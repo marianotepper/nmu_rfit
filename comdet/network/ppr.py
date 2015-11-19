@@ -11,7 +11,7 @@ import comdet.network.utils as nu
 
 def approximate_page_rank(graph, alpha, epsilon, seeds, weight):
     if weight is None:
-        weight = defaultdict(lambda: 1)
+        weight = graph.new_edge_property('float', vals=1)
     pagerank = defaultdict(int)
     residual = defaultdict(int)
     candidates = deque(seeds)
@@ -52,7 +52,7 @@ def support_sweep(graph, sorted_nodes, weight):
     conductance = []
     sorted_nodes_examined = set([])
     if weight is None:
-        weight = defaultdict(lambda: 1)
+        weight = graph.new_edge_property('float', vals=1)
     for i, u in enumerate(sorted_nodes):
         deg_u = u.out_degree(weight=weight)
         cut_size = deg_u

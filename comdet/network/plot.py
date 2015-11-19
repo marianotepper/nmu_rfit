@@ -107,15 +107,15 @@ def draw(graph, communities, pos=None, output=None):
                            output=output)
 
 
-def plot_preference_matrix(array, samples, offset=0, labels=None, title=None):
+def plot_preference_matrix(array, bands=[], offset=0, labels=None, title=None):
     n_colors = int(np.max(array))
     palette = sns.cubehelix_palette(n_colors + 1, start=2, rot=0, dark=0.15,
                                     light=1)
     cmap = colors.ListedColormap(palette, N=n_colors + 1)
     plt.imshow(array, interpolation='none', cmap=cmap)
     count = 0
-    for neigh_comm in samples:
-        count += len(neigh_comm) + offset
+    for k in bands:
+        count += k + offset
         plt.plot([count - 0.5] * 2, [-0.5, array.shape[0] - 0.5], 'k')
     plt.tick_params(
         which='both',  # both major and minor ticks are affected

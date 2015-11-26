@@ -5,5 +5,5 @@
 *.zip
 *.pickle
 comdet/data/footballTSEweb
-
+*.mat
 *.pdf

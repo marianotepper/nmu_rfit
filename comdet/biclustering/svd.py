@@ -5,10 +5,9 @@ import comdet.biclustering.utils as utils
 
 class SVD:
 
-    def __init__(self, array, rcond=1e-15):
+    def __init__(self, array):
         self.shape = array.shape
         self.u, self.s, self.vt = np.linalg.svd(array, full_matrices=False)
-        self.rcond = rcond
 
     def update(self, a, b):
         m = self.u.T.dot(a)
@@ -46,6 +45,18 @@ class SVD:
 
         k = np.dot(np.diag(np.append(self.s, [0])),
                    np.identity(self.s.size + 1) - np.outer(u_a, v_b))
+
+        if np.allclose(k, np.zeros_like(k)):
+            self.u = np.zeros_like(self.u)
+            self.s = np.zeros_like(self.s)
+            self.vt = np.zeros_like(self.vt)
+            return
+
+        if np.any(np.isnan(k)):
+            self.u[:] = np.nan
+            self.s[:] = np.nan
+            self.vt[:] = np.nan
+            return
 
         inner_u, s_new, inner_vt = np.linalg.svd(k)
 

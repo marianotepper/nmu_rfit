@@ -3,7 +3,7 @@ import graph_tool as gt
 import string
 import numpy as np
 from scipy.sparse import coo_matrix as sparse
-from scipy.sparse import find, eye
+from scipy.sparse import find, eye, triu
 
 
 def create():
@@ -52,10 +52,11 @@ def characters_network():
     bipartite_adj, characters, comics = create()
 
     adj = bipartite_adj.dot(bipartite_adj.T)
+    adj = triu(adj)
     row_idx, col_idx, _ = find(adj)
     edges = zip(row_idx, col_idx)
 
     graph = gt.Graph(directed=False)
     graph.add_edge_list(edges)
-    return graph
+    return graph, characters
 

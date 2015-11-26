@@ -24,7 +24,7 @@ def locally_minimal_neighborhood_communities(graph, min_degree=2, weight=None):
     graph.vertex_properties[_ncc] = vprop_ncc
 
     loc_min_list = []
-    for i, v in enumerate(graph.vertices()):
+    for v in graph.vertices():
         d = v.out_degree()
         if d < min_degree:
             continue

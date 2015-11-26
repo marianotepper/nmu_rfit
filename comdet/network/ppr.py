@@ -6,12 +6,11 @@ import numpy as np
 from scipy.sparse import diags
 from scipy.sparse.linalg import eigs, spsolve
 import math
+import matplotlib.pyplot as plt
 import comdet.network.utils as nu
 
 
 def approximate_page_rank(graph, alpha, epsilon, seeds, weight):
-    if weight is None:
-        weight = graph.new_edge_property('float', vals=1)
     pagerank = defaultdict(int)
     residual = defaultdict(int)
     candidates = deque(seeds)
@@ -19,16 +18,17 @@ def approximate_page_rank(graph, alpha, epsilon, seeds, weight):
         residual[s] = 1.0 / len(seeds)
 
     def _push(u):
-        deg_u = u.out_degree()
+        deg_u = u.out_degree(weight=weight)
+        if deg_u == 0:
+            return
         push_val = residual[u] - 0.5 * epsilon * deg_u
         put_val = (1.0 - alpha) * push_val / deg_u
         pagerank[u] += alpha * push_val
         residual[u] = 0.5 * epsilon * deg_u
         for e in u.out_edges():
             v = e.target()
-            deg_v = v.out_degree()
-            put_val_uv = put_val
-            put_val_uv *= weight[e]
+            deg_v = v.out_degree(weight=weight)
+            put_val_uv = put_val * weight[e]
             old_residual = residual[v]
             residual[v] = old_residual + put_val_uv
             thresh = deg_v * epsilon
@@ -51,8 +51,6 @@ def support_sweep(graph, sorted_nodes, weight):
     cut = 0.
     conductance = []
     sorted_nodes_examined = set([])
-    if weight is None:
-        weight = graph.new_edge_property('float', vals=1)
     for i, u in enumerate(sorted_nodes):
         deg_u = u.out_degree(weight=weight)
         cut_size = deg_u
@@ -79,6 +77,8 @@ def pagerank_nibble(graph, alpha, cluster_size, seeds, weight):
         iter(seeds)
     except TypeError:
         seeds = [seeds]
+    if weight is None:
+        weight = graph.new_edge_property('float', vals=1)
     pagerank, residual = approximate_page_rank(graph, alpha, 1.0 / cluster_size,
                                                seeds, weight=weight)
     if not pagerank:
@@ -90,9 +90,10 @@ def pagerank_nibble(graph, alpha, cluster_size, seeds, weight):
     conductance = support_sweep(graph, sorted_nodes, weight=weight)
     best_cut_idx, min_conductance = min(enumerate(conductance),
                                         key=itemgetter(1))
-    # plt.figure()
-    # plt.plot(conductance)
-    # plt.scatter([best_cut_idx], [min_conductance])
+    print len(pagerank)
+    plt.figure()
+    plt.plot(conductance)
+    plt.scatter([best_cut_idx], [min_conductance])
 
     # print(best_cut_idx, len(sorted_nodes))
     return sorted_nodes[:best_cut_idx + 1], min_conductance

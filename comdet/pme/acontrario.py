@@ -22,8 +22,8 @@ def random_line_probability(data, inliers_threshold, line):
     print minima, maxima
     vec = maxima - minima
     area = np.prod(vec)
-    dist = np.linalg.norm(vec)
-    return dist * 2 * inliers_threshold / area
+    length = np.linalg.norm(vec)
+    return length * 2 * inliers_threshold / area
 
 
 def random_circle_probability(data, inliers_threshold, circle):

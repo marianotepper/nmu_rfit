@@ -4,7 +4,7 @@ from scipy.sparse.linalg import svds
 from scipy.sparse import issparse, find
 from comdet.biclustering.utils import relative_error, sparse
 import comdet.biclustering.mdl as mdl
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
@@ -185,6 +185,7 @@ def bicluster(online_deflator, n=None, share_points=True):
     total_codelength = []
 
     for k in range(n):
+        # print k
         if online_deflator.array.nnz == 0:
             break
 
@@ -202,6 +203,9 @@ def bicluster(online_deflator, n=None, share_points=True):
                             shape=(online_deflator.array.shape[0], 1))
 
             u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped, max_iter=10)
+
+            # print k, idx_v.shape, idx_v, selection, find(u)[0].shape
+
         except AttributeError:
             u, v = nmf_robust_rank1(online_deflator.array)
             idx_v = find(v)[1]
@@ -209,7 +213,6 @@ def bicluster(online_deflator, n=None, share_points=True):
         rows.append(binarize(u))
         cols.append(binarize(v))
 
-        print k, idx_v.shape, idx_v, selection, find(u)[0].shape
         online_deflator.remove_columns(idx_v)
         if not share_points:
             idx_u = find(u)[0]
@@ -219,14 +222,14 @@ def bicluster(online_deflator, n=None, share_points=True):
             cl = online_mdl.add_rank1_approximation(online_deflator.array, u, v)
             total_codelength.append(cl)
 
-        plt.matshow(online_deflator.array.toarray())
+        # plt.matshow(online_deflator.array.toarray())
 
     if n is not None:
         total_codelength = np.array(total_codelength)
         cut_point = np.argmin(total_codelength)
 
-        plt.figure()
-        plt.plot(total_codelength)
-        plt.plot([cut_point], total_codelength[cut_point], marker='o', color='r')
+    #     plt.figure()
+    #     plt.plot(total_codelength)
+    #     plt.plot([cut_point], total_codelength[cut_point], marker='o', color='r')
 
     return rows[:cut_point+1], cols[:cut_point+1]

@@ -6,7 +6,6 @@ def normalize_2d(points):
     if points.shape[1] != 3:
         raise ValueError('The points must be Nx3');
 
-
     # Find the indices of the points that are not at infinity
     finite_idx = np.where(np.abs(points[:, 2]) > np.finfo(float).eps)[0]
     print finite_idx, finite_idx.size, points.shape[0]

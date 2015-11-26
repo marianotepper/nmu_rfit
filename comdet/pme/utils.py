@@ -8,7 +8,6 @@ def normalize_2d(points):
 
     # Find the indices of the points that are not at infinity
     finite_idx = np.where(np.abs(points[:, 2]) > np.finfo(float).eps)[0]
-    print finite_idx, finite_idx.size, points.shape[0]
 
     if finite_idx.size != points.shape[0]:
         warnings.warn('Found points at infinity', RuntimeWarning)

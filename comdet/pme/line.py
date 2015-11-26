@@ -1,15 +1,16 @@
 from __future__ import absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
-import comdet.ransac.model
-import comdet.ransac.utils as utils
+import comdet.pme.model
+import comdet.pme.utils as utils
 
 
-class Line(comdet.ransac.model.Model):
+class Line(comdet.pme.model.Model):
 
-    def __init__(self, data):
+    def __init__(self, data=None):
         self.eq = None
-        self.fit(data)
+        if data is not None:
+            self.fit(data)
 
     def min_sample_size(self):
         return 2
@@ -49,7 +50,7 @@ class Line(comdet.ransac.model.Model):
         plt.plot([p1[0], p2[0]], [p1[1], p2[1]], **kwargs)
 
 
-if __name__ == '__main__':
+def test():
     x = np.array([[1, 1], [1, 2], [1, 3]])
     l1 = Line(x)
     print l1.distances(x)
@@ -62,3 +63,6 @@ if __name__ == '__main__':
     l1.plot(color='g', linewidth=2)
     l2.plot(color='g', linewidth=2)
     plt.show()
+
+if __name__ == '__main__':
+    test()

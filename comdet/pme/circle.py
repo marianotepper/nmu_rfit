@@ -1,16 +1,17 @@
 from __future__ import absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
-import comdet.ransac.model
-import comdet.ransac.utils as utils
+import comdet.pme.model
 
 
-class Circle(comdet.ransac.model.Model):
+class Circle(comdet.pme.model.Model):
 
-    def __init__(self, data):
+    def __init__(self, data=None):
         self.center = None
         self.radius = None
-        self.fit(data)
+        if data is not None:
+            self.fit(data)
+
 
     def min_sample_size(self):
         return 2
@@ -40,7 +41,8 @@ class Circle(comdet.ransac.model.Model):
         y = self.center[1] + self.radius * np.sin(t)
         plt.plot(x, y, **kwargs)
 
-if __name__ == '__main__':
+
+def test():
     x = np.array([[1, 1], [1, 2], [0, 0]])
     c1 = Circle(x)
     print c1.distances(x)
@@ -55,3 +57,6 @@ if __name__ == '__main__':
     # l2.plot(color='g', linewidth=2)
     plt.axis('equal')
     plt.show()
+
+if __name__ == '__main__':
+    test()

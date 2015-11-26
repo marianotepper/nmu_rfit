@@ -1,18 +1,16 @@
 from __future__ import absolute_import
 import numpy as np
-from scipy.optimize import linprog
 import mpl_toolkits.mplot3d as plt3d
-import matplotlib.pyplot as plt
-from matplotlib.collections import PolyCollection
 from matplotlib.colors import colorConverter
-import comdet.ransac.model
+import comdet.pme.model
 
 
-class Plane(comdet.ransac.model.Model):
+class Plane(comdet.pme.model.Model):
 
-    def __init__(self, data):
+    def __init__(self, data=None):
         self.eq = None
-        self.fit(data)
+        if data is not None:
+            self.fit(data)
 
     def min_sample_size(self):
         return 3
@@ -164,7 +162,9 @@ class Plane(comdet.ransac.model.Model):
         ax.add_collection3d(tri)
 
 
-if __name__ == '__main__':
+def test():
+    import matplotlib.pyplot as plt
+
     x1 = np.array([[0, 1, 0], [1, .5, 0], [1, .2, 1]])
     l1 = Plane(x1)
     # np.random.seed(0)
@@ -189,3 +189,6 @@ if __name__ == '__main__':
     ax.set_zlabel('Z')
 
     plt.show()
+
+if __name__ == '__main__':
+    test()

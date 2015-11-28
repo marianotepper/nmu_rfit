@@ -1,10 +1,9 @@
 from __future__ import absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
-import comdet.pme.model
 
 
-class Circle(comdet.pme.model.Model):
+class Circle:
 
     def __init__(self, data=None):
         self.center = None
@@ -12,7 +11,7 @@ class Circle(comdet.pme.model.Model):
         if data is not None:
             self.fit(data)
 
-
+    @property
     def min_sample_size(self):
         return 2
 

@@ -1,9 +1,9 @@
 import numpy as np
-from scipy.sparse import issparse, spmatrix
-from multiprocessing import Pool
-from functools import partial
-from multipledispatch import dispatch
-from comdet.biclustering.utils import count_nonzero
+import scipy.sparse as sp
+import multiprocessing
+import functools
+import multipledispatch
+import comdet.biclustering.utils as utils
 
 
 def quantize(arr, q):
@@ -22,7 +22,7 @@ def quantize(arr, q):
 log2_2pi = np.log2(2 * np.pi)
 
 
-@dispatch(object)
+@multipledispatch.dispatch(object)
 def universal_bernoulli(arr):
     """
     universal codelength for an IID Bernoulli sequence .
@@ -30,11 +30,11 @@ def universal_bernoulli(arr):
     formula) of the enumerative code for Bernoulli sequences (Cover'91)
     """
     n = reduce(lambda x, y: x * y, arr.shape)
-    k = count_nonzero(arr)
+    k = utils.count_nonzero(arr)
     return universal_bernoulli(n, k)
 
 
-@dispatch(int, int)
+@multipledispatch.dispatch(int, int)
 def universal_bernoulli(n, k):
     """
     universal codelength for an IID Bernoulli sequence .
@@ -66,7 +66,7 @@ def universal_bernoulli_uniform(arr, q):
     gives the locations of the non-zeros, then the non-zeros are
     described with ceil(log_2(Q))+1 bits each
     """
-    if issparse(arr):
+    if sp.issparse(arr):
         k = arr.nnz
     else:
         k = np.count_nonzero(arr)
@@ -105,14 +105,14 @@ def codelength(arr, u, v, limits=(-6, 1), pool_size=0):
     E = [A - uq * vq']_1, where [1] is binary thresholding
     """
     if pool_size > 0:
-        pool = Pool(pool_size)
+        pool = multiprocessing.Pool(pool_size)
         map_fun = pool.map
     else:
         map_fun = map
 
     qtop = np.ceil(np.log2(np.max(arr.flat)))
     qs = np.power(2, np.arange(qtop + limits[0], qtop + limits[1]))
-    cl_fp = partial(codelength_fixed_precision, arr, u, v)
+    cl_fp = functools.partial(codelength_fixed_precision, arr, u, v)
     lengths = map_fun(cl_fp, qs)
     k, cl_min = min(enumerate(lengths), key=lambda e: e[1])
     if pool_size > 0:
@@ -146,11 +146,11 @@ class OnlineMDL:
     def add_rank1_approximation(self, remainder, u, v):
         u_n = reduce(lambda x, y: x * y, u.shape)
         self.u_count += 1
-        self.u_nnz += count_nonzero(u)
+        self.u_nnz += utils.count_nonzero(u)
         code_u = universal_bernoulli(u_n * self.u_count, self.u_nnz)
         v_n = reduce(lambda x, y: x * y, v.shape)
         self.v_count += 1
-        self.v_nnz += count_nonzero(v)
+        self.v_nnz += utils.count_nonzero(v)
         code_v = universal_bernoulli(v_n * self.v_count, self.v_nnz)
         code_diff = universal_bernoulli(remainder)
         return code_u + code_v + code_diff

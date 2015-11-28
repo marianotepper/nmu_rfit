@@ -1,25 +1,24 @@
 from __future__ import absolute_import
 import numpy as np
-from multipledispatch import dispatch
-from scipy.sparse import vstack, spmatrix
+import multipledispatch
+import scipy.sparse as sp
 import comdet.biclustering.fct as fct
-from comdet.biclustering.utils import sparse
-from comdet.biclustering.svd import SVD
+import comdet.biclustering.utils as utils
 
 
-@dispatch(spmatrix)
+@multipledispatch.dispatch(sp.spmatrix)
 def power_of_two_padding(mat):
     new_shape = list(mat.shape)
     new_m = 2**np.ceil(np.log2(mat.shape[0]))
     new_shape[0] = new_m - new_shape[0]
     new_shape = tuple(new_shape)
     if new_shape[0] > 0:
-        return sparse(vstack((mat, sparse(new_shape))))
+        return utils.sparse(sp.vstack((mat, utils.sparse(new_shape))))
     else:
         return mat
 
 
-@dispatch(np.ndarray)
+@multipledispatch.dispatch(np.ndarray)
 def power_of_two_padding(mat):
     new_shape = list(mat.shape)
     new_m = 2**np.ceil(np.log2(mat.shape[0]))
@@ -63,7 +62,7 @@ def compress(array, s, roc='rows'):
     subsampled_mat = transform_mat.dot(mat).toarray()
 
     r_inv = invert_r(subsampled_mat)
-    projected_mat = np.dot(mat, sparse(r_inv)).toarray()
+    projected_mat = np.dot(mat, utils.sparse(r_inv)).toarray()
     selection = select_leverage_scores(projected_mat, s, nrows_original)
 
     mat2 = array.tocsr()
@@ -95,13 +94,13 @@ class OnlineColumnCompressor:
         self.transform_mat = fct.fast_cauchy_transform(self.mat.shape[0],
                                                        n_samples, n_samples)
         subsampled_mat = self.transform_mat.dot(self.mat).toarray()
-        self.svd = SVD(subsampled_mat)
+        self.svd = utils.UpdatableSVD(subsampled_mat)
 
     def compress(self):
         self.apply_downdates()
         self.svd.trim()
         r_inv = OnlineColumnCompressor._invert_r(self.svd)
-        projected_mat = self.mat.dot(sparse(r_inv)).toarray()
+        projected_mat = self.mat.dot(utils.sparse(r_inv)).toarray()
         selection = select_leverage_scores(projected_mat, self.n_samples,
                                            self.nrows_original)
         # TODO scale nonzero rows
@@ -133,7 +132,7 @@ class OnlineColumnCompressor:
         v = self.mat[idx, :]
         if v.min() == 0 and v.max() == 0:
             return
-        u = sparse(([1], ([idx], [0])), shape=(self.nrows_original, 1))
+        u = utils.sparse(([1], ([idx], [0])), shape=(self.nrows_original, 1))
         self.additive_downdate(u, v)
 
     def apply_downdates(self):

@@ -28,3 +28,6 @@ def normalize_2d(points):
 
     return new_points.dot(trans), trans
 
+
+def argsort(seq, cmp_fun=None, key=None):
+    return [e[0] for e in sorted(enumerate(seq), cmp=cmp_fun, key=key)]

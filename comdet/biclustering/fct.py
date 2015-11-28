@@ -1,25 +1,25 @@
 from __future__ import absolute_import
 import numpy as np
 from scipy.linalg import hadamard
-from math import sqrt
-from scipy.sparse import coo_matrix as sparse
-from scipy.sparse import block_diag
+import math
+import comdet.biclustering.utils as utils
+import scipy.sparse as sp
 
 
 def normalized_hadamard(n):
-    return hadamard(n) / sqrt(n)
+    return hadamard(n) / math.sqrt(n)
 
 
 def create_blockdiagonal_matrix(func, blocksize, n_blocks):
-    diag = [sparse(func()) for _ in range(n_blocks)]
-    return block_diag(diag)
+    diag = [utils.sparse(func()) for _ in range(n_blocks)]
+    return sp.block_diag(diag)
 
 
 def basis(size):
     rows = np.random.randint(size[0], size=(size[1],))
     cols = range(size[1])
     data = np.ones((size[1],))
-    return sparse((data, (rows, cols)))
+    return utils.sparse((data, (rows, cols)))
 
 
 def cauchy(m, block_side):
@@ -32,7 +32,6 @@ def cauchy(m, block_side):
 
 
 def spread_matrix(m, s):
-
     gs = np.vstack((normalized_hadamard(s), np.eye(s)))
 
     def create_block():

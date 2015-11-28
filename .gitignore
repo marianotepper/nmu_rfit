@@ -1,9 +1,2 @@
-*.txt
-*.gz
-*.gml
-*.gt
-*.zip
-*.pickle
-comdet/data/footballTSEweb
 *.mat
 *.pdf

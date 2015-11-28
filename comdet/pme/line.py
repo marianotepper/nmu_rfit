@@ -1,17 +1,16 @@
-from __future__ import absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
-import comdet.pme.model
-import comdet.pme.utils as utils
+import utils
 
 
-class Line(comdet.pme.model.Model):
+class Line:
 
     def __init__(self, data=None):
         self.eq = None
         if data is not None:
             self.fit(data)
 
+    @property
     def min_sample_size(self):
         return 2
 
@@ -33,15 +32,20 @@ class Line(comdet.pme.model.Model):
             data = np.hstack((data, np.ones((data.shape[0], 1))))
         return np.abs(np.dot(data, self.eq)) / np.linalg.norm(self.eq[:2])
 
-    def plot(self, **kwargs):
-        if abs(self.eq[0]) > abs(self.eq[1]):  # line is more vertical
-            ylim = plt.ylim()
-            p1 = np.array([0., 1., 0.])
-            p2 = np.array([0., -1. / ylim[1], 1.])
-        else:  # line more horizontal
+    def plot(self, limits=None, **kwargs):
+        if limits is None:
             xlim = plt.xlim()
-            p1 = np.array([1., 0., 0.])
-            p2 = np.array([-1. / xlim[1], 0., 1.])
+            ylim = plt.ylim()
+        else:
+            xlim = limits[0]
+            ylim = limits[1]
+
+        if abs(self.eq[0]) > abs(self.eq[1]):  # line is more vertical
+            p1 = np.array([0., 1., -ylim[0]])
+            p2 = np.array([0., 1., -ylim[1]])
+        else:  # line more horizontal
+            p1 = np.array([1., 0., -xlim[0]])
+            p2 = np.array([1., 0., -xlim[1]])
 
         p1 = np.cross(self.eq, p1)
         p2 = np.cross(self.eq, p2)

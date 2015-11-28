@@ -1,17 +1,17 @@
-from __future__ import absolute_import
 import numpy as np
 import mpl_toolkits.mplot3d as plt3d
-from matplotlib.colors import colorConverter
-import comdet.pme.model
+import matplotlib.colors as mpl_colors
+import utils as utils
 
 
-class Plane(comdet.pme.model.Model):
+class Plane:
 
     def __init__(self, data=None):
         self.eq = None
         if data is not None:
             self.fit(data)
 
+    @property
     def min_sample_size(self):
         return 3
 
@@ -122,10 +122,7 @@ class Plane(comdet.pme.model.Model):
             else:
                 return 1
 
-        def _argsort(seq, cmp_fun=None):
-            return [e[0] for e in sorted(enumerate(seq), cmp=cmp_fun)]
-
-        idx = _argsort(arr.tolist(), cmp_fun=compare)
+        idx = utils.argsort(arr.tolist(), cmp_fun=compare)
         return [points[i] for i in idx]
 
     def plot(self, ax, limits=None, color=None, alpha=0.5, **kwargs):
@@ -157,8 +154,8 @@ class Plane(comdet.pme.model.Model):
 
         tri = plt3d.art3d.Poly3DCollection([points])
         if color is not None:
-            tri.set_color(colorConverter.to_rgba(color, alpha=alpha))
-        tri.set_edgecolor(colorConverter.to_rgba('k', alpha=0))
+            tri.set_color(mpl_colors.colorConverter.to_rgba(color, alpha=alpha))
+        tri.set_edgecolor(mpl_colors.colorConverter.to_rgba('k', alpha=0))
         ax.add_collection3d(tri)
 
 

@@ -1,9 +1,10 @@
-from __future__ import absolute_import
 import numpy as np
 import scipy.special as special
-import scipy.sparse as sp
 import itertools
-import comdet.pme.utils as utils
+import multipledispatch
+import utils
+import line
+import circle
 
 
 def compute_nfa(inliers, n_samples, instance_proba):
@@ -18,7 +19,7 @@ def compute_nfa(inliers, n_samples, instance_proba):
 
 
 def meaningful(data, model, inliers, inliers_threshold, epsilon):
-    proba = random_line_probability(data, inliers_threshold, model)
+    proba = random_probability(data, inliers_threshold, model)
     return compute_nfa(inliers, model.min_sample_size, proba) < epsilon
 
 
@@ -26,18 +27,20 @@ def filter_meaningful(meaningful_fun, mod_inliers_iter):
     return itertools.ifilter(meaningful_fun, mod_inliers_iter)
 
 
-def random_line_probability(data, inliers_threshold, _):
+@multipledispatch.dispatch(object, float, line.Line)
+def random_probability(data, inliers_threshold, model):
     vec = np.max(data, axis=0) - np.min(data, axis=0)
     area = np.prod(vec)
     length = np.linalg.norm(vec)
     return length * 2 * inliers_threshold / area
 
 
-def random_circle_probability(data, inliers_threshold, circle):
+@multipledispatch.dispatch(object, float, circle.Circle)
+def random_probability(data, inliers_threshold, model):
     area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
-    proba = np.pi * ((circle.radius + inliers_threshold) ** 2 -
-                     (circle.radius + inliers_threshold) ** 2) / area;
-    return min(proba, 1)
+    ring_area = np.pi * ((model.radius + inliers_threshold) ** 2 -
+                         (model.radius - inliers_threshold) ** 2)
+    return min(ring_area / area, 1)
 
 
 def log_nchoosek(n, k):

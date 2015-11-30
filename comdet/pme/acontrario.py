@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import numpy as np
-import scipy.special as sp
+import scipy.special as special
+import scipy.sparse as sp
 import itertools
 import comdet.pme.utils as utils
 
@@ -40,7 +41,8 @@ def random_circle_probability(data, inliers_threshold, circle):
 
 
 def log_nchoosek(n, k):
-    return sp.gammaln(n + 1) - sp.gammaln(n - k + 1) - sp.gammaln(k + 1)
+    return special.gammaln(n + 1) - special.gammaln(n - k + 1)\
+           - special.gammaln(k + 1)
 
 
 def log_betainc(a, b, x):
@@ -51,24 +53,24 @@ def log_betainc(a, b, x):
     if x == 1.0:
         return 0
 
-    logbt = sp.gammaln(a + b) - sp.gammaln(a) - sp.gammaln(b) +\
+    logbt = special.gammaln(a + b) - special.gammaln(a) - special.gammaln(b) +\
             a * np.log(x) + b * np.log(1.0 - x)
 
     if x < (a + 1.0) / (a + b + 2.0):
         # Use continued fraction directly
-        return logbt + np.log(sp.betainc(a, b, x))
+        return logbt + np.log(special.betainc(a, b, x))
     else:
         # Factors in front of the continued fraction.
         bt = np.exp(logbt)
         # Use continued fraction after making the symmetry transformation.
-        return np.log(1.0 - bt * sp.betainc(b, a, 1.0 - x) / b)
+        return np.log(1.0 - bt * special.betainc(b, a, 1.0 - x) / b)
 
 
 def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
     nfa_list = []
     for (mod, in_a) in mod_inliers_list:
         proba = random_line_probability(data, inliers_threshold, mod)
-        nfa_list.append(compute_nfa(in_a, mod.min_sample_size, proba) < epsilon)
+        nfa_list.append(compute_nfa(in_a, mod.min_sample_size, proba))
     idx = utils.argsort(nfa_list)
 
     out_list = []
@@ -80,9 +82,10 @@ def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
 
         inliers = [in_b for k, (_, in_b) in enumerate(mod_inliers_list)
                    if idx.index(k) < pick]
-        inliers = map(lambda x: in_a.multiply(x), inliers)
-        inliers = in_a - reduce(lambda x, y: (x + y).astype(bool), inliers)
-        if meaningful(data, mod, inliers, inliers_threshold, epsilon):
+        inliers = map(lambda x: in_a - in_a.multiply(x).astype(bool), inliers)
+
+        if all([meaningful(data, mod, in_b, inliers_threshold, epsilon)
+                for in_b in inliers]):
             out_list.append(pick)
 
     return out_list

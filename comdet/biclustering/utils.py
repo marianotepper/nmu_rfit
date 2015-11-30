@@ -17,6 +17,7 @@ def relative_error(mat_ref, mat, ord='fro'):
     denom = np.linalg.norm(sp.find(mat_ref)[2], ord=ord)
     return num / denom
 
+
 @multipledispatch.dispatch(np.ndarray, np.ndarray)
 def relative_error(mat_ref, mat, ord='fro'):
     if ord == 0:

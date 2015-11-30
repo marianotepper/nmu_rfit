@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 import utils
 
 
-class Line:
-
+class Line(object):
     def __init__(self, data=None):
         self.eq = None
         if data is not None:

@@ -4,7 +4,7 @@ import matplotlib.colors as mpl_colors
 import utils as utils
 
 
-class Plane:
+class Plane(object):
 
     def __init__(self, data=None):
         self.eq = None

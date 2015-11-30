@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Circle:
+class Circle(object):
 
     def __init__(self, data=None):
         self.center = None

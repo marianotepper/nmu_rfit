@@ -1,43 +1,13 @@
 import numpy as np
 import scipy.sparse.linalg as spla
 import scipy.sparse as sp
-import sklearn.decomposition.nmf as nmf
-import comdet.biclustering.nls as nls
 import comdet.biclustering.utils as utils
 import comdet.biclustering.mdl as mdl
 import matplotlib.pyplot as plt
 
 
-def nmf_robust(array, n_components=1, lambda_e=1., max_iter=500):
-    e = utils.sparse(array.shape)
-    gamma_e = utils.sparse(e.shape)
-
-    learner = nmf.NMF(n_components=n_components, init='nndsvd', max_iter=500)
-    u = learner.fit_transform(array - e)
-    v = learner.components_
-
-    learner = nmf.NMF(n_components=n_components, init='custom', max_iter=500)
-
-    error = []
-    for i in range(int(max_iter)):
-        u_sp = utils.sparse(u)
-        v_sp = utils.sparse(v)
-        temp = array - u_sp.dot(v_sp)
-        e = shrinkage(temp + gamma_e / lambda_e, 1. / lambda_e)
-        gamma_e += lambda_e * (temp - e)
-
-        u = learner.fit_transform(array - e, W=u, H=v)
-        v = learner.components_
-
-        error.append(learner.reconstruction_err_)
-        if i > 0 and np.fabs(error[i] - error[i-1]) < 1e-6:
-            break
-    return utils.sparse(u), utils.sparse(v)
-
-
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
                      v_init=None, max_iter=5e2):
-
     if u_init is None and v_init is None:
         x, s, y = spla.svds(array, 1)
         s = np.sqrt(s)
@@ -94,32 +64,6 @@ def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
         if i > max_iter / 2 and np.fabs(error[i] - error[i-1]) < 1e-4:
             break
     return u, v
-
-
-def nls(array, u_init, v):
-    return nmf.non_negative_factorization(array, W=u_init, H=v, init='custom',
-                                          update_H=False)[0]
-
-
-def nmf_robust_u(array, u_init, v, lambda_e=1, max_iter=500):
-    u = u_init.toarray()
-    v_np = v.toarray()
-
-    e = utils.sparse(array.shape)
-    gamma_e = utils.sparse(e.shape)
-
-    error = []
-    for i in range(int(max_iter)):
-        u = nls(array - e, u, v_np)
-        u_sp = utils.sparse(u)
-        temp = array - u_sp.dot(v)
-        e = shrinkage(temp + gamma_e / lambda_e, 1. / lambda_e)
-        gamma_e += lambda_e * (temp - e)
-
-        error.append(learner.reconstruction_err_)
-        if i > 0 and np.fabs(error[i] - error[i-1]) < 1e-6:
-            break
-    return utils.sparse(u), utils.sparse(v)
 
 
 def nmf_robust_rank1_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2):
@@ -219,18 +163,16 @@ def bicluster(online_deflator, n=None, share_points=True):
     if n is None:
         n = online_deflator.array.shape[1]
 
-    rows = []
-    cols = []
+    bic_list = []
     online_mdl = mdl.OnlineMDL()
     total_codelength = []
 
     for k in range(n):
-        print k
         if online_deflator.array.nnz == 0:
             break
 
         try:
-            u, v = nmf_robust(online_deflator.array_compressed)
+            u, v = nmf_robust_rank1(online_deflator.array_compressed)
 
             idx_v = sp.find(v)[1]
             array_cropped = online_deflator.array[:, idx_v]
@@ -240,20 +182,16 @@ def bicluster(online_deflator, n=None, share_points=True):
             u_init = utils.sparse((u_data, (online_deflator.selection[idx_u],
                                             np.zeros_like(idx_u))),
                                   shape=(online_deflator.array.shape[0], 1))
-            # u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped,
-            #                        max_iter=10)
-            u = nmf_robust_u(array_cropped, u_init, v_cropped)
+            u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped)
 
         except AttributeError:
-            u, v = nmf_robust(online_deflator.array, n_components=1)
-            # u1, v1 = nmf_robust_rank1(online_deflator.array)
+            u, v = nmf_robust_rank1(online_deflator.array)
             idx_v = sp.find(v)[1]
 
         u = binarize(u)
         v = binarize(v)
 
-        rows.append(u)
-        cols.append(v)
+        bic_list.append((u, v))
 
         online_deflator.remove_columns(idx_v)
         if not share_points:
@@ -267,8 +205,8 @@ def bicluster(online_deflator, n=None, share_points=True):
     if n is not None:
         total_codelength = np.array(total_codelength)
         cut_point = np.argmin(total_codelength)
-        plt.figure()
-        plt.plot(total_codelength)
-        plt.plot([cut_point], total_codelength[cut_point], marker='o', color='r')
+        # plt.figure()
+        # plt.plot(total_codelength)
+        # plt.plot([cut_point], total_codelength[cut_point], marker='o', color='r')
 
-    return rows[:cut_point+1], cols[:cut_point+1]
+    return bic_list[:cut_point+1]

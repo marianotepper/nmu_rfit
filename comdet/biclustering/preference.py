@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
+import matplotlib.colors as mpl_colors
 import seaborn.apionly as sns
 import numpy as np
 import scipy.sparse
@@ -25,20 +25,30 @@ def add_col(preference_matrix, in_column, value=1):
     return preference_matrix
 
 
-def plot_preference_matrix(array, bands=[], offset=0, labels=None, title=None):
+def plot_preference_matrix(array, bic_list=[], palette=[]):
+    white = mpl_colors.colorConverter.to_rgba('w', alpha=1)
+    black = mpl_colors.colorConverter.to_rgba('k', alpha=1)
+
+    cmap = mpl_colors.ListedColormap([white, black])
+    plt.hold(True)
     try:
-        n_colors = int(np.max(array))
+        plt.imshow(array, interpolation='none', cmap=cmap)
     except TypeError:
-        array = array.toarray()
-        n_colors = int(np.max(array))
-    palette = sns.cubehelix_palette(n_colors + 1, start=2, rot=0, dark=0.15,
-                                    light=1)
-    cmap = colors.ListedColormap(palette, N=n_colors + 1)
-    plt.imshow(array, interpolation='none', cmap=cmap)
-    count = 0
-    for k in bands:
-        count += k + offset
-        plt.plot([count - 0.5] * 2, [-0.5, array.shape[0] - 0.5], 'k')
+        plt.imshow(array.toarray(), interpolation='none', cmap=cmap)
+
+    if bic_list and not palette:
+        palette = sns.color_palette('Set1', len(bic_list))
+
+    for (u, v), c in zip(bic_list, palette):
+        uv = u.dot(v).astype(int)
+        white = mpl_colors.colorConverter.to_rgba('w', alpha=0)
+        c = mpl_colors.colorConverter.to_rgba(c, alpha=1)
+        cmap = mpl_colors.ListedColormap([white, c])
+        try:
+            plt.imshow(uv, interpolation='none', cmap=cmap)
+        except TypeError:
+            plt.imshow(uv.toarray(), interpolation='none', cmap=cmap)
+
     plt.tick_params(
         which='both',  # both major and minor ticks are affected
         bottom='off',
@@ -48,17 +58,3 @@ def plot_preference_matrix(array, bands=[], offset=0, labels=None, title=None):
         labelbottom='off',
         labelleft='off')
     plt.axis('image')
-
-    if n_colors > 1:
-        cmap = colors.ListedColormap(palette[1:], N=3)
-        locs = np.linspace(1, n_colors, n_colors)
-        mappable = plt.cm.ScalarMappable(cmap=cmap)
-        mappable.set_array([])
-        mappable.set_clim(1, n_colors + 1)
-        cb = plt.colorbar(mappable, drawedges=True)
-        cb.set_ticks(locs + 0.5)
-        if labels is not None:
-            cb.set_ticklabels(labels)
-        if title is not None:
-            cb.ax.set_title(title, loc='left')
-        cb.ax.tick_params(left='off', right='off')

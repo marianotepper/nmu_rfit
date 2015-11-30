@@ -29,7 +29,6 @@ class Circle:
         y = np.linalg.solve(M, b)
         self.center = -y[:2] / 2
         self.radius = np.linalg.norm(self.center) - y[2]
-        print self.center, self.radius
 
     def distances(self, data):
         return np.abs(np.linalg.norm(data - self.center, axis=1) - self.radius)

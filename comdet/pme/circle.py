@@ -13,7 +13,7 @@ class Circle:
 
     @property
     def min_sample_size(self):
-        return 2
+        return 3
 
     def fit(self, data):
         if data.shape[0] < 3:

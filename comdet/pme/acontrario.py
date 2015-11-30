@@ -27,7 +27,7 @@ def filter_meaningful(meaningful_fun, mod_inliers_iter):
     return itertools.ifilter(meaningful_fun, mod_inliers_iter)
 
 
-@multipledispatch.dispatch(object, float, line.Line)
+@multipledispatch.dispatch(np.ndarray, float, line.Line)
 def random_probability(data, inliers_threshold, model):
     vec = np.max(data, axis=0) - np.min(data, axis=0)
     area = np.prod(vec)
@@ -35,7 +35,7 @@ def random_probability(data, inliers_threshold, model):
     return length * 2 * inliers_threshold / area
 
 
-@multipledispatch.dispatch(object, float, circle.Circle)
+@multipledispatch.dispatch(np.ndarray, float, circle.Circle)
 def random_probability(data, inliers_threshold, model):
     area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
     ring_area = np.pi * ((model.radius + inliers_threshold) ** 2 -
@@ -72,7 +72,7 @@ def log_betainc(a, b, x):
 def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
     nfa_list = []
     for (mod, in_a) in mod_inliers_list:
-        proba = random_line_probability(data, inliers_threshold, mod)
+        proba = random_probability(data, inliers_threshold, mod)
         nfa_list.append(compute_nfa(in_a, mod.min_sample_size, proba))
     idx = utils.argsort(nfa_list)
 
@@ -84,11 +84,16 @@ def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
             continue
 
         inliers = [in_b for k, (_, in_b) in enumerate(mod_inliers_list)
-                   if idx.index(k) < pick]
+                   if idx.index(k) in out_list]
         inliers = map(lambda x: in_a - in_a.multiply(x).astype(bool), inliers)
+
+        # proba = random_probability(data, inliers_threshold, mod)
+        # print [compute_nfa(in_b, mod.min_sample_size, proba)
+        #        for in_b in inliers]
 
         if all([meaningful(data, mod, in_b, inliers_threshold, epsilon)
                 for in_b in inliers]):
             out_list.append(pick)
 
     return out_list
+    # return idx

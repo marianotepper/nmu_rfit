@@ -42,7 +42,6 @@ class GaussianLocalSampler:
 def model_distance_generator(model_class, elements, sampler):
     samples = sampler.generate(elements, model_class().min_sample_size)
     for s in samples:
-        print s
         ms_set = np.take(elements, s, axis=0)
         model = model_class()
         model.fit(ms_set)

@@ -32,8 +32,6 @@ class Circle(object):
         t = np.arange(0, 2*np.pi + 0.1, 0.1)
         x = self.center[0] + self.radius * np.cos(t)
         y = self.center[1] + self.radius * np.sin(t)
-        plt.hold(True)
-        plt.scatter(self.center[0], self.center[1])
         plt.plot(x, y, **kwargs)
 
 

@@ -53,7 +53,7 @@ class Line(object):
         plt.plot([p1[0], p2[0]], [p1[1], p2[1]], **kwargs)
 
 
-def test():
+def _test():
     x = np.array([[1, 1], [1, 2], [1, 3]])
     l1 = Line(x)
     print l1.distances(x)
@@ -68,4 +68,4 @@ def test():
     plt.show()
 
 if __name__ == '__main__':
-    test()
+    _test()

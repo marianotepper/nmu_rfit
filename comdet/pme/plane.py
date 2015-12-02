@@ -159,7 +159,7 @@ class Plane(object):
         ax.add_collection3d(tri)
 
 
-def test():
+def _test():
     import matplotlib.pyplot as plt
 
     x1 = np.array([[0, 1, 0], [1, .5, 0], [1, .2, 1]])
@@ -188,4 +188,4 @@ def test():
     plt.show()
 
 if __name__ == '__main__':
-    test()
+    _test()

@@ -35,7 +35,7 @@ class Circle(object):
         plt.plot(x, y, **kwargs)
 
 
-def test():
+def _test():
     x = np.array([[-0.08045062, 1.42318932],
                   [ 0.33886852, 1.16171235],
                   [-0.21174648, 1.08196667]])
@@ -55,4 +55,4 @@ def test():
     plt.show()
 
 if __name__ == '__main__':
-    test()
+    _test()

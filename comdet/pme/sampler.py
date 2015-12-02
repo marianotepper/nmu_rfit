@@ -9,7 +9,7 @@ class UniformSampler:
 
     def generate(self, x, min_sample_size):
         n_elements = x.shape[0]
-        for _ in range(self.n_samples):
+        for i in range(self.n_samples):
             while True:
                 sample = np.random.randint(0, n_elements, size=min_sample_size)
                 if np.unique(sample).size == min_sample_size:
@@ -22,11 +22,17 @@ class GaussianLocalSampler:
         self.n_samples = n_samples
         # p(x[i] | x[j]) = exp(-(dist(x[i], x[j])) / sigma)
         self.var = sigma ** 2
+        self.distribution = None
 
     def generate(self, x, min_sample_size):
         n_elements = x.shape[0]
+        self.distribution = np.zeros((n_elements,))
         for _ in range(self.n_samples):
-            j = np.random.randint(0, n_elements)
+            bins = np.cumsum(self.distribution.max() - self.distribution)
+            bins /= bins[-1]
+            rnd = np.random.random()
+            j = np.searchsorted(bins, rnd)
+            # j = np.random.randint(0, n_elements)
             dists = distance.cdist(x, np.atleast_2d(x[j, :]), 'euclidean')
             bins = np.cumsum(np.exp(-(dists ** 2) / self.var))
             bins /= bins[-1]
@@ -36,6 +42,7 @@ class GaussianLocalSampler:
                 sample = np.hstack((sample, [j]))
                 if np.unique(sample).size == min_sample_size:
                     break
+            self.distribution[sample] += 1
             yield sample
 
 

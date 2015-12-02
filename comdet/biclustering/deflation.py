@@ -43,6 +43,10 @@ class L1CompressedDeflator(Deflator):
             self.selection = selection
             self.array_compressed = self.array[self.selection, :]
 
+    @property
+    def n_samples(self):
+        return self._compressor.n_samples
+
     def additive_downdate(self, u, v):
         super(Deflator, self).additive_downdate(u, v)
         self._compressor.additive_downdate(u, v)

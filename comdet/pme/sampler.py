@@ -57,7 +57,7 @@ def model_distance_generator(model_class, elements, sampler):
 
 def inliers_generator(mdg, threshold):
     for model, dist in mdg:
-        yield model, dist < threshold
+        yield model, dist <= threshold
 
 
 # if __name__ == '__main__':

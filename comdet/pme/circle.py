@@ -28,11 +28,19 @@ class Circle(object):
     def distances(self, data):
         return np.abs(np.linalg.norm(data - self.center, axis=1) - self.radius)
 
-    def plot(self, **kwargs):
+    def plot(self, threshold=None, **kwargs):
         t = np.arange(0, 2*np.pi + 0.1, 0.1)
         x = self.center[0] + self.radius * np.cos(t)
         y = self.center[1] + self.radius * np.sin(t)
         plt.plot(x, y, **kwargs)
+
+        if threshold is not None:
+            x = self.center[0] + (self.radius - threshold) * np.cos(t)
+            y = self.center[1] + (self.radius - threshold) * np.sin(t)
+            plt.plot(x, y, **kwargs)
+            x = self.center[0] + (self.radius + threshold) * np.cos(t)
+            y = self.center[1] + (self.radius + threshold) * np.sin(t)
+            plt.plot(x, y, **kwargs)
 
 
 def _test():

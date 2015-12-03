@@ -8,8 +8,6 @@ import utils
 import line
 import circle
 
-import matplotlib.pyplot as plt
-
 
 def meaningful(data, model, inliers, inliers_threshold, epsilon):
     return compute_nfa(data, model, inliers, inliers_threshold) < epsilon
@@ -90,7 +88,6 @@ class _DummyArray:
 
 def multiscale_meaningful(data, model, epsilon, min_count=None, max_count=None,
                           max_thresh=None):
-    dist_arr = model.distances(data)
     dist = model.distances(data).tolist()
     heapq.heapify(dist)
     nnz = 0
@@ -105,144 +102,36 @@ def multiscale_meaningful(data, model, epsilon, min_count=None, max_count=None,
             break
         inliers = _DummyArray((data.shape[0],), nnz)
         if meaningful(data, model, inliers, s, epsilon):
-            print 'meaningful', s, nnz, max_count
-            if nnz == 31 and max_count == 36:
-                print '----',
-                mask = dist_arr <= s
-                print mask.sum(),
-                print '----'
-
-                x_lim = (data[:, 0].min() - 0.1, data[:, 0].max() + 0.1)
-                y_lim = (data[:, 1].min() - 0.1, data[:, 1].max() + 0.1)
-                delta_x = x_lim[1] - x_lim[0]
-                delta_y = y_lim[1] - y_lim[0]
-                min_delta = min([delta_x, delta_y])
-                delta_x /= min_delta
-                delta_y /= min_delta
-                fig_size = (4 * delta_x, 4 * delta_y)
-
-                plt.figure(figsize=fig_size)
-                plt.xlim(x_lim)
-                plt.ylim(y_lim)
-                plt.hold(True)
-                plt.scatter(data[:, 0], data[:, 1], c='w', marker='o', s=10)
-                plt.scatter(data[mask, 0], data[mask, 1], c='r', marker='o', s=10)
-                model.plot(threshold=s)
             return True
     return False
-
-
-def optimal_nfa(data, model, max_thresh, considered=None):
-    if considered is None:
-        dist = model.distances(data)
-    else:
-        dist = model.distances(data[sp.find(considered)[0], :])
-    min_nfa = np.inf
-    sorted_dist = np.sort(dist)
-    for k, d in enumerate(sorted_dist):
-        if d >= max_thresh:
-            break
-        inliers = _DummyArray((data.shape[0],), k+1)
-        nfa = compute_nfa(data, model, inliers, d)
-        if nfa < min_nfa:
-            min_nfa = nfa
-            min_d = (compute_nfa(data, model, inliers, d), k+1, d)
-    print min_d
-    return min_nfa
 
 
 def best_nfa(data, model, inliers):
     included = sp.find(inliers)[0]
     if included.shape[0] == 0:
         return np.inf
-    data_included = data[included, :]
-    c = circle.Circle(data_included)
-    max_dist = c.distances(data_included).max()
-    # max_dist = model.distances(data[included, :]).max()
+    max_dist = model.distances(data[included, :]).max()
     nfa = compute_nfa(data, model, inliers, max_dist)
-    print included.shape, max_dist, nfa, inliers.shape
-
-    if included.shape[0] == 86 or included.shape[0] == 76 or included.shape[0] == 71 or included.shape[0] == 81:
-        x_lim = (data[:, 0].min() - 0.1, data[:, 0].max() + 0.1)
-        y_lim = (data[:, 1].min() - 0.1, data[:, 1].max() + 0.1)
-        delta_x = x_lim[1] - x_lim[0]
-        delta_y = y_lim[1] - y_lim[0]
-        min_delta = min([delta_x, delta_y])
-        delta_x /= min_delta
-        delta_y /= min_delta
-        fig_size = (4 * delta_x, 4 * delta_y)
-
-        plt.figure(figsize=fig_size)
-        plt.xlim(x_lim)
-        plt.ylim(y_lim)
-        plt.hold(True)
-        plt.scatter(data[:, 0], data[:, 1], c='w', marker='o', s=10)
-        plt.scatter(data_included[:, 0], data_included[:, 1], c='r', marker='o', s=10)
-        model.plot(threshold=max_dist)
     return nfa
 
 
 def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
-    def inner_meaningful((model, inliers)):
-        return meaningful(data, model, inliers, inliers_threshold, epsilon)
-
-    filtered = list(filter_meaningful(inner_meaningful, mod_inliers_list))
-
-    nfa_list = []
-    # threshold_list = []
-    for i, (mod, in_a) in enumerate(filtered):
-        print i
-        in_list = [in_b for j, (_, in_b) in enumerate(filtered) if i != j]
-        in_list = map(lambda x: in_a.multiply(x).astype(bool), in_list)
-        inliers = in_a - reduce(lambda x, y: (x + y).astype(bool), in_list)
-
-        # nfa = compute_nfa(data, mod, in_a, inliers_threshold)
-        # nfa = optimal_nfa(data, mod, inliers_threshold, considered=inliers)
-        # nfa = best_nfa(data, mod, inliers)
-        nfa = best_nfa(data, mod, in_a)
-        print inliers.nnz, in_a.nnz, nfa
-        # if nfa < epsilon:
-        nfa_list.append(nfa)
-        # threshold_list.append(new_thresh)
+    nfa_list = [best_nfa(data, mod, in_a)
+                for mod, in_a in mod_inliers_list
+                if compute_nfa(data, mod, in_a, inliers_threshold) < epsilon]
     idx = utils.argsort(nfa_list)
 
-    print [(pick, nfa_list[pick]) for pick in idx]
-
     keep_list = list(idx)
-    out_list = []
     for i, pick in enumerate(idx):
         mod, in_a = mod_inliers_list[pick]
         if i == 0:
-            out_list.append(pick)
             continue
-
-        # in_list = [mod_inliers_list[k][1] for k in out_list]
-        # in_list = map(lambda x: in_a - in_a.multiply(x).astype(bool), in_list)
-
-        # new_thresh = threshold_list[pick]
 
         in_list = [mod_inliers_list[k][1] for k in keep_list if k != pick]
         in_list = map(lambda x: in_a.multiply(x).astype(bool), in_list)
         inliers = in_a - reduce(lambda x, y: (x + y).astype(bool), in_list)
-        # print inliers.nnz
 
-        # proba = random_probability(data, new_thresh, mod)
-        # print pick, in_a.nnz, [in_b.nnz for in_b in in_list],\
-        #     [compute_nfa(in_b, mod.min_sample_size, proba)
-        #              for in_b in in_list],\
-        #     [multiscale_meaningful(data, mod, epsilon, max_count=in_b.nnz) for in_b in in_list],\
-        print i, in_a.nnz
-
-        # if all([compute_nfa(data, mod, in_b, inliers_threshold) < epsilon for in_b in in_list]):
-        # if all([best_nfa(data, mod, in_b) < epsilon for in_b in in_list]):
-        # if all([multiscale_meaningful(data, mod, epsilon, min_count=in_b.nnz*0.9, max_count=in_b.nnz) for in_b in in_list]):
-        # if best_nfa(data, mod, inliers) < epsilon:
-        if multiscale_meaningful(data, mod, epsilon, max_count=inliers.nnz):
-            print pick, 'meaningful', best_nfa(data, mod, in_b)
-            # if pick != 8:
-            out_list.append(pick)
-        else:
+        if not multiscale_meaningful(data, mod, epsilon, max_count=inliers.nnz):
             keep_list.remove(pick)
-            print pick, 'discard', best_nfa(data, mod, in_b)
 
-    return out_list
+    return keep_list

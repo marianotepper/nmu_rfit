@@ -25,7 +25,7 @@ def add_col(preference_matrix, in_column, value=1):
     return preference_matrix
 
 
-def plot_preference_matrix(array, bic_list=[], palette=[]):
+def plot_preference_matrix(array, bic_list=[], palette='Set1'):
     white = mpl_colors.colorConverter.to_rgba('w', alpha=1)
     black = mpl_colors.colorConverter.to_rgba('k', alpha=1)
 
@@ -36,8 +36,8 @@ def plot_preference_matrix(array, bic_list=[], palette=[]):
     except TypeError:
         plt.imshow(array.toarray(), interpolation='none', cmap=cmap)
 
-    if bic_list and not palette:
-        palette = sns.color_palette('Set1', len(bic_list))
+    if bic_list:
+        palette = sns.color_palette(palette, len(bic_list))
 
     for (u, v), c in zip(bic_list, palette):
         uv = u.dot(v).astype(int)

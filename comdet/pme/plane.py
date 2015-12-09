@@ -11,10 +11,6 @@ class Plane(object):
         if data is not None:
             self.fit(data)
 
-    @classmethod
-    def min_sample_size(cls):
-        return 3
-
     @property
     def min_sample_size(self):
         return 3

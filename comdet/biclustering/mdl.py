@@ -51,7 +51,5 @@ class OnlineMDL:
     def add_rank1_approximation(self, remainder, u, v):
         self.code_u += universal_bernoulli(u)
         self.code_v += universal_bernoulli(v)
-        n = reduce(lambda x, y: np.unique(x).size * np.unique(y).size, sp.find(remainder)[:2])
-        k = utils.count_nonzero(remainder)
-        code_diff = universal_bernoulli(n, k)
+        code_diff = universal_bernoulli(remainder)
         return self.code_u + self.code_v + code_diff

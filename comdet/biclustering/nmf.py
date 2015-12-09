@@ -84,35 +84,6 @@ def nmf_robust_rank1_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2):
     return u
 
 
-def nmf_robust_rank1_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2):
-
-    v = v_init
-    e = utils.sparse(array.shape)
-    gamma_v = utils.sparse(v.shape)
-    gamma_e = utils.sparse(e.shape)
-
-    error = []
-    for _ in range(int(max_iter)):
-        temp = array - e
-        num_y = (lambda_e * u.T.dot(temp) + lambda_v * v - gamma_v +
-                 u.T.dot(gamma_e))
-        denom_y = u.T.dot(u).toarray()[0, 0] + lambda_v
-        y = num_y / denom_y
-
-        v = projection_positive(y + gamma_v / lambda_v)
-        gamma_v += lambda_v * (y - v)
-
-        uy = u.dot(y)
-        temp = array - uy
-        e = shrinkage(temp + gamma_e / lambda_e, 1. / lambda_e)
-        gamma_e += lambda_e * (temp - e)
-
-        error.append(utils.relative_error(array, uy + e))
-        if error[-1] < 1e-4:
-            break
-    return v
-
-
 def projection_positive(x):
     (i, j, data) = sp.find(x)
     mask = data > 0

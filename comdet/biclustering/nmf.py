@@ -3,7 +3,7 @@ import scipy.sparse.linalg as spla
 import scipy.sparse as sp
 import comdet.biclustering.utils as utils
 import comdet.biclustering.mdl as mdl
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
@@ -29,12 +29,12 @@ def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
     error = []
     for _ in range(int(max_iter)):
         temp = array - e
-        num_x = (lambda_e * temp.dot(y.T) + lambda_u * u - gamma_u +\
+        num_x = (lambda_e * temp.dot(y.T) + lambda_u * u - gamma_u +
                  gamma_e.dot(y.T))
         denom_x = y.dot(y.T).toarray()[0, 0] + lambda_u
         x = num_x / denom_x
 
-        num_y = (lambda_e * x.T.dot(temp) + lambda_v * v - gamma_v +\
+        num_y = (lambda_e * x.T.dot(temp) + lambda_v * v - gamma_v +
                  x.T.dot(gamma_e))
         denom_y = x.T.dot(x).toarray()[0, 0] + lambda_v
         y = num_y / denom_y
@@ -65,7 +65,7 @@ def nmf_robust_rank1_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2):
     error = []
     for _ in range(int(max_iter)):
         temp = array - e
-        num_x = (lambda_e * temp.dot(v.T) + lambda_u * u - gamma_u +\
+        num_x = (lambda_e * temp.dot(v.T) + lambda_u * u - gamma_u +
                  gamma_e.dot(v.T))
         denom_x = v.dot(v.T).toarray()[0, 0] + lambda_u
         x = num_x / denom_x
@@ -94,7 +94,7 @@ def nmf_robust_rank1_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2):
     error = []
     for _ in range(int(max_iter)):
         temp = array - e
-        num_y = (lambda_e * u.T.dot(temp) + lambda_v * v - gamma_v +\
+        num_y = (lambda_e * u.T.dot(temp) + lambda_v * v - gamma_v +
                  u.T.dot(gamma_e))
         denom_y = u.T.dot(u).toarray()[0, 0] + lambda_v
         y = num_y / denom_y
@@ -124,7 +124,7 @@ def projection_positive(x):
 
 def shrinkage(t, alpha):
     if sp.issparse(t):
-        (i, j, x) = sp.find(t)
+        i, j, x = sp.find(t)
         mask = np.abs(x) > alpha
         i = i[mask]
         j = j[mask]
@@ -137,9 +137,10 @@ def shrinkage(t, alpha):
 
 
 def binarize(x):
-    x.data[:] = 1
-    x.astype(bool)
-    return x
+    i, j, v = sp.find(x)
+    mask = v > (1e-4 * v.max())
+    return utils.sparse((v[mask], (i[mask], j[mask])), shape=x.shape,
+                        dtype=bool)
 
 
 def bicluster(deflator, n=None, share_points=True):
@@ -158,8 +159,9 @@ def bicluster(deflator, n=None, share_points=True):
             active_rows = np.unique(sp.find(deflator.array_compressed)[0])
             if deflator.n_samples > active_rows.shape[0]:
                 raise ValueError('Fewer active rows than compression rate')
-            # print k, active_rows.shape, np.sort(deflator.selection[active_rows]), deflator.n_samples
+
             u, v = nmf_robust_rank1(deflator.array_compressed)
+            v = binarize(v)
 
             idx_v = sp.find(v)[1]
             array_cropped = deflator.array[:, idx_v]
@@ -170,14 +172,12 @@ def bicluster(deflator, n=None, share_points=True):
                                             np.zeros_like(idx_u))),
                                   shape=(deflator.array.shape[0], 1))
             u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped)
-            # print sp.find(u)[0], '\n---', idx_v, idx_v.shape
         except(AttributeError, ValueError):
-            # print k, np.unique(sp.find(deflator.array_compressed)[0]).shape, deflator.n_samples
             u, v = nmf_robust_rank1(deflator.array)
+            v = binarize(v)
             idx_v = sp.find(v)[1]
 
         u = binarize(u)
-        v = binarize(v)
         bic_list.append((u, v))
 
         deflator.remove_columns(idx_v)

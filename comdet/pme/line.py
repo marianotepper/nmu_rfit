@@ -9,6 +9,10 @@ class Line(object):
         if data is not None:
             self.fit(data)
 
+    @classmethod
+    def min_sample_size(cls):
+        return 2
+
     @property
     def min_sample_size(self):
         return 2

@@ -11,6 +11,10 @@ class Circle(object):
         if data is not None:
             self.fit(data)
 
+    @classmethod
+    def min_sample_size(cls):
+        return 3
+
     @property
     def min_sample_size(self):
         return 3
@@ -28,7 +32,7 @@ class Circle(object):
     def distances(self, data):
         return np.abs(np.linalg.norm(data - self.center, axis=1) - self.radius)
 
-    def plot(self, threshold=None, **kwargs):
+    def plot(self, threshold=None, intervals=None, **kwargs):
         t = np.arange(0, 2*np.pi + 0.1, 0.1)
         x = self.center[0] + self.radius * np.cos(t)
         y = self.center[1] + self.radius * np.sin(t)
@@ -41,6 +45,18 @@ class Circle(object):
             x = self.center[0] + (self.radius + threshold) * np.cos(t)
             y = self.center[1] + (self.radius + threshold) * np.sin(t)
             plt.plot(x, y, **kwargs)
+            if intervals is not None:
+                ang = np.linspace(-np.pi, np.pi, intervals+1)[0:3]
+                x = np.zeros((ang.shape[0], 2)) + self.center[0]
+                x[:, 0] += (self.radius - threshold) * np.cos(ang)
+                x[:, 1] += (self.radius + threshold) * np.cos(ang)
+                y = np.zeros((ang.shape[0], 2)) + self.center[1]
+                y[:, 0] += (self.radius - threshold) * np.sin(ang)
+                y[:, 1] += (self.radius + threshold) * np.sin(ang)
+                plt.plot(x.T, y.T, **kwargs)
+
+
+
 
 
 def _test():

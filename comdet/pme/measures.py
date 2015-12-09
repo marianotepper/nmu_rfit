@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 # coding: utf-8
 import numpy as np
 import scipy.sparse as sp
@@ -141,10 +140,10 @@ def gnmi(groups1, groups2):
 
 def intersect_size(c1, c2):
     if sp.issparse(c1):
-        mul = c1.multiply(c2)
-    else:
-        mul = c1 * c2
-    return mul.astype(float).sum()
+        c1 = np.squeeze(c1.toarray())
+    if sp.issparse(c2):
+        c2 = np.squeeze(c2.toarray())
+    return (c1 * c2).astype(float).sum()
 
 
 def size(c):
@@ -160,7 +159,7 @@ def mean_precision_recall(groups1, groups2):
     :return: recall
     """
     conf = confusion_matrix(groups1, groups2)
-    idx = hungarian.linear_assignment(1 / conf)
+    idx = hungarian.linear_assignment(1. / conf)
     conf = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
     precision = conf.max(axis=0).sum() / sum([size(c) for c in groups2])
     recall = conf.max(axis=1).sum() / sum([size(c) for c in groups1])

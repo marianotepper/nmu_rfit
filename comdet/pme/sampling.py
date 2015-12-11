@@ -60,6 +60,10 @@ def inliers_generator(mdg, threshold):
         yield model, dist <= threshold
 
 
+def ransac_generator(model_class, elements, sampler, inliers_threshold):
+    mdg = model_distance_generator(model_class, elements, sampler)
+    return inliers_generator(mdg, inliers_threshold)
+
 # if __name__ == '__main__':
 #     x = np.random.rand(100, 2)
 #     sampler = GaussianLocalSampler(0.1)

@@ -3,7 +3,7 @@ import scipy.sparse.linalg as spla
 import scipy.sparse as sp
 import comdet.biclustering.utils as utils
 import comdet.biclustering.mdl as mdl
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
@@ -149,6 +149,7 @@ def bicluster(deflator, n=None, share_points=True):
             idx_v = sp.find(v)[1]
 
         u = binarize(u)
+        idx_u = sp.find(u)[0]
         bic_list.append((u, v))
 
         deflator.remove_columns(idx_v)
@@ -159,6 +160,9 @@ def bicluster(deflator, n=None, share_points=True):
         if n is not None:
             cl = online_mdl.add_rank1_approximation(deflator.array, u, v)
             total_codelength.append(cl)
+
+        if idx_u.size <= 1 and idx_v.size <= 1:
+            break
 
     if n is not None:
         total_codelength = np.array(total_codelength)

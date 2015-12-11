@@ -1,28 +1,24 @@
 import numpy as np
 import scipy.sparse as sp
 import scipy.special as special
-import itertools
 import multipledispatch
 import heapq
+import operator
 import utils
 import line
 import circle
 
 
-def meaningful(data, model, inliers, inliers_threshold, epsilon):
-    return compute_nfa(data, model, inliers, inliers_threshold) < epsilon
+def meaningful(value, upper_bound):
+    return value < upper_bound
 
 
-def filter_meaningful(meaningful_fun, mod_inliers_iter):
-    return itertools.ifilter(meaningful_fun, mod_inliers_iter)
-
-
-def compute_nfa(data, model, inliers, inliers_threshold):
+def false_alarms_number(data, model, inliers, inliers_threshold):
     probability = random_probability(data, inliers_threshold, model)
-    return inner_compute_nfa(inliers, model.min_sample_size, probability)
+    return inner_number_false_positives(inliers, model.min_sample_size, probability)
 
 
-def inner_compute_nfa(inliers, n_samples, instance_proba):
+def inner_number_false_positives(inliers, n_samples, instance_proba):
     n = inliers.shape[0]
     k = inliers.sum() - n_samples
     if k <= 0:
@@ -45,9 +41,10 @@ def random_probability(data, inliers_threshold, model):
 def random_probability(data, inliers_threshold, model):
     upper = np.maximum(np.max(data, axis=0), model.center + model.radius)
     lower = np.minimum(np.min(data, axis=0), model.center - model.radius)
+    # area = np.prod(upper - lower)
     area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
-    ring_area = np.pi * ((model.radius + inliers_threshold) ** 2 -
-                         (model.radius - inliers_threshold) ** 2)
+    # (a + b)**2 - (a - b)**2 == 4ab
+    ring_area = np.pi * 4 * model.radius * inliers_threshold
     return min(ring_area / area, 1)
 
 
@@ -86,6 +83,21 @@ class _DummyArray:
         return self.nnz
 
 
+def optimal(data, model, inliers):
+    if sp.issparse(inliers):
+        inliers = np.squeeze(inliers.toarray())
+    dist = model.distances(data[inliers, :]).tolist()
+    dist.sort()
+    min_nfa = np.inf
+    for k, s in enumerate(dist):
+        if s < np.finfo(np.float32).resolution:
+            continue
+        dummy_inliers = _DummyArray((data.shape[0],), k+1)
+        nfa = false_alarms_number(data, model, dummy_inliers, s)
+        min_nfa = np.minimum(nfa, min_nfa)
+    return min_nfa + np.log10(k+1)
+
+
 def multiscale_meaningful(data, model, epsilon, min_count=None, max_count=None,
                           max_thresh=None):
     dist = model.distances(data).tolist()
@@ -101,37 +113,78 @@ def multiscale_meaningful(data, model, epsilon, min_count=None, max_count=None,
         if max_thresh is not None and s > max_thresh:
             break
         inliers = _DummyArray((data.shape[0],), nnz)
-        if meaningful(data, model, inliers, s, epsilon):
+        nfa = false_alarms_number(data, model, inliers, s)
+        if meaningful(nfa, epsilon):
             return True
     return False
 
 
-def best_nfa(data, model, inliers):
-    included = sp.find(inliers)[0]
-    if included.shape[0] == 0:
-        return np.inf
-    max_dist = model.distances(data[included, :]).max()
-    nfa = compute_nfa(data, model, inliers, max_dist)
-    return nfa
+def uniformity(x, model, inliers):
+    bins = np.linspace(-np.pi, np.pi, inliers.sum()+1)[1:]
+    if sp.issparse(inliers):
+        inliers = np.squeeze(inliers.toarray())
+    vecs = x[inliers, :] - model.center
+    angles = np.arctan2(vecs[:, 1], vecs[:, 0])
+    idx = np.searchsorted(bins, angles)
+    bc = np.bincount(idx)
+    n = inliers.sum()
+    k = (bc <= 0).sum()
+    if k == 0:
+        proba = np.inf
+    else:
+        proba = log_betainc(n - k, k + 1, 1 - np.exp(-1))
+    return np.log(n) + proba < 0
 
 
 def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
-    nfa_list = [best_nfa(data, mod, in_a)
-                for mod, in_a in mod_inliers_list
-                if compute_nfa(data, mod, in_a, inliers_threshold) < epsilon]
-    idx = utils.argsort(nfa_list)
+    # return range(len(mod_inliers_list))
+    nfa_list = [(i, optimal(data, mod, in_a))
+                for i, (mod, in_a) in enumerate(mod_inliers_list)]
+    nfa_list = filter(lambda e: meaningful(e[1], epsilon), nfa_list)
+    nfa_list = sorted(nfa_list, key=operator.itemgetter(1))
+    print nfa_list
+    idx = zip(*nfa_list)[0]
+
+    # return idx
 
     keep_list = list(idx)
-    for i, pick in enumerate(idx):
+    print keep_list
+    for pick in idx:
         mod, in_a = mod_inliers_list[pick]
-        if i == 0:
+        in_list = [mod_inliers_list[k][1] for k in keep_list if k < pick]
+        if not in_list:
             continue
-
-        in_list = [mod_inliers_list[k][1] for k in keep_list if k != pick]
         in_list = map(lambda x: in_a.multiply(x).astype(bool), in_list)
         inliers = in_a - reduce(lambda x, y: (x + y).astype(bool), in_list)
-
         if not multiscale_meaningful(data, mod, epsilon, max_count=inliers.nnz):
             keep_list.remove(pick)
 
+    print keep_list
     return keep_list
+
+    # keep_list = []
+    # while idx:
+    #     max_nfa = -np.inf
+    #     max_idx = None
+    #     for i, pick in enumerate(idx):
+    #         mod, in_a = mod_inliers_list[pick]
+    #
+    #         in_list = [mod_inliers_list[k][1] for k in idx if k != pick]
+    #         if not in_list:
+    #             break
+    #         in_list = map(lambda x: in_a.multiply(x).astype(bool), in_list)
+    #         inliers = in_a - reduce(lambda x, y: (x + y).astype(bool), in_list)
+    #
+    #         nfa = best_nfa(data, mod, inliers)
+    #         if nfa > max_nfa:
+    #             max_nfa = nfa
+    #             max_idx = pick
+    #
+    #     print max_nfa, max_idx
+    #     if max_nfa > epsilon:
+    #         idx.remove(max_idx)
+    #     else:
+    #         break
+    #
+    # print idx
+    # return idx

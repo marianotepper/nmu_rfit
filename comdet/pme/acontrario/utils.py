@@ -1,51 +1,43 @@
 import numpy as np
 import scipy.sparse as sp
 import scipy.special as special
-import multipledispatch
+import abc
 import heapq
 import operator
-import utils
-import line
-import circle
 
 
-def meaningful(value, upper_bound):
-    return value < upper_bound
+def meaningful(value, epsilon):
+    return value < epsilon
 
 
-def false_alarms_number(data, model, inliers, inliers_threshold):
-    probability = random_probability(data, inliers_threshold, model)
-    return inner_number_false_positives(inliers, model.min_sample_size, probability)
+class BinomialNFA(object):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, data, epsilon, inliers_threshold):
+        self.data = data
+        self.epsilon = epsilon
+        self.inliers_threshold = inliers_threshold
+
+    def nfa(self, model, n_inliers, inliers_threshold=None):
+        n = self.data.shape[0]
+        p = self._random_probability(model, inliers_threshold=inliers_threshold)
+        pfa = log_binomial(n, n_inliers - model.min_sample_size, p)
+        n_tests = log_nchoosek(n, model.min_sample_size)
+        return (pfa + n_tests) / np.log(10)
+
+    def meaningful(self, model, n_inliers):
+        return self.nfa(model, n_inliers) < self.epsilon
+
+    @abc.abstractmethod
+    def _random_probability(self, model, inliers_threshold=None):
+        pass
 
 
-def inner_number_false_positives(inliers, n_samples, instance_proba):
-    n = inliers.shape[0]
-    k = inliers.sum() - n_samples
+def log_binomial(n, k, instance_proba):
     if k <= 0:
-        pfa = np.inf
+        return np.inf
     else:
-        pfa = log_betainc(k, n - k + 1, instance_proba)
-    n_tests = log_nchoosek(n, n_samples)
-    return (pfa + n_tests) / np.log(10)
-
-
-@multipledispatch.dispatch(np.ndarray, float, line.Line)
-def random_probability(data, inliers_threshold, model):
-    vec = np.max(data, axis=0) - np.min(data, axis=0)
-    area = np.prod(vec)
-    length = np.linalg.norm(vec)
-    return length * 2 * inliers_threshold / area
-
-
-@multipledispatch.dispatch(np.ndarray, float, circle.Circle)
-def random_probability(data, inliers_threshold, model):
-    upper = np.maximum(np.max(data, axis=0), model.center + model.radius)
-    lower = np.minimum(np.min(data, axis=0), model.center - model.radius)
-    # area = np.prod(upper - lower)
-    area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
-    # (a + b)**2 - (a - b)**2 == 4ab
-    ring_area = np.pi * 4 * model.radius * inliers_threshold
-    return min(ring_area / area, 1)
+        return log_betainc(k, n - k + 1, instance_proba)
 
 
 def log_nchoosek(n, k):
@@ -74,33 +66,23 @@ def log_betainc(a, b, x):
         return np.log(1.0 - bt * special.betainc(b, a, 1.0 - x) / b)
 
 
-class _DummyArray:
-    def __init__(self, shape, nnz):
-        self.shape = shape
-        self.nnz = nnz
-
-    def sum(self):
-        return self.nnz
-
-
-def optimal(data, model, inliers):
+def optimal_nfa(ac_tester, model, inliers):
     if sp.issparse(inliers):
         inliers = np.squeeze(inliers.toarray())
-    dist = model.distances(data[inliers, :]).tolist()
+    dist = model.distances(ac_tester.data[inliers, :]).tolist()
     dist.sort()
     min_nfa = np.inf
     for k, s in enumerate(dist):
         if s < np.finfo(np.float32).resolution:
             continue
-        dummy_inliers = _DummyArray((data.shape[0],), k+1)
-        nfa = false_alarms_number(data, model, dummy_inliers, s)
+        nfa = ac_tester.nfa(model, k+1, inliers_threshold=s)
         min_nfa = np.minimum(nfa, min_nfa)
     return min_nfa + np.log10(k+1)
 
 
-def multiscale_meaningful(data, model, epsilon, min_count=None, max_count=None,
+def multiscale_meaningful(ac_tester, model, min_count=None, max_count=None,
                           max_thresh=None):
-    dist = model.distances(data).tolist()
+    dist = model.distances(ac_tester.data).tolist()
     heapq.heapify(dist)
     nnz = 0
     while dist:
@@ -112,35 +94,16 @@ def multiscale_meaningful(data, model, epsilon, min_count=None, max_count=None,
             break
         if max_thresh is not None and s > max_thresh:
             break
-        inliers = _DummyArray((data.shape[0],), nnz)
-        nfa = false_alarms_number(data, model, inliers, s)
-        if meaningful(nfa, epsilon):
+        if ac_tester.meaningful(model, nnz, inliers_threshold=s):
             return True
     return False
 
 
-def uniformity(x, model, inliers):
-    bins = np.linspace(-np.pi, np.pi, inliers.sum()+1)[1:]
-    if sp.issparse(inliers):
-        inliers = np.squeeze(inliers.toarray())
-    vecs = x[inliers, :] - model.center
-    angles = np.arctan2(vecs[:, 1], vecs[:, 0])
-    idx = np.searchsorted(bins, angles)
-    bc = np.bincount(idx)
-    n = inliers.sum()
-    k = (bc <= 0).sum()
-    if k == 0:
-        proba = np.inf
-    else:
-        proba = log_betainc(n - k, k + 1, 1 - np.exp(-1))
-    return np.log(n) + proba < 0
-
-
-def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
+def exclusion_principle(ac_tester, mod_inliers_list):
     # return range(len(mod_inliers_list))
-    nfa_list = [(i, optimal(data, mod, in_a))
+    nfa_list = [(i, optimal_nfa(ac_tester, mod, in_a))
                 for i, (mod, in_a) in enumerate(mod_inliers_list)]
-    nfa_list = filter(lambda e: meaningful(e[1], epsilon), nfa_list)
+    nfa_list = filter(lambda e: meaningful(e[1], ac_tester.epsilon), nfa_list)
     nfa_list = sorted(nfa_list, key=operator.itemgetter(1))
     print nfa_list
     idx = zip(*nfa_list)[0]
@@ -156,7 +119,7 @@ def exclusion_principle(data, mod_inliers_list, inliers_threshold, epsilon):
             continue
         in_list = map(lambda x: in_a.multiply(x).astype(bool), in_list)
         inliers = in_a - reduce(lambda x, y: (x + y).astype(bool), in_list)
-        if not multiscale_meaningful(data, mod, epsilon, max_count=inliers.nnz):
+        if not multiscale_meaningful(mod, max_count=inliers.nnz):
             keep_list.remove(pick)
 
     print keep_list

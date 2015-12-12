@@ -33,7 +33,8 @@ class BoxedNFA(object):
         mask_out = np.logical_not(mask_in)
 
         step = inliers_threshold * 2
-        bins = np.arange(s[mask_in].min() - inliers_threshold, s[mask_in].max() + 2*inliers_threshold, step)
+        bins = np.arange(s[mask_in].min() - inliers_threshold,
+                         s[mask_in].max() + step, step)
 
         # plt.figure()
         # plt.axis('equal')
@@ -66,9 +67,8 @@ class BoxedNFA(object):
         p = line_area / region_area
         pfa = utils.log_binomial(region_mask.sum(), mask_in.sum(), p)
         n_tests = utils.log_nchoosek(self.data.shape[0], model.min_sample_size)
+        # TODO: think why the correction by bins.size - 1 is needed
         return (pfa + n_tests) / np.log(10) + np.log10(bins.size - 1)
 
     def meaningful(self, model, n_inliers):
-        if self.nfa(model, n_inliers) < self.epsilon:
-            print self.nfa(model, n_inliers)
         return self.nfa(model, n_inliers) < self.epsilon

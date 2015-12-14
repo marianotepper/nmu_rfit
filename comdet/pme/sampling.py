@@ -3,7 +3,7 @@ import numpy as np
 import scipy.spatial.distance as distance
 
 
-class UniformSampler:
+class UniformSampler(object):
     def __init__(self, n_samples):
         self.n_samples = n_samples
 
@@ -17,8 +17,8 @@ class UniformSampler:
             yield sample
 
 
-class GaussianLocalSampler:
-    def __init__(self, n_samples, sigma):
+class GaussianLocalSampler(object):
+    def __init__(self, sigma, n_samples=None):
         self.n_samples = n_samples
         # p(x[i] | x[j]) = exp(-(dist(x[i], x[j])) / sigma)
         self.var = sigma ** 2
@@ -63,6 +63,7 @@ def inliers_generator(mdg, threshold):
 def ransac_generator(model_class, elements, sampler, inliers_threshold):
     mdg = model_distance_generator(model_class, elements, sampler)
     return inliers_generator(mdg, inliers_threshold)
+
 
 # if __name__ == '__main__':
 #     x = np.random.rand(100, 2)

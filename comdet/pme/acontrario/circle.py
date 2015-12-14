@@ -6,54 +6,59 @@ import matplotlib.pyplot as plt
 class GlobalNFA(utils.BinomialNFA):
     def __init__(self, data, epsilon, inliers_threshold):
         super(GlobalNFA, self).__init__(data, epsilon, inliers_threshold)
+        self.area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
 
     def _random_probability(self, model, inliers_threshold=None):
         if inliers_threshold is None:
             inliers_threshold = self.inliers_threshold
-        area = np.prod(np.max(self.data, axis=0) - np.min(self.data, axis=0))
-        _, s = model.project(self.data)
-        length = s.max() - s.min()
-        return length * 2 * inliers_threshold / area
+        # (a + b)**2 - (a - b)**2 == 4ab
+        ring_area = np.pi * 4 * model.radius * inliers_threshold
+        return min(ring_area / self.area, 1)
 
 
 class LocalNFA(object):
-    def __init__(self, data, epsilon, inliers_threshold):
+    def __init__(self, data, epsilon, inliers_threshold, plot=False):
         self.data = data
         self.epsilon = epsilon
         self.inliers_threshold = inliers_threshold
+        self.plot = plot
 
-    def nfa(self, model, n_inliers, data=None, inliers_threshold=None, plot=False):
+    def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
         if data is None:
             data = self.data
         if inliers_threshold is None:
             inliers_threshold = self.inliers_threshold
 
+        if model.radius < inliers_threshold:
+            return np.inf
+
         dist = model.distances(data)
-        proj, s, u, x0 = model.project(data)
-        mask_in = dist <= inliers_threshold
-        mask_out = np.logical_not(mask_in)
+        proj, s = model.project(data)
+        mask_out = dist > inliers_threshold
 
-        step = inliers_threshold * 2
-        bins = np.arange(s.min(), s.max() + step, step)
+        step = 60
+        bins = np.linspace(-np.pi, np.pi, step)
 
-        if plot:
+        if self.plot:
+            mask_in = dist <= inliers_threshold
             plt.figure()
             plt.axis('equal')
             plt.scatter(data[:, 0], data[:, 1], c='w')
             plt.scatter(data[mask_in, 0], data[mask_in, 1], c='r')
             model.plot()
-            x = x0 + np.atleast_2d(bins).T * u
+            x = np.vstack((model.center[0] + model.radius * np.cos(bins),
+                           model.center[1] + model.radius * np.sin(bins))).T
             plt.scatter(x[:, 0], x[:, 1], marker='x')
 
         idx = np.searchsorted(bins, s)
-        dist_selected = np.zeros((bins.size - 1,)) + inliers_threshold
+        dist_selected = np.zeros((bins.size,)) + inliers_threshold
         for k in range(dist_selected.size):
-            sel = np.logical_and(mask_out, idx == (k+1))
+            sel = np.logical_and(mask_out, idx == k)
             if not np.any(sel):
                 dist_selected[k] = np.nan
             else:
                 dist_selected[k] = dist[sel].min()
-                if plot:
+                if self.plot:
                     data_sel = data[sel, :]
                     proj_sel = proj[sel, :]
                     i_m = np.argmin(dist[sel])
@@ -61,7 +66,7 @@ class LocalNFA(object):
                     plt.plot([proj_sel[i_m, 0], data_sel[i_m, 0]],
                              [proj_sel[i_m, 1], data_sel[i_m, 1]], color='k')
 
-        upper_threshold = np.nanmedian(dist_selected)
+        upper_threshold = np.minimum(np.nanmedian(dist_selected), model.radius)
         region_mask = dist <= upper_threshold
 
         p = inliers_threshold / upper_threshold

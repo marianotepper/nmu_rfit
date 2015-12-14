@@ -31,8 +31,8 @@ class Circle(object):
     def project(self, data):
         vecs = data - self.center
         angles = np.arctan2(vecs[:, 1], vecs[:, 0])
-        proj = np.hstack((np.cos(angles) * self.radius,
-                          np.sin(angles) * self.radius))
+        proj = np.vstack((self.center[0] + self.radius * np.cos(angles),
+                          self.center[1] + self.radius * np.sin(angles))).T
         return proj, angles
 
     def plot(self, **kwargs):

@@ -22,8 +22,7 @@ class LocalNFA(object):
         self.epsilon = epsilon
         self.inliers_threshold = inliers_threshold
 
-    def nfa(self, model, n_inliers, data=None, inliers_threshold=None,
-            plot=False):
+    def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
         if data is None:
             data = self.data
         if inliers_threshold is None:

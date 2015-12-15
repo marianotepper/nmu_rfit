@@ -32,15 +32,20 @@ class Line(object):
         return np.abs(np.dot(data, self.eq)) / np.linalg.norm(self.eq[:2])
 
     def project(self, data):
+        u, x0 = self.point_and_basis()
+        s = np.dot(data - x0, u)
+        proj = x0 + np.atleast_2d(s).T * u
+        return proj, s
+
+    def point_and_basis(self):
         u = np.array([self.eq[1], -self.eq[0]])
         if abs(self.eq[1]) > abs(self.eq[0]):
             x0 = np.array([0, -self.eq[2] / self.eq[1]])
         else:
             x0 = np.array([-self.eq[2] / self.eq[0], 0])
         u /= np.linalg.norm(u)
-        s = np.dot(data - x0, u)
-        proj = x0 + np.atleast_2d(s).T * u
-        return proj, s, u, x0
+        return u, x0
+
 
     def plot(self, limits=None, **kwargs):
         if limits is None:

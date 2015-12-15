@@ -1,7 +1,6 @@
 import numpy as np
 import mpl_toolkits.mplot3d as plt3d
 import matplotlib.colors as mpl_colors
-import utils as utils
 
 
 class Plane(object):
@@ -26,6 +25,27 @@ class Plane(object):
             data = np.vstack((data, np.zeros((1, 4))))
         _, _, v = np.linalg.svd(data, full_matrices=False)
         self.eq = v[3, :]
+
+    def project(self, data):
+        basis, x0 = self.point_and_basis()
+        s = (data - x0).dot(basis.T)
+        proj = x0 + s.dot(basis)
+        return proj, s
+
+    def point_and_basis(self):
+        basis = self.basis()
+        i_max = np.argmax(np.abs(self.eq[:2]))
+        x0 = np.zeros((3,))
+        x0[i_max] -= self.eq[3] / self.eq[i_max]
+        return basis, x0
+
+    def basis(self):
+        n = self.eq[:3] / np.linalg.norm(self.eq[:3])
+        basis1 = np.array([-n[1], n[0], 0])
+        basis1 /= np.linalg.norm(basis1)
+        basis2 = np.cross(n, basis1)
+        basis2 /= np.linalg.norm(basis2)
+        return np.vstack((basis1, basis2))
 
     def distances(self, data):
         if data.shape[1] == 3:
@@ -76,12 +96,7 @@ class Plane(object):
         return p1, p2
 
     def _sort_vertices(self, points):
-        n = self.eq[:3] / np.linalg.norm(self.eq[:3])
-        basis1 = np.array([-n[1], n[0], 0])
-        basis1 /= np.linalg.norm(basis1)
-        basis2 = np.cross(n, basis1)
-        basis2 /= np.linalg.norm(basis2)
-        basis = np.vstack((basis1, basis2))
+        basis = self.basis()
 
         arr = np.array(points)
         arr = arr.dot(basis.T)
@@ -122,10 +137,11 @@ class Plane(object):
             else:
                 return 1
 
-        idx = utils.argsort(arr.tolist(), cmp_fun=compare)
+        seq = arr.tolist()
+        idx = zip(*sorted(enumerate(seq), cmp=compare))[0]
         return [points[i] for i in idx]
 
-    def plot(self, ax, limits=None, color=None, alpha=0.5, **kwargs):
+    def plot(self, ax, limits=None, color='b', alpha=0.5, **kwargs):
         if limits is None:
             xlim = list(ax.get_xlim())
             ylim = list(ax.get_ylim())
@@ -153,8 +169,7 @@ class Plane(object):
         points = self._sort_vertices(points)
 
         tri = plt3d.art3d.Poly3DCollection([points])
-        if color is not None:
-            tri.set_color(mpl_colors.colorConverter.to_rgba(color, alpha=alpha))
+        tri.set_color(mpl_colors.colorConverter.to_rgba(color, alpha=alpha))
         tri.set_edgecolor(mpl_colors.colorConverter.to_rgba('k', alpha=0))
         ax.add_collection3d(tri)
 

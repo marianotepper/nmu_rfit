@@ -22,14 +22,15 @@ class LocalNFA(object):
         self.epsilon = epsilon
         self.inliers_threshold = inliers_threshold
 
-    def nfa(self, model, n_inliers, data=None, inliers_threshold=None, plot=False):
+    def nfa(self, model, n_inliers, data=None, inliers_threshold=None,
+            plot=False):
         if data is None:
             data = self.data
         if inliers_threshold is None:
             inliers_threshold = self.inliers_threshold
 
         dist = model.distances(data)
-        proj, s, u, x0 = model.project(data)
+        proj, s = model.project(data)
         mask_in = dist <= inliers_threshold
         mask_out = np.logical_not(mask_in)
 
@@ -37,6 +38,7 @@ class LocalNFA(object):
         bins = np.arange(s.min(), s.max() + step, step)
 
         if plot:
+            u, x0 = model.point_and_basis()
             plt.figure()
             plt.axis('equal')
             plt.scatter(data[:, 0], data[:, 1], c='w')

@@ -29,41 +29,8 @@ class LocalNFA(object):
         if inliers_threshold is None:
             inliers_threshold = self.inliers_threshold
 
-        dist = model.distances(data)
-        proj, s = model.project(data)
-        mask_in = dist <= inliers_threshold
-        mask_out = np.logical_not(mask_in)
-
-        bins = np.linspace(s.min(), s.max(), 60)
-
-        if plot:
-            u, x0 = model.point_and_basis()
-            plt.figure()
-            plt.axis('equal')
-            plt.scatter(data[:, 0], data[:, 1], c='w')
-            plt.scatter(data[mask_in, 0], data[mask_in, 1], c='r')
-            model.plot()
-            x = x0 + np.atleast_2d(bins).T * u
-            plt.scatter(x[:, 0], x[:, 1], marker='x')
-
-        idx = np.searchsorted(bins, s)
-        dist_selected = np.zeros((bins.size,)) + inliers_threshold
-        for k in range(dist_selected.size):
-            sel = np.logical_and(mask_out, idx == k)
-            if not np.any(sel):
-                dist_selected[k] = np.nan
-            else:
-                dist_selected[k] = dist[sel].min()
-                if plot:
-                    data_sel = data[sel, :]
-                    proj_sel = proj[sel, :]
-                    i_m = np.argmin(dist[sel])
-                    plt.scatter(data_sel[i_m, 0], data_sel[i_m, 1], marker='+')
-                    plt.plot([proj_sel[i_m, 0], data_sel[i_m, 0]],
-                             [proj_sel[i_m, 1], data_sel[i_m, 1]], color='k')
-
-        upper_threshold = np.nanmedian(dist_selected)
-        region_mask = dist <= upper_threshold
+        upper_threshold = inliers_threshold * 3
+        region_mask = model.distances(data) <= upper_threshold
 
         p = inliers_threshold / upper_threshold
         k = n_inliers - model.min_sample_size

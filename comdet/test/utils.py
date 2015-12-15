@@ -5,13 +5,13 @@ import comdet.pme.acontrario as ac
 import comdet.pme.measures as mes
 
 
-def build_preference_matrix(ransac_gen, ac_tester):
+def build_preference_matrix(n_elements, ransac_gen, ac_tester):
     def meaningful((model, inliers)):
         return ac_tester.meaningful(model, inliers.sum())
 
     filtered = itertools.ifilter(meaningful, ransac_gen)
 
-    pref_matrix = pref.create_preference_matrix(x.shape[0])
+    pref_matrix = pref.create_preference_matrix(n_elements)
     original_models = []
     for i, (model, inliers) in enumerate(filtered):
         pref_matrix = pref.add_col(pref_matrix, inliers)

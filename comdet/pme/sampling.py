@@ -4,7 +4,7 @@ import scipy.spatial.distance as distance
 
 
 class UniformSampler(object):
-    def __init__(self, n_samples):
+    def __init__(self, n_samples=None):
         self.n_samples = n_samples
 
     def generate(self, x, min_sample_size):

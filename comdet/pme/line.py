@@ -39,10 +39,9 @@ class Line(object):
 
     def point_and_basis(self):
         u = np.array([self.eq[1], -self.eq[0]])
-        if abs(self.eq[1]) > abs(self.eq[0]):
-            x0 = np.array([0, -self.eq[2] / self.eq[1]])
-        else:
-            x0 = np.array([-self.eq[2] / self.eq[0], 0])
+        i_max = np.argmax(np.abs(self.eq[:2]))
+        x0 = np.zeros((2,))
+        x0[i_max] -= self.eq[2] / self.eq[i_max]
         u /= np.linalg.norm(u)
         return u, x0
 

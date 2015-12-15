@@ -34,8 +34,7 @@ class LocalNFA(object):
         mask_in = dist <= inliers_threshold
         mask_out = np.logical_not(mask_in)
 
-        step = inliers_threshold * 2
-        bins = np.arange(s.min(), s.max() + step, step)
+        bins = np.linspace(s.min(), s.max(), 60)
 
         if plot:
             u, x0 = model.point_and_basis()
@@ -48,9 +47,9 @@ class LocalNFA(object):
             plt.scatter(x[:, 0], x[:, 1], marker='x')
 
         idx = np.searchsorted(bins, s)
-        dist_selected = np.zeros((bins.size - 1,)) + inliers_threshold
+        dist_selected = np.zeros((bins.size,)) + inliers_threshold
         for k in range(dist_selected.size):
-            sel = np.logical_and(mask_out, idx == (k+1))
+            sel = np.logical_and(mask_out, idx == k)
             if not np.any(sel):
                 dist_selected[k] = np.nan
             else:

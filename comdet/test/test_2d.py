@@ -97,7 +97,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     base_plot(x)
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 
-    pref_matrix, orig_models = test_utils.build_preference_matrix(ransac_gen,
+    pref_matrix, orig_models = test_utils.build_preference_matrix(x.shape[0],
+                                                                  ransac_gen,
                                                                   ac_tester)
     print 'Preference matrix size:', pref_matrix.shape
 

@@ -36,8 +36,7 @@ class LocalNFA(object):
         proj, s = model.project(data)
         mask_out = dist > inliers_threshold
 
-        step = 60
-        bins = np.linspace(-np.pi, np.pi, step)
+        bins = np.linspace(-np.pi, np.pi, 60)
 
         if plot:
             mask_in = dist <= inliers_threshold

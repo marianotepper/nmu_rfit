@@ -54,6 +54,7 @@ class GaussianLocalSampler(object):
                 yield sample
             counter_total += 1
 
+
 def model_distance_generator(model_class, elements, sampler):
     samples = sampler.generate(elements, model_class().min_sample_size)
     for s in samples:

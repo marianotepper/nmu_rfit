@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import scipy.sparse as sp
 import itertools
 import comdet.biclustering.preference as pref
 import comdet.pme.acontrario as ac

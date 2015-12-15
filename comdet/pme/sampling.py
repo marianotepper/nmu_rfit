@@ -27,25 +27,32 @@ class GaussianLocalSampler(object):
     def generate(self, x, min_sample_size):
         n_elements = x.shape[0]
         self.distribution = np.zeros((n_elements,))
-        i = 0
-        while i < self.n_samples:
+        counter_samples = 0
+        counter_total = 0
+        while (counter_samples < self.n_samples and
+                       counter_total < self.n_samples * 100):
             bins = np.cumsum(self.distribution.max() - self.distribution)
             bins /= bins[-1]
             rnd = np.random.random()
             j = np.searchsorted(bins, rnd)
-            # j = np.random.randint(0, n_elements)
             dists = distance.cdist(x, np.atleast_2d(x[j, :]), 'euclidean')
             bins = np.cumsum(np.exp(-(dists ** 2) / self.var))
             bins /= bins[-1]
+
+            success = False
             for _ in range(100):
                 rnd = np.random.random((min_sample_size - 1,))
                 sample = np.searchsorted(bins, rnd)
                 sample = np.hstack((sample, [j]))
                 if np.unique(sample).size == min_sample_size:
-                    self.distribution[sample] += 1
-                    i += 1
-                    yield sample
+                    success = True
+                    break
 
+            if success:
+                self.distribution[sample] += 1
+                counter_samples += 1
+                yield sample
+            counter_total += 1
 
 def model_distance_generator(model_class, elements, sampler):
     samples = sampler.generate(elements, model_class().min_sample_size)

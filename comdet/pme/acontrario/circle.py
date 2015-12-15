@@ -17,13 +17,13 @@ class GlobalNFA(utils.BinomialNFA):
 
 
 class LocalNFA(object):
-    def __init__(self, data, epsilon, inliers_threshold, plot=False):
+    def __init__(self, data, epsilon, inliers_threshold):
         self.data = data
         self.epsilon = epsilon
         self.inliers_threshold = inliers_threshold
-        self.plot = plot
 
-    def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
+    def nfa(self, model, n_inliers, data=None, inliers_threshold=None,
+            plot=False):
         if data is None:
             data = self.data
         if inliers_threshold is None:
@@ -39,7 +39,7 @@ class LocalNFA(object):
         step = 60
         bins = np.linspace(-np.pi, np.pi, step)
 
-        if self.plot:
+        if plot:
             mask_in = dist <= inliers_threshold
             plt.figure()
             plt.axis('equal')
@@ -58,7 +58,7 @@ class LocalNFA(object):
                 dist_selected[k] = np.nan
             else:
                 dist_selected[k] = dist[sel].min()
-                if self.plot:
+                if plot:
                     data_sel = data[sel, :]
                     proj_sel = proj[sel, :]
                     i_m = np.argmin(dist[sel])

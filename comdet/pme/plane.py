@@ -88,15 +88,18 @@ class Plane(object):
         s_min = np.fmax(s_min1, s_min2)
         s_max = np.fmin(s_max1, s_max2)
         p1 = x0 + s_min * u
-        if np.any(p1 < lower_bound) or np.any(p1 > upper_bound):
-            p1 = None
         p2 = x0 + s_max * u
         if np.any(p1 < lower_bound) or np.any(p1 > upper_bound):
+            p1 = None
+        if np.any(p2 < lower_bound) or np.any(p2 > upper_bound):
             p2 = None
         return p1, p2
 
     def _sort_vertices(self, points):
         basis = self.basis()
+
+        if not points:
+            print 'a'
 
         arr = np.array(points)
         arr = arr.dot(basis.T)

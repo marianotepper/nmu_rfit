@@ -1,2 +1,4 @@
 *.mat
 *.pdf
+/comdet/data/*
+!/comdet/data/sources.txt

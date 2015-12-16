@@ -123,7 +123,6 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 
 
 if __name__ == '__main__':
-    # plt.switch_backend('TkAgg')
     sampling_factor = 20
     inliers_threshold = 0.03
     epsilon = 0

@@ -120,13 +120,11 @@ class OnlineColumnCompressor:
                         np.squeeze(v.toarray()))
         dd = Downdate(Downdate.additive, u_padded * v)
         self.downdates.append(dd)
-        # self.mat = self.mat + subsampled_u * v
 
     def remove_column(self, idx):
         self.svd.remove_column(idx)
         dd = Downdate(Downdate.column_removal, idx)
         self.downdates.append(dd)
-        # self.mat_lil[:, idx_col] = 0
 
     def remove_row(self, idx):
         v = self.mat[idx, :]

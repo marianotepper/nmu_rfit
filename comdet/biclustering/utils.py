@@ -135,9 +135,10 @@ class UpdatableSVD:
             p = np.zeros((self.u.shape[0], 1))
             self.u = np.hstack((self.u, p))
             self.vt = np.vstack((self.vt, q))
-        self.u = np.dot(self.u, inner_u)
-        self.s = s_new
-        self.vt = np.dot(inner_vt, self.vt)
+        # update and crop
+        self.u = np.dot(self.u, inner_u)[:, :-1]
+        self.s = s_new[:-1]
+        self.vt = np.dot(inner_vt, self.vt)[:-1, :]
 
     def trim(self):
         orig_size = min(self.shape)

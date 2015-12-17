@@ -1,0 +1,186 @@
+from __future__ import absolute_import
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import PIL
+import seaborn.apionly as sns
+import numpy as np
+import scipy.sparse as sp
+import timeit
+import os
+import comdet.biclustering.preference as pref
+import comdet.biclustering.nmf as bc
+import comdet.biclustering.deflation as deflation
+import comdet.test.utils as test_utils
+
+
+class Projector(object):
+    def __init__(self, data, visibility, proj_mat, dirname_in,
+                 dirname_out=None):
+        self.data = data
+        self.visibility = visibility
+        self.proj_mat = proj_mat
+        self.dirname_in = dirname_in
+        self.dirname_out = dirname_out
+
+    def _project(self, points, k):
+        n = points.shape[0]
+        data_homogeneous = np.hstack((points, np.ones((n, 1))))
+        img_data = data_homogeneous.dot(self.proj_mat[:, :, k].T)
+        img_data /= np.atleast_2d(img_data[:, 2]).T
+        return img_data
+
+    def plot(self, mod_inliers_list, palette):
+
+        for i, filename in enumerate(os.listdir(self.dirname_in)):
+            self.inner_plot(mod_inliers_list, palette, filename)
+
+    def inner_plot(self, mod_inliers_list, palette, filename):
+        try:
+            idx = int(filename[-7:-4])
+            k = idx - 1
+        except ValueError:
+            return
+        if np.any(np.isnan(self.proj_mat[:, :, k])):
+            return
+
+        img = PIL.Image.open(self.dirname_in + filename).convert('L')
+        plt.figure()
+        plt.imshow(img, cmap='gray')
+        plt.axis('off')
+        plt.hold(True)
+
+        for (mod, inliers), color in zip(mod_inliers_list, palette):
+            visible = np.logical_and(self.visibility[:, k], inliers)
+            if visible.sum() < 3:
+                continue
+
+            img_data = self._project(self.data[visible, :], k)
+            plt.scatter(img_data[:, 0], img_data[:, 1], c='w')
+
+            lower = self.data[visible, :].min(axis=0)
+            upper = self.data[visible, :].max(axis=0)
+            limits = [(lower[i], upper[i]) for i in range(self.data.shape[1])]
+            points = mod.plot_points(limits[0], limits[1], limits[2])
+            if not points:
+                continue
+            points = np.array(points)
+            img_points = self._project(points, k)
+            plt.fill(img_points[:, 0], img_points[:, 1], color=color, alpha=0.5)
+
+        if self.dirname_out is not None:
+            plt.savefig(self.dirname_out + filename + '.pdf', dpi=600)
+
+
+def base_plot(x, size=2, filename=None):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(x[:, 0], x[:, 1], x[:, 2], c='w', marker='o', s=size)
+    ax.axis('equal')
+    ax.view_init(elev=10.)
+    if filename is not None:
+        plt.savefig(filename + '.pdf', dpi=600)
+    return fig, ax
+
+
+def plot_final_models(data, mod_inliers_list, palette, filename=None,
+                      show_data=True, save_animation=False):
+    if show_data:
+        size = 2
+    else:
+        size = 0
+    fig, ax = base_plot(data, size=size)
+    for (mod, inliers), color in zip(mod_inliers_list, palette):
+        lower = data[inliers, :].min(axis=0)
+        upper = data[inliers, :].max(axis=0)
+        limits = [(lower[k], upper[k]) for k in range(data.shape[1])]
+        mod.plot(ax, limits=limits, color=color, linewidth=5, alpha=0.7)
+
+    if filename is not None:
+        plt.savefig(filename + '.pdf', dpi=600)
+
+    if save_animation:
+        def init():
+            return
+
+        def animate(k):
+            ax.view_init(elev=10., azim=k)
+
+        anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                       frames=360, interval=10)
+        anim.save(filename + '.mp4', fps=30, dpi=150,
+                  extra_args=['-vcodec', 'libx264'])
+
+
+def plot_original_models(x, original_models, bic_list, palette, filename=None):
+    fig, ax = base_plot(x, size=5)
+    for i, (lf, rf) in enumerate(bic_list):
+        inliers = sp.find(lf)[0]
+        lower = x[inliers, :].min(axis=0)
+        upper = x[inliers, :].max(axis=0)
+        limits = [(lower[k], upper[k]) for k in range(x.shape[1])]
+        for j in sp.find(rf)[1]:
+            original_models[j].plot(ax, limits=limits, color=palette[i],
+                                    alpha=0.5)
+
+    if filename is not None:
+        plt.savefig(filename + '.pdf', dpi=600)
+
+
+def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
+                     ac_tester, output_prefix, projector=None, palette='Set1'):
+    t = timeit.default_timer()
+    bic_list = bc.bicluster(deflator)
+    t1 = timeit.default_timer() - t
+    print 'Time:', t1
+    print len(bic_list)
+
+    mod_inliers_list, bic_list = test_utils.clean(model_class, x, ac_tester,
+                                                  bic_list)
+
+    palette = sns.color_palette(palette, len(bic_list), desat=.5)
+
+    plt.figure()
+    pref.plot_preference_matrix(pref_matrix, bic_list=bic_list, palette=palette)
+    plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
+
+    filename = output_prefix + '_final_models'
+    plot_final_models(x, mod_inliers_list, palette, filename=filename,
+                      save_animation=True)
+    plot_final_models(x, mod_inliers_list, palette, show_data=False,
+                      filename=filename + '_clean', save_animation=True)
+
+    if projector is not None:
+        if not os.path.exists(output_prefix):
+            os.mkdir(output_prefix)
+        projector.dirname_out = output_prefix + '/'
+        projector.plot(mod_inliers_list, palette)
+
+
+def test(model_class, x, name, ransac_gen, ac_tester, projector=None):
+    print name, x.shape
+
+    output_prefix = '../results/' + name
+
+    base_plot(x)
+    plt.savefig(output_prefix + '_data.pdf', dpi=600)
+
+    pref_matrix, orig_models = test_utils.build_preference_matrix(x.shape[0],
+                                                                  ransac_gen,
+                                                                  ac_tester)
+    print 'Preference matrix size:', pref_matrix.shape
+
+    plt.figure()
+    pref.plot_preference_matrix(pref_matrix)
+    plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
+
+    # print 'Running regular bi-clustering'
+    # deflator = deflation.Deflator(pref_matrix)
+    # run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
+    #                  ac_tester, output_prefix + '_bic_reg')
+
+    print 'Running compressed bi-clustering'
+    compression_level = 128
+    deflator = deflation.L1CompressedDeflator(pref_matrix, compression_level)
+    run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
+                     ac_tester, output_prefix + '_bic_comp',
+                     projector=projector)

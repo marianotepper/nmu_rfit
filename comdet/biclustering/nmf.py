@@ -122,7 +122,7 @@ def bicluster(deflator, n=None, share_points=True):
     online_mdl = mdl.OnlineMDL()
     total_codelength = []
 
-    for k in range(n):
+    for _ in range(n):
         if deflator.array.nnz == 0:
             break
 

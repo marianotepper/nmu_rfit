@@ -98,9 +98,6 @@ class Plane(object):
     def _sort_vertices(self, points):
         basis = self.basis()
 
-        if not points:
-            print 'a'
-
         arr = np.array(points)
         arr = arr.dot(basis.T)
         center = np.mean(arr, axis=0)
@@ -144,16 +141,7 @@ class Plane(object):
         idx = zip(*sorted(enumerate(seq), cmp=compare))[0]
         return [points[i] for i in idx]
 
-    def plot(self, ax, limits=None, color='b', alpha=0.5, **kwargs):
-        if limits is None:
-            xlim = list(ax.get_xlim())
-            ylim = list(ax.get_ylim())
-            zlim = list(ax.get_zlim())
-        else:
-            xlim = limits[0]
-            ylim = limits[1]
-            zlim = limits[2]
-
+    def plot_points(self, xlim, ylim, zlim):
         sides = [np.array([1., 0., 0., -xlim[0]]),
                  np.array([1., 0., 0., -xlim[1]]),
                  np.array([0., 1., 0., -ylim[0]]),
@@ -169,8 +157,22 @@ class Plane(object):
             if p2 is not None:
                 points.append(p2)
 
-        points = self._sort_vertices(points)
+        if not points:
+            return []
+        else:
+            return self._sort_vertices(points)
 
+    def plot(self, ax, limits=None, color='b', alpha=0.5, **kwargs):
+        if limits is None:
+            xlim = list(ax.get_xlim())
+            ylim = list(ax.get_ylim())
+            zlim = list(ax.get_zlim())
+        else:
+            xlim = limits[0]
+            ylim = limits[1]
+            zlim = limits[2]
+
+        points = self.plot_points(xlim, ylim, zlim)
         tri = plt3d.art3d.Poly3DCollection([points])
         tri.set_color(mpl_colors.colorConverter.to_rgba(color, alpha=alpha))
         tri.set_edgecolor(mpl_colors.colorConverter.to_rgba('k', alpha=0))

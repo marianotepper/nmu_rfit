@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import numpy as np
 import scipy.spatial.distance as distance
+import itertools
 
 
 class UniformSampler(object):
@@ -55,23 +56,17 @@ class GaussianLocalSampler(object):
             counter_total += 1
 
 
-def model_distance_generator(model_class, elements, sampler):
+def model_generator(model_class, elements, sampler):
     samples = sampler.generate(elements, model_class().min_sample_size)
     for s in samples:
         ms_set = np.take(elements, s, axis=0)
         model = model_class()
         model.fit(ms_set)
-        yield model, model.distances(elements)
+        yield model
 
 
-def inliers_generator(mdg, threshold):
-    for model, dist in mdg:
-        yield model, dist <= threshold
-
-
-def ransac_generator(model_class, elements, sampler, inliers_threshold):
-    mdg = model_distance_generator(model_class, elements, sampler)
-    return inliers_generator(mdg, inliers_threshold)
+def ransac_filter(mg, data, threshold):
+    return itertools.ifilter(lambda m: m.distances(data) <= threshold, mg)
 
 
 # if __name__ == '__main__':

@@ -84,12 +84,13 @@ def optimal_nfa(ac_tester, model, inliers, considered=None):
     else:
         if considered.sum() == inliers.sum():
             return -np.inf
-        data_considered = ac_tester.data[considered, :]
+        data_considered = ac_tester.data[considered]
     if sp.issparse(inliers):
         inliers = np.squeeze(inliers.toarray())
-    dist = model.distances(ac_tester.data[inliers, :])
-    if dist.size <= model.min_sample_size:
+    if inliers.sum() <= model.min_sample_size:
         return np.inf
+    print inliers.size, inliers.sum()
+    dist = model.distances(ac_tester.data[inliers])
     dist.sort()
     min_nfa = np.inf
     for k, s in enumerate(dist):

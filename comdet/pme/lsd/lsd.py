@@ -7,8 +7,14 @@ import matplotlib.pyplot as plt
 
 class Segment(object):
     def __init__(self, p_a, p_b, quality=None, width=None, precision=None):
-        self.p_a = np.append(p_a, [1])
-        self.p_b = np.append(p_b, [1])
+        def homogeneous(p):
+            if len(p) == 2:
+                return np.append(p, [1])
+            elif p[2] != 0:
+                return np.array(p) / p[2]
+
+        self.p_a = homogeneous(p_a)
+        self.p_b = homogeneous(p_b)
         self.quality = quality
         self.width = width
         self.precision = precision

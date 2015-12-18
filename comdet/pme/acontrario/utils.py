@@ -35,6 +35,10 @@ class BinomialNFA(object):
         return self.nfa(model, n_inliers) < self.epsilon
 
     @abc.abstractmethod
+    def threshold(self, model):
+        pass
+
+    @abc.abstractmethod
     def _random_probability(self, model, inliers_threshold=None):
         pass
 

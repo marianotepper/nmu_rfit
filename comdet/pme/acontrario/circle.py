@@ -8,6 +8,9 @@ class GlobalNFA(utils.BinomialNFA):
         self.inliers_threshold = inliers_threshold
         self.area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
 
+    def threshold(self, model):
+        return self.inliers_threshold
+
     def _random_probability(self, model, data=None, inliers_threshold=None):
         if inliers_threshold is None:
             inliers_threshold = self.inliers_threshold
@@ -42,3 +45,6 @@ class LocalNFA(object):
 
     def meaningful(self, model, n_inliers):
         return self.nfa(model, n_inliers) < self.epsilon
+
+    def threshold(self, model):
+        return self.inliers_threshold

@@ -1,9 +1,9 @@
+from __future__ import absolute_import
 import numpy as np
 import scipy.sparse.linalg as spla
 import scipy.sparse as sp
-import comdet.biclustering.utils as utils
-import comdet.biclustering.mdl as mdl
-# import matplotlib.pyplot as plt
+from . import utils
+from . import mdl
 
 
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
@@ -167,8 +167,5 @@ def bicluster(deflator, n=None, share_points=True):
     if n is not None:
         total_codelength = np.array(total_codelength)
         cut_point = np.argmin(total_codelength)
-        # plt.figure()
-        # plt.plot(total_codelength)
-        # plt.plot([cut_point], total_codelength[cut_point], marker='o', color='r')
 
     return bic_list[:cut_point+1]

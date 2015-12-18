@@ -4,7 +4,7 @@ import matplotlib.colors as mpl_colors
 import seaborn.apionly as sns
 import numpy as np
 import scipy.sparse
-import comdet.biclustering.utils as utils
+from . import utils
 
 
 def create_preference_matrix(n_rows):
@@ -25,7 +25,7 @@ def add_col(preference_matrix, in_column, value=1):
     return preference_matrix
 
 
-def plot_preference_matrix(array, bic_list=[], palette='Set1'):
+def plot(array, bic_list=[], palette='Set1'):
     white = mpl_colors.colorConverter.to_rgba('w', alpha=1)
     black = mpl_colors.colorConverter.to_rgba('k', alpha=1)
 

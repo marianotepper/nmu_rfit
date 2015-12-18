@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-import comdet.biclustering.compression as compression
+from . import compression
 
 
 class Deflator:

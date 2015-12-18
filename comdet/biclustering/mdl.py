@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import numpy as np
 import multipledispatch
-import comdet.biclustering.utils as utils
+from . import utils
 
 
 log2_2pi = np.log2(2 * np.pi)

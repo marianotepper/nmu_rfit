@@ -2,8 +2,8 @@ from __future__ import absolute_import
 import numpy as np
 import multipledispatch
 import scipy.sparse as sp
-import comdet.biclustering.fct as fct
-import comdet.biclustering.utils as utils
+from . import  fct
+from . import utils
 
 
 @multipledispatch.dispatch(sp.spmatrix)

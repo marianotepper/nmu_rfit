@@ -1,13 +1,13 @@
 from __future__ import absolute_import
 import numpy as np
-from scipy.linalg import hadamard
-import math
-import comdet.biclustering.utils as utils
 import scipy.sparse as sp
+import math
+import scipy.linalg
+from . import utils
 
 
 def normalized_hadamard(n):
-    return hadamard(n) / math.sqrt(n)
+    return scipy.linalg.hadamard(n) / math.sqrt(n)
 
 
 def create_blockdiagonal_matrix(func, blocksize, n_blocks):

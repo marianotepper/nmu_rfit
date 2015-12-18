@@ -65,8 +65,12 @@ def model_generator(model_class, elements, sampler):
         yield model
 
 
+def inliers(model, elements, threshold):
+    return model.distances(elements) <= threshold
+
+
 def inliers_generator(mg, elements, threshold):
-    return itertools.imap(lambda m: (m, m.distances(elements) <= threshold), mg)
+    return itertools.imap(lambda m: (m, inliers(m, elements, threshold)), mg)
 
 
 def ransac_generator(model_class, elements, sampler, inliers_threshold):

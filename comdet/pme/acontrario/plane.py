@@ -1,6 +1,5 @@
 import numpy as np
 import comdet.pme.acontrario.utils as utils
-import matplotlib.pyplot as plt
 
 
 class GlobalNFA(utils.BinomialNFA):

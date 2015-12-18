@@ -11,7 +11,7 @@ class Segment(object):
         self.quality = quality
         self.width = width
         self.precision = precision
-        line_ab = np.cross(p_a, p_b)
+        line_ab = np.cross(self.p_a, self.p_b)
         self.line = line_ab / np.linalg.norm(line_ab[:2])
 
     def plot(self, **kwargs):
@@ -33,7 +33,7 @@ def compute(gray_image, epsilon=1):
     fobj_txt = tempfile.NamedTemporaryFile(suffix='.txt')
     sp = subprocess.Popen([exe, fobj.name, fobj_txt.name])
     sp.wait()
-    
+
     segments = []
     for line in fobj_txt:
         l = line.split(' ')

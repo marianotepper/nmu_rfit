@@ -22,10 +22,12 @@ class Segment(object):
 def compute(gray_image, epsilon=1):
     fobj = tempfile.NamedTemporaryFile(suffix='.pgm')
     gray_image.save(fobj.name)
-    
-    exe = './lsd'
+
+    dir_name = os.path.dirname(__file__)
+    exe = '{0}/lsd'.format(dir_name)
     if not os.path.exists(exe):
-        sp = subprocess.Popen(['make'], stdout=open(os.devnull, 'wb'))
+        sp = subprocess.Popen(['make'], stdout=open(os.devnull, 'wb'),
+                              cwd=dir_name)
         sp.wait()
 
     fobj_txt = tempfile.NamedTemporaryFile(suffix='.txt')

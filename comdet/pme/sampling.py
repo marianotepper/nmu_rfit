@@ -9,7 +9,7 @@ class UniformSampler(object):
         self.n_samples = n_samples
 
     def generate(self, x, min_sample_size):
-        n_elements = x.shape[0]
+        n_elements = len(x)
         for i in range(self.n_samples):
             while True:
                 sample = np.random.randint(0, n_elements, size=min_sample_size)
@@ -26,7 +26,7 @@ class GaussianLocalSampler(object):
         self.distribution = None
 
     def generate(self, x, min_sample_size):
-        n_elements = x.shape[0]
+        n_elements = len(x)
         self.distribution = np.zeros((n_elements,))
         counter_samples = 0
         counter_total = 0

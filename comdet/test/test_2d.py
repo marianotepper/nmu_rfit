@@ -6,9 +6,7 @@ import numpy as np
 import scipy.io
 import re
 import timeit
-import comdet.biclustering.preference as pref
-import comdet.biclustering.nmf as bc
-import comdet.biclustering.deflation as deflation
+import comdet.biclustering as bc
 import comdet.test.utils as test_utils
 import comdet.pme.line as line
 import comdet.pme.circle as circle
@@ -76,7 +74,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
     palette = sns.color_palette(palette, len(bic_list))
 
     plt.figure()
-    pref.plot_preference_matrix(pref_matrix, bic_list=bic_list, palette=palette)
+    bc.preference.plot(pref_matrix, bic_list=bic_list, palette=palette)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     plot_final_models(x, [mi[0] for mi in mod_inliers_list], palette=palette)
@@ -107,17 +105,17 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     plt.savefig(output_prefix + '_original_models.pdf', dpi=600)
 
     plt.figure()
-    pref.plot_preference_matrix(pref_matrix)
+    bc.preference.plot(pref_matrix)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print 'Running regular bi-clustering'
-    deflator = deflation.Deflator(pref_matrix)
+    deflator = bc.deflation.Deflator(pref_matrix)
     run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
                      ac_tester, gt_groups, output_prefix + '_bic_reg')
 
     print 'Running compressed bi-clustering'
     compression_level = 128
-    deflator = deflation.L1CompressedDeflator(pref_matrix, compression_level)
+    deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
     run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
                      ac_tester, gt_groups, output_prefix + '_bic_comp')
 

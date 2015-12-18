@@ -14,7 +14,7 @@ class Line(object):
         return 2
 
     def fit(self, data):
-        if data.shape[0] < 2:
+        if data.shape[0] < self.min_sample_size:
             raise ValueError('At least two points are needed to fit a line')
         if data.shape[1] != 2:
             raise ValueError('Points must be 2D')

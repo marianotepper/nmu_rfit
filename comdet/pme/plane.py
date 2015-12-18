@@ -15,7 +15,7 @@ class Plane(object):
         return 3
 
     def fit(self, data):
-        if data.shape[0] < 3:
+        if data.shape[0] < self.min_sample_size:
             raise ValueError('At least three points are needed to fit a plane')
         if data.shape[1] != 3:
             raise ValueError('Points must be 3D')

@@ -16,7 +16,7 @@ class Circle(object):
         return 3
 
     def fit(self, data):
-        if data.shape[0] < 3:
+        if data.shape[0] < self.min_sample_size:
             raise ValueError('At least three points are needed to fit a circle')
 
         a = np.hstack((data, np.ones((data.shape[0], 1))))

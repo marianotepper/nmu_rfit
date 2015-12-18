@@ -19,10 +19,9 @@ def meaningful(value, epsilon):
 class BinomialNFA(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, data, epsilon, inliers_threshold):
+    def __init__(self, data, epsilon):
         self.data = data
         self.epsilon = epsilon
-        self.inliers_threshold = inliers_threshold
 
     def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
         n = self.data.shape[0]

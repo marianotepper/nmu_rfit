@@ -4,7 +4,8 @@ import comdet.pme.acontrario.utils as utils
 
 class GlobalNFA(utils.BinomialNFA):
     def __init__(self, data, epsilon, inliers_threshold):
-        super(GlobalNFA, self).__init__(data, epsilon, inliers_threshold)
+        super(GlobalNFA, self).__init__(data, epsilon)
+        self.inliers_threshold = inliers_threshold
         self.area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
 
     def _random_probability(self, model, data=None, inliers_threshold=None):

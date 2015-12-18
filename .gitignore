@@ -1,4 +1,4 @@
-*.mat
-*.pdf
+/comdet/results/*
+/comdet/pme/lsd/lsd_call_example
 /comdet/data/*
 !/comdet/data/sources.txt

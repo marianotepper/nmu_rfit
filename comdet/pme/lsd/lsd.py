@@ -2,6 +2,7 @@ import tempfile
 import os.path
 import subprocess
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Segment(object):
@@ -45,7 +46,6 @@ def compute(gray_image, epsilon=1):
 
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
     import PIL.Image
     dir_name = '/Users/mariano/Documents/datasets/YorkUrbanDB/'
     img_name = dir_name + 'P1020839/P1020839.jpg'

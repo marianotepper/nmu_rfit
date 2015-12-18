@@ -3,6 +3,13 @@ import scipy.sparse as sp
 import scipy.special as special
 import abc
 import operator
+import itertools
+
+
+def ifilter(ac_tester, mig):
+    def inner_meaningful((model, inliers)):
+        return ac_tester.meaningful(model, inliers.sum())
+    return itertools.ifilter(meaningful, mig)
 
 
 def meaningful(value, epsilon):

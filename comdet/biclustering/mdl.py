@@ -1,7 +1,5 @@
+from __future__ import absolute_import
 import numpy as np
-import scipy.sparse as sp
-import multiprocessing
-import functools
 import multipledispatch
 import comdet.biclustering.utils as utils
 

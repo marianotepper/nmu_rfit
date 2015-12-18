@@ -25,11 +25,12 @@ class Line(object):
             data_norm = np.vstack((data_norm, np.zeros((1, 3))))
         _, _, v = np.linalg.svd(data_norm, full_matrices=False)
         self.eq = v[2, :].dot(trans.T)
+        self.eq /= np.linalg.norm(self.eq[:2])
 
     def distances(self, data):
         if data.shape[1] == 2:
             data = np.hstack((data, np.ones((data.shape[0], 1))))
-        return np.abs(np.dot(data, self.eq)) / np.linalg.norm(self.eq[:2])
+        return np.abs(np.dot(data, self.eq))
 
     def project(self, data):
         u, x0 = self.point_and_basis()

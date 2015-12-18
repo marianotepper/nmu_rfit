@@ -6,8 +6,8 @@ import numpy as np
 
 class Segment(object):
     def __init__(self, p_a, p_b, quality=None, width=None, precision=None):
-        self.p_a = p_a
-        self.p_b = p_b
+        self.p_a = np.append(p_a, [1])
+        self.p_b = np.append(p_b, [1])
         self.quality = quality
         self.width = width
         self.precision = precision

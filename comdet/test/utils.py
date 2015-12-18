@@ -1,16 +1,12 @@
 from __future__ import absolute_import
 import scipy.sparse as sp
-import itertools
 import comdet.biclustering.preference as pref
 import comdet.pme.acontrario as ac
 import comdet.pme.measures as mes
 
 
 def build_preference_matrix(n_elements, ransac_gen, ac_tester):
-    def meaningful((model, inliers)):
-        return ac_tester.meaningful(model, inliers.sum())
-
-    filtered = itertools.ifilter(meaningful, ransac_gen)
+    filtered = ac.ifilter(ac_tester, ransac_gen)
 
     pref_matrix = pref.create_preference_matrix(n_elements)
     original_models = []

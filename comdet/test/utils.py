@@ -29,7 +29,9 @@ def compute_measures(gt_groups, left_factors):
 
 
 def clean(model_class, x, ac_tester, bic_list):
-    bic_list = [bic for bic in bic_list if bic[1].nnz > 1]
+    bic_list = [bic for bic in bic_list
+                if bic[1].nnz > 1 and
+                bic[0].nnz > model_class().min_sample_size]
     mod_inliers_list = []
     for r, _ in bic_list:
         mod = model_class(x[sp.find(r)[0], :])

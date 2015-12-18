@@ -45,7 +45,6 @@ class Line(object):
         u /= np.linalg.norm(u)
         return u, x0
 
-
     def plot(self, limits=None, **kwargs):
         if limits is None:
             xlim = plt.xlim()

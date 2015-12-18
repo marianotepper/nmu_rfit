@@ -7,7 +7,7 @@ class GlobalNFA(utils.BinomialNFA):
         super(GlobalNFA, self).__init__(data, epsilon, inliers_threshold)
         self.area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
 
-    def _random_probability(self, model, inliers_threshold=None):
+    def _random_probability(self, model, data=None, inliers_threshold=None):
         if inliers_threshold is None:
             inliers_threshold = self.inliers_threshold
         # (a + b)**2 - (a - b)**2 == 4ab

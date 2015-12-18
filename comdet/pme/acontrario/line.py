@@ -6,11 +6,13 @@ class GlobalNFA(utils.BinomialNFA):
     def __init__(self, data, epsilon, inliers_threshold):
         super(GlobalNFA, self).__init__(data, epsilon, inliers_threshold)
 
-    def _random_probability(self, model, inliers_threshold=None):
+    def _random_probability(self, model, data=None, inliers_threshold=None):
+        if data is None:
+            data = self.data
         if inliers_threshold is None:
             inliers_threshold = self.inliers_threshold
-        area = np.prod(np.max(self.data, axis=0) - np.min(self.data, axis=0))
-        _, s = model.project(self.data)
+        area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
+        _, s = model.project(data)
         length = s.max() - s.min()
         return length * 2 * inliers_threshold / area
 

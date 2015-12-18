@@ -12,7 +12,7 @@ class Segment(object):
         self.width = width
         self.precision = precision
         line_ab = np.cross(p_a, p_b)
-        self.line = line_ab / np.linalg.norm(line_ab)
+        self.line = line_ab / np.linalg.norm(line_ab[:2])
 
     def plot(self, **kwargs):
         plt.plot([self.p_a[0], self.p_b[0]], [self.p_a[1], self.p_b[1]],

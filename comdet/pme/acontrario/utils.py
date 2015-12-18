@@ -24,9 +24,10 @@ class BinomialNFA(object):
         self.epsilon = epsilon
         self.inliers_threshold = inliers_threshold
 
-    def nfa(self, model, n_inliers, inliers_threshold=None):
+    def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
         n = self.data.shape[0]
-        p = self._random_probability(model, inliers_threshold=inliers_threshold)
+        p = self._random_probability(model, data=data,
+                                     inliers_threshold=inliers_threshold)
         pfa = log_binomial(n, n_inliers - model.min_sample_size, p)
         n_tests = log_nchoosek(n, model.min_sample_size)
         return (pfa + n_tests) / np.log(10)

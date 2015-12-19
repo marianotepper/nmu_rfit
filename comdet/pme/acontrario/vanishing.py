@@ -2,34 +2,11 @@ import numpy as np
 import comdet.pme.acontrario.utils as utils
 
 
-class GlobalNFA(utils.BinomialNFA):
-    def __init__(self, data, epsilon, threshold_in_image, img_radius, img_center):
-        super(GlobalNFA, self).__init__(data, epsilon)
+class VanishingThresholder(object):
+    def __init__(self, threshold_in_image, img_radius, img_center):
         self.threshold_in_image = threshold_in_image
         self.img_radius = img_radius
         self.img_center = img_center
-
-    def _random_probability(self, model, data=None, inliers_threshold=None):
-        if not inliers_threshold:
-            return self.threshold_in_image / self.img_radius
-        else:
-            if model.point[2] != 0:
-                dist = np.linalg.norm(model.point[:2] - self.img_center)
-                if dist > self.img_radius:
-                    ph = np.arccos((self.img_radius + inliers_threshold) / dist)
-                    ro = np.arccos((self.img_radius - inliers_threshold) / dist)
-                    length_in = 2 * (self.img_radius + inliers_threshold)
-                    length_in *= np.tan(ph) + np.pi - ph
-                    length_out = 2 * dist * np.sin(ro)
-                    length_out += self.img_radius * (2 * (np.pi - ro))
-                    length_out += inliers_threshold * 2 * ro
-                    length_img = 2 * np.pi * self.img_radius
-                    return (length_in - length_out) / length_img
-                else:
-                    return inliers_threshold / self.img_radius
-
-            else:
-                return inliers_threshold / (2 * np.pi)
 
     def threshold(self, model):
         if model.point[2] != 0:
@@ -48,3 +25,54 @@ class GlobalNFA(utils.BinomialNFA):
                 return self.threshold_in_image
         else:
             return (self.threshold_in_image / self.img_radius) * 2 * np.pi
+
+
+class GlobalNFA(utils.BinomialNFA, VanishingThresholder):
+    def __init__(self, data, epsilon, threshold_in_image, img_radius,
+                 img_center):
+        utils.BinomialNFA.__init__(self, data, epsilon)
+        VanishingThresholder.__init__(self, threshold_in_image, img_radius,
+                                      img_center)
+
+    def _total_and_probability(self, model, data, inliers_threshold):
+        if model.point[2] != 0 and inliers_threshold == self.threshold_in_image:
+            p = self.threshold_in_image / self.img_radius
+        elif model.point[2] != 0:
+            dist = np.linalg.norm(model.point[:2] - self.img_center)
+            if dist > self.img_radius:
+                phi = np.arccos((self.img_radius + inliers_threshold) / dist)
+                theta = np.arccos((self.img_radius - inliers_threshold) / dist)
+                length_in = 2 * (self.img_radius + inliers_threshold)
+                length_in *= np.tan(phi) + np.pi - phi
+                length_out = 2 * dist * np.sin(theta)
+                length_out += self.img_radius * (2 * (np.pi - theta))
+                length_out += inliers_threshold * 2 * theta
+                length_img = 2 * np.pi * self.img_radius
+                p = (length_in - length_out) / length_img
+            else:
+                p = inliers_threshold / self.img_radius
+        else:
+            p = inliers_threshold / (2 * np.pi)
+        return len(data), p
+
+    def threshold(self, model):
+        return VanishingThresholder.threshold(self, model)
+
+
+class LocalNFA(utils.BinomialNFA, VanishingThresholder):
+    def __init__(self, data, epsilon, threshold_in_image, img_radius,
+                 img_center):
+        utils.BinomialNFA.__init__(self, data, epsilon)
+        VanishingThresholder.__init__(self, threshold_in_image, img_radius,
+                                      img_center)
+
+    def _total_and_probability(self, model, data, inliers_threshold):
+        dist = model.distances(data)
+        upper_threshold = np.maximum(inliers_threshold * 3,
+                                     np.min(dist[dist > inliers_threshold]))
+        region_mask = dist <= upper_threshold
+        p = inliers_threshold / upper_threshold
+        return region_mask.sum(), p
+
+    def threshold(self, model):
+        return VanishingThresholder.threshold(self, model)

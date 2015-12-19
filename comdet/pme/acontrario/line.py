@@ -10,40 +10,25 @@ class GlobalNFA(utils.BinomialNFA):
     def threshold(self, model):
         return self.inliers_threshold
 
-    def _random_probability(self, model, data=None, inliers_threshold=None):
-        if data is None:
-            data = self.data
-        if inliers_threshold is None:
-            inliers_threshold = self.inliers_threshold
+    def _total_and_probability(self, model, data, inliers_threshold):
         area = np.prod(np.max(data, axis=0) - np.min(data, axis=0))
         _, s = model.project(data)
         length = s.max() - s.min()
         return length * 2 * inliers_threshold / area
 
 
-class LocalNFA(object):
+class LocalNFA(utils.BinomialNFA):
     def __init__(self, data, epsilon, inliers_threshold):
-        self.data = data
-        self.epsilon = epsilon
+        super(LocalNFA, self).__init__(data, epsilon)
         self.inliers_threshold = inliers_threshold
 
-    def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
-        if data is None:
-            data = self.data
-        if inliers_threshold is None:
-            inliers_threshold = self.inliers_threshold
-
-        upper_threshold = inliers_threshold * 3.
-        region_mask = model.distances(data) <= upper_threshold
-
+    def _total_and_probability(self, model, data, inliers_threshold):
+        dist = model.distances(data)
+        upper_threshold = np.maximum(inliers_threshold * 3,
+                                     np.min(dist[dist > inliers_threshold]))
+        region_mask = dist <= upper_threshold
         p = inliers_threshold / upper_threshold
-        k = n_inliers - model.min_sample_size
-        pfa = utils.log_binomial(region_mask.sum(), k, p)
-        n_tests = utils.log_nchoosek(data.shape[0], model.min_sample_size)
-        return (pfa + n_tests) / np.log(10)
-
-    def meaningful(self, model, n_inliers):
-        return self.nfa(model, n_inliers) < self.epsilon
+        return region_mask.sum(), p
 
     def threshold(self, model):
         return self.inliers_threshold

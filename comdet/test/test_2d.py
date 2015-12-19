@@ -133,7 +133,7 @@ if __name__ == '__main__':
                                  ac_circle.LocalNFA),
                      }
 
-    # configuration = {'Star': (line.Line, sampling.UniformSampler(),
+    # configuration = {'Star': (line.Line, sampling.SimpleSampler(),
     #                           ac_line.LocalNFA),
     #                  'Stairs': (line.Line,
     #                             sampling.GaussianLocalSampler(0.05),
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     #                              ac_circle.LocalNFA),
     #                  }
     #
-    # configuration = {'Star': (line.Line, sampling.UniformSampler(),
+    # configuration = {'Star': (line.Line, sampling.SimpleSampler(),
     #                           ac_line.GlobalNFA),
     #                  'Stairs': (line.Line,
     #                             sampling.GaussianLocalSampler(0.05),

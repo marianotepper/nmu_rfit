@@ -10,7 +10,7 @@ class UniformSampler(object):
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
-        for i in range(self.n_samples):
+        for _ in range(self.n_samples):
             while True:
                 sample = np.random.randint(0, n_elements, size=min_sample_size)
                 if np.unique(sample).size == min_sample_size:

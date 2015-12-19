@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import PIL
+import PIL.Image
 import seaborn.apionly as sns
 import numpy as np
 import scipy.sparse as sp

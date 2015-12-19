@@ -30,8 +30,8 @@ def clean(model_class, x, ac_tester, bic_list):
                 bic[0].nnz > model_class().min_sample_size]
     mod_inliers_list = []
     for r, _ in bic_list:
-        mod = model_class(x[sp.find(r)[0], :])
-        inliers = mod.distances(x) <= ac_tester.inliers_threshold
+        mod = model_class(x[sp.find(r)[0]])
+        inliers = mod.distances(x) <= ac_tester.threshold(mod)
         mod_inliers_list.append((mod, inliers))
 
     survivors = ac.exclusion_principle(ac_tester, mod_inliers_list)

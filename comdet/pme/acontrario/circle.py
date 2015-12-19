@@ -34,7 +34,7 @@ class LocalNFA(object):
         if model.radius < inliers_threshold:
             return np.inf
 
-        upper_threshold = inliers_threshold * 3
+        upper_threshold = inliers_threshold * 3.
         region_mask = model.distances(data) <= upper_threshold
 
         p = inliers_threshold / upper_threshold

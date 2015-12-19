@@ -20,7 +20,7 @@ class VanishingPoint():
         if sol[2] == 2:  # matrix rank
             self.point = np.append(sol[0], [1])
         else:
-            angles = _normalize(np.atan2(lines[:, 0], lines[:, 1]))
+            angles = _normalize(np.arctan2(lines[:, 0], lines[:, 1]))
             alpha = np.mean(angles)
             self.point = np.array([np.cos(alpha), np.sin(alpha), 0])
 
@@ -28,20 +28,21 @@ class VanishingPoint():
     def project(self, data):
         lines = np.array([seg.line for seg in data])
         if self.point[2] != 0:
-            return np.atan2(lines[:, 1], lines[:, 0])
+            return np.arctan2(lines[:, 1], lines[:, 0])
         else:
-            return _normalize(np.atan2(lines[:, 0], lines[:, 1]))
+            return _normalize(np.arctan2(lines[:, 0], lines[:, 1]))
 
     def distances(self, data):
         lines = np.array([seg.line for seg in data])
         if self.point[2] != 0:
             return np.abs(lines.dot(self.point))
         else:
-            angleVP = _normalize(np.atan2(self.point[1], self.point[0]))
-            angleL = _normalize(np.atan2(lines[:, 0], lines[:, 1]))
+            angleVP = _normalize(np.arctan2(self.point[1], self.point[0]))
+            angleL = _normalize(np.arctan2(lines[:, 0], lines[:, 1]))
             angle_diff = _normalize(np.abs(angleVP - angleL))
-            if np.abs(angle_diff - np.pi) < np.abs(angle_diff):
-                angle_diff = np.abs(angle_diff - np.pi)
+            complement = np.abs(angle_diff - np.pi)
+            change = complement < np.abs(angle_diff)
+            angle_diff[change] = complement[change]
             return angle_diff
 
     def plot(self, **kwargs):

@@ -89,7 +89,6 @@ def optimal_nfa(ac_tester, model, inliers, considered=None):
         inliers = np.squeeze(inliers.toarray())
     if inliers.sum() <= model.min_sample_size:
         return np.inf
-    print inliers.size, inliers.sum()
     dist = model.distances(ac_tester.data[inliers])
     dist.sort()
     min_nfa = np.inf

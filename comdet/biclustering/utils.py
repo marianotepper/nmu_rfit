@@ -129,6 +129,8 @@ class UpdatableSVD:
             self.vt[:] = np.nan
             return
 
+        # ensure SVD convergence:
+        k[np.abs(k) < np.finfo(np.float32).resolution] = 0
         inner_u, s_new, inner_vt = np.linalg.svd(k)
 
         if s_new.size > self.s.size:

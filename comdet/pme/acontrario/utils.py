@@ -24,9 +24,14 @@ class BinomialNFA(object):
         self.epsilon = epsilon
 
     def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
-        n = len(self.data)
-        p = self._random_probability(model, data=data,
-                                     inliers_threshold=inliers_threshold)
+        if data is None:
+            data = self.data
+        if inliers_threshold is None:
+            inliers_threshold = self.threshold(model)
+        try:
+            n, p = self._total_and_probability(model, data, inliers_threshold)
+        except ValueError:
+            return np.inf
         pfa = log_binomial(n, n_inliers - model.min_sample_size, p)
         n_tests = log_nchoosek(n, model.min_sample_size)
         return (pfa + n_tests) / np.log(10)
@@ -39,7 +44,7 @@ class BinomialNFA(object):
         pass
 
     @abc.abstractmethod
-    def _random_probability(self, model, inliers_threshold=None):
+    def _total_and_probability(self, model, data, inliers_threshold):
         pass
 
 
@@ -87,7 +92,7 @@ def optimal_nfa(ac_tester, model, inliers, considered=None):
         data_considered = ac_tester.data[considered]
     if sp.issparse(inliers):
         inliers = np.squeeze(inliers.toarray())
-    if inliers.sum() <= model.min_sample_size:
+    if model.min_sample_size >= inliers.sum():
         return np.inf
     dist = model.distances(ac_tester.data[inliers])
     dist.sort()
@@ -95,13 +100,16 @@ def optimal_nfa(ac_tester, model, inliers, considered=None):
     for k, s in enumerate(dist):
         if k < model.min_sample_size:
             continue
-        if considered is not None and k + 1 >= data_considered.shape[0]:
+        if considered is not None and k + 1 >= len(data_considered):
             continue
         if s < np.finfo(np.float32).resolution:
             continue
         nfa = ac_tester.nfa(model, k + 1, inliers_threshold=s,
                             data=data_considered)
+        if nfa < min_nfa:
+            stats = k + 1, s
         min_nfa = np.minimum(nfa, min_nfa)
+    # print stats
     return min_nfa + np.log10(len(dist) - model.min_sample_size)
 
 

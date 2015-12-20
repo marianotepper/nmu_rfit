@@ -26,7 +26,7 @@ class Segment(object):
                  **kwargs)
 
 
-def compute(gray_image, epsilon=1):
+def compute(gray_image, epsilon=0):
     fobj = tempfile.NamedTemporaryFile(suffix='.pgm')
     gray_image.save(fobj.name)
 
@@ -38,7 +38,7 @@ def compute(gray_image, epsilon=1):
         sp.wait()
 
     fobj_txt = tempfile.NamedTemporaryFile(suffix='.txt')
-    sp = subprocess.Popen([exe, fobj.name, fobj_txt.name])
+    sp = subprocess.Popen([exe, '-e', str(epsilon), fobj.name, fobj_txt.name])
     sp.wait()
 
     segments = []

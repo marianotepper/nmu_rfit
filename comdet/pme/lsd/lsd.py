@@ -38,7 +38,7 @@ def compute(gray_image, epsilon=0):
         sp.wait()
 
     fobj_txt = tempfile.NamedTemporaryFile(suffix='.txt')
-    sp = subprocess.Popen([exe, '-e', str(epsilon), fobj.name, fobj_txt.name])
+    sp = subprocess.Popen([exe, '-e', str(-epsilon), fobj.name, fobj_txt.name])
     sp.wait()
 
     segments = []

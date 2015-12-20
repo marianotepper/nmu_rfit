@@ -107,7 +107,7 @@ class OnlineColumnCompressor:
         return selection
 
     @staticmethod
-    def _invert_r(svd, rcond=1e-10):
+    def _invert_r(svd, rcond=1e-6):
         mask = svd.s > rcond * np.max(svd.s)
         s = 1. / svd.s[mask]
         vt = svd.vt[mask, :]

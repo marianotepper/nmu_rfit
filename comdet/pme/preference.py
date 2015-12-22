@@ -3,23 +3,23 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mpl_colors
 import seaborn.apionly as sns
 import numpy as np
-import scipy.sparse
-from . import utils
+import scipy.sparse as sp
+import comdet.pme.acontrario as ac
 
 
 def create_preference_matrix(n_rows):
-    return utils.sparse((n_rows, 0))
+    return sp.csc_matrix((n_rows, 0))
 
 
 def add_col(preference_matrix, in_column, value=1):
     col_shape = (preference_matrix.shape[0], 1)
     col_idx = np.where(in_column)[0]
     data_shape = (len(col_idx),)
-    column = utils.sparse((value * np.ones(data_shape),
+    column = sp.csc_matrix((value * np.ones(data_shape),
                            (col_idx, np.zeros(data_shape))),
-                          col_shape)
+                           col_shape)
     if preference_matrix.shape[1] > 0:
-        preference_matrix = scipy.sparse.hstack([preference_matrix, column])
+        preference_matrix = sp.hstack([preference_matrix, column])
     else:
         preference_matrix = column
     return preference_matrix
@@ -58,3 +58,15 @@ def plot(array, bic_list=[], palette='Set1'):
         labelbottom='off',
         labelleft='off')
     plt.axis('image')
+
+
+def build_preference_matrix(n_elements, ransac_gen, ac_tester):
+    filtered = ac.ifilter(ac_tester, ransac_gen)
+
+    pref_matrix = create_preference_matrix(n_elements)
+    original_models = []
+    for i, (model, inliers) in enumerate(filtered):
+        pref_matrix = add_col(pref_matrix, inliers)
+        original_models.append(model)
+
+    return pref_matrix, original_models

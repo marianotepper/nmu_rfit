@@ -18,29 +18,6 @@ class UniformSampler(object):
             yield sample
 
 
-class AdaptiveSampler(object):
-    def __init__(self, n_samples=None):
-        self.n_samples = n_samples
-        self.distribution = None
-
-    def generate(self, x, min_sample_size):
-        n_elements = len(x)
-        self.distribution = np.zeros((n_elements,))
-        for _ in range(self.n_samples):
-            bins = np.cumsum(self.distribution.max() - self.distribution)
-            if bins[-1] > 0:
-                rnd = np.random.randint(0, bins[-1], size=min_sample_size)
-                sample = np.searchsorted(bins, rnd)
-            else:
-                sample = np.array([], dtype=np.int)
-            unique_sample = np.unique(sample)
-            if unique_sample.size < min_sample_size:
-                remainder = min_sample_size - unique_sample.size
-                comp = np.random.randint(0, n_elements, size=remainder)
-                sample = np.append(sample, [comp])
-            yield sample
-
-
 class GaussianLocalSampler(object):
     def __init__(self, sigma, n_samples=None):
         self.n_samples = n_samples

@@ -5,7 +5,6 @@ import multipledispatch
 
 def sparse(*args, **kwargs):
     return sp.csc_matrix(*args, **kwargs)
-    # return coo_matrix(*args, **kwargs).tocsc()
 
 
 @multipledispatch.dispatch(sp.spmatrix, sp.spmatrix)
@@ -117,21 +116,19 @@ class UpdatableSVD:
         k = np.dot(np.diag(np.append(self.s, [0])),
                    np.identity(self.s.size + 1) - np.outer(u_a, v_b))
 
-        if np.allclose(k, np.zeros_like(k)):
-            self.u = np.zeros_like(self.u)
-            self.s = np.zeros_like(self.s)
-            self.vt = np.zeros_like(self.vt)
-            return
+        # if np.allclose(k, np.zeros_like(k)):
+        #     self.u = np.zeros_like(self.u)
+        #     self.s = np.zeros_like(self.s)
+        #     self.vt = np.zeros_like(self.vt)
+        #     return
 
-        if np.any(np.isnan(k)):
+        try:
+            inner_u, s_new, inner_vt = np.linalg.svd(k)
+        except np.linalg.LinAlgError:
             self.u[:] = np.nan
             self.s[:] = np.nan
             self.vt[:] = np.nan
             return
-
-        # ensure SVD convergence:
-        k[np.abs(k) < np.finfo(np.float32).resolution] = 0
-        inner_u, s_new, inner_vt = np.linalg.svd(k)
 
         if s_new.size > self.s.size:
             p = np.zeros((self.u.shape[0], 1))
@@ -141,6 +138,7 @@ class UpdatableSVD:
         self.u = np.dot(self.u, inner_u)[:, :-1]
         self.s = s_new[:-1]
         self.vt = np.dot(inner_vt, self.vt)[:-1, :]
+        self.s[self.s < np.finfo(np.float32).resolution] = 0
 
     def trim(self):
         orig_size = min(self.shape)

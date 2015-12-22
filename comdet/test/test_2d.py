@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import sys
 import matplotlib.pyplot as plt
 import seaborn.apionly as sns
 import scipy.sparse as sp
@@ -8,9 +9,10 @@ import re
 import timeit
 import comdet.biclustering as bc
 import comdet.test.utils as test_utils
+import comdet.pme.preference as pref
+import comdet.pme.sampling as sampling
 import comdet.pme.line as line
 import comdet.pme.circle as circle
-import comdet.pme.sampling as sampling
 import comdet.pme.acontrario.line as ac_line
 import comdet.pme.acontrario.circle as ac_circle
 
@@ -74,7 +76,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
     palette = sns.color_palette(palette, len(bic_list))
 
     plt.figure()
-    bc.preference.plot(pref_matrix, bic_list=bic_list, palette=palette)
+    pref.plot(pref_matrix, bic_list=bic_list, palette=palette)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     plot_final_models(x, [mi[0] for mi in mod_inliers_list], palette=palette)
@@ -95,9 +97,9 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     base_plot(x)
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 
-    pref_matrix, orig_models = test_utils.build_preference_matrix(x.shape[0],
-                                                                  ransac_gen,
-                                                                  ac_tester)
+    pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
+                                                            ransac_gen,
+                                                            ac_tester)
     print 'Preference matrix size:', pref_matrix.shape
 
     base_plot(x)
@@ -105,7 +107,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     plt.savefig(output_prefix + '_original_models.pdf', dpi=600)
 
     plt.figure()
-    bc.preference.plot(pref_matrix)
+    pref.plot(pref_matrix)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print 'Running regular bi-clustering'
@@ -121,6 +123,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 
 
 if __name__ == '__main__':
+    sys.stdout = test_utils.Logger("test_2d.txt")
+
     sampling_factor = 20
     inliers_threshold = 0.03
     epsilon = 0
@@ -132,26 +136,6 @@ if __name__ == '__main__':
                      'Circles': (circle.Circle, sampling.UniformSampler(),
                                  ac_circle.LocalNFA),
                      }
-
-    # configuration = {'Star': (line.Line, sampling.SimpleSampler(),
-    #                           ac_line.LocalNFA),
-    #                  'Stairs': (line.Line,
-    #                             sampling.GaussianLocalSampler(0.05),
-    #                             ac_line.LocalNFA),
-    #                  'Circles': (circle.Circle,
-    #                              sampling.GaussianLocalSampler(0.5),
-    #                              ac_circle.LocalNFA),
-    #                  }
-    #
-    # configuration = {'Star': (line.Line, sampling.SimpleSampler(),
-    #                           ac_line.GlobalNFA),
-    #                  'Stairs': (line.Line,
-    #                             sampling.GaussianLocalSampler(0.05),
-    #                             ac_line.GlobalNFA),
-    #                  'Circles': (circle.Circle,
-    #                              sampling.GaussianLocalSampler(0.5),
-    #                              ac_circle.GlobalNFA),
-    #                  }
 
     examples = scipy.io.loadmat('../data/JLinkageExamples.mat')
     for current_example in examples:
@@ -167,9 +151,12 @@ if __name__ == '__main__':
         model_class, sampler, ac_tester_class = configuration[exp_type]
         data = examples[current_example].T
 
+        def inliers(model):
+            return sampling.inliers(model, data, inliers_threshold)
+
         sampler.n_samples = data.shape[0] * sampling_factor
-        ransac_gen = sampling.ransac_generator(model_class, data, sampler,
-                                               inliers_threshold)
+        mg = sampling.ModelGenerator(model_class, data)
+        ransac_gen = sampling.RansacGenerator(sampler, mg, inliers)
         ac_tester = ac_tester_class(data, epsilon, inliers_threshold)
 
         match = re.match(exp_type + '[0-9]*_', current_example)

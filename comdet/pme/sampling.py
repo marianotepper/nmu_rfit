@@ -4,7 +4,7 @@ import scipy.spatial.distance as distance
 import itertools
 
 
-class SimpleSampler(object):
+class UniformSampler(object):
     def __init__(self, n_samples=None):
         self.n_samples = n_samples
 
@@ -18,15 +18,16 @@ class SimpleSampler(object):
             yield sample
 
 
-class UniformSampler(object):
+class AdaptiveSampler(object):
     def __init__(self, n_samples=None):
         self.n_samples = n_samples
+        self.distribution = None
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
-        distribution = np.zeros((n_elements,))
+        self.distribution = np.zeros((n_elements,))
         for _ in range(self.n_samples):
-            bins = np.cumsum(distribution.max() - distribution)
+            bins = np.cumsum(self.distribution.max() - self.distribution)
             if bins[-1] > 0:
                 rnd = np.random.randint(0, bins[-1], size=min_sample_size)
                 sample = np.searchsorted(bins, rnd)
@@ -37,7 +38,6 @@ class UniformSampler(object):
                 remainder = min_sample_size - unique_sample.size
                 comp = np.random.randint(0, n_elements, size=remainder)
                 sample = np.append(sample, [comp])
-            distribution[sample] += 1
             yield sample
 
 
@@ -78,29 +78,30 @@ class GaussianLocalSampler(object):
             counter_total += 1
 
 
-def model_generator(model_class, elements, sampler):
-    samples = sampler.generate(elements, model_class().min_sample_size)
-    for s in samples:
-        ms_set = np.take(elements, s, axis=0)
-        model = model_class()
-        model.fit(ms_set)
-        yield model
+class ModelGenerator(object):
+    def __init__(self, model_class, elements):
+        self.model_class = model_class
+        self.elements = elements
+
+    def generate(self, sampler):
+        samples = sampler.generate(self.elements,
+                                   self.model_class().min_sample_size)
+        for s in samples:
+            ms_set = np.take(self.elements, s, axis=0)
+            model = self.model_class(ms_set)
+            yield model
 
 
 def inliers(model, elements, threshold):
     return model.distances(elements) <= threshold
 
 
-def inliers_generator(mg, elements, threshold):
-    return itertools.imap(lambda m: (m, inliers(m, elements, threshold)), mg)
+class RansacGenerator(object):
+    def __init__(self, sampler, mg, inliers_fun):
+        self.sampler = sampler
+        self.model_generator = mg
+        self.inliers_fun = inliers_fun
 
-
-def ransac_generator(model_class, elements, sampler, inliers_threshold):
-    mg = model_generator(model_class, elements, sampler)
-    return inliers_generator(mg, elements, inliers_threshold)
-
-
-# if __name__ == '__main__':
-#     x = np.random.rand(100, 2)
-#     sampler = GaussianLocalSampler(0.1)
-#     list(sampler.generate(x, 1, 2))
+    def __iter__(self):
+        return itertools.imap(lambda m: (m, self.inliers_fun(m)),
+                              self.model_generator.generate(self.sampler))

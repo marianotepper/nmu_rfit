@@ -56,29 +56,16 @@ class GaussianLocalSampler(object):
 
 
 class ModelGenerator(object):
-    def __init__(self, model_class, elements):
+    def __init__(self, model_class, elements, sampler):
         self.model_class = model_class
         self.elements = elements
-
-    def generate(self, sampler):
-        samples = sampler.generate(self.elements,
-                                   self.model_class().min_sample_size)
-        for s in samples:
-            ms_set = np.take(self.elements, s, axis=0)
-            model = self.model_class(ms_set)
-            yield model
-
-
-def inliers(model, elements, threshold):
-    return model.distances(elements) <= threshold
-
-
-class RansacGenerator(object):
-    def __init__(self, sampler, mg, inliers_fun):
         self.sampler = sampler
-        self.model_generator = mg
-        self.inliers_fun = inliers_fun
 
     def __iter__(self):
-        return itertools.imap(lambda m: (m, self.inliers_fun(m)),
-                              self.model_generator.generate(self.sampler))
+        def generate(s):
+            ms_set = np.take(self.elements, s, axis=0)
+            return self.model_class(ms_set)
+        samples = self.sampler.generate(self.elements,
+                                        self.model_class().min_sample_size)
+        return itertools.imap(generate, samples)
+

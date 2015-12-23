@@ -1,5 +1,5 @@
 import numpy as np
-import comdet.pme.acontrario.utils as utils
+from . import utils
 
 
 class GlobalNFA(utils.BinomialNFA):
@@ -17,21 +17,3 @@ class GlobalNFA(utils.BinomialNFA):
         length = s.max() - s.min()
         p = length * 2 * inliers_threshold / area
         return len(data), inliers_mask.sum(), p
-
-
-class LocalNFA(utils.BinomialNFA):
-    def __init__(self, data, epsilon, inliers_threshold):
-        super(LocalNFA, self).__init__(data, epsilon)
-        self.inliers_threshold = inliers_threshold
-
-    def _binomial_params(self, model, data, inliers_threshold):
-        dist = model.distances(data)
-        upper_threshold = np.maximum(inliers_threshold * 3,
-                                     np.min(dist[dist > inliers_threshold]))
-        n = self.inner_inliers(dist, upper_threshold).sum()
-        k = self.inner_inliers(dist, inliers_threshold).sum()
-        p = inliers_threshold / upper_threshold
-        return n, k, p
-
-    def threshold(self, model):
-        return self.inliers_threshold

@@ -51,11 +51,39 @@ class BinomialNFA(object):
             data = self.data
         if inliers_threshold is None:
             inliers_threshold = self.threshold(model)
-        return self.inner_inliers(model.distances(data), inliers_threshold)
+        return np.abs(model.distances(data)) <= inliers_threshold
 
-    # noinspection PyMethodMayBeStatic
-    def inner_inliers(self, distances, inliers_threshold):
-        return distances <= inliers_threshold
+
+class LocalNFA(BinomialNFA):
+    def __init__(self, data, epsilon, inliers_threshold):
+        super(LocalNFA, self).__init__(data, epsilon)
+        self.inliers_threshold = inliers_threshold
+
+    def _binomial_params(self, model, data, inliers_threshold):
+        ratio = 2.
+        dist = model.distances(data)
+        dist_abs = np.abs(dist)
+
+        upper_threshold = np.maximum(inliers_threshold * 3,
+                                     np.min(dist_abs[dist_abs > inliers_threshold]))
+        inliers = dist_abs <= inliers_threshold
+        region1 = np.logical_and(dist >= -upper_threshold,
+                                 dist < -inliers_threshold)
+        region2 = np.logical_and(dist <= upper_threshold,
+                                 dist > inliers_threshold)
+        n1 = region1.sum()
+        n2 = region2.sum()
+        k = inliers.sum()
+        if n1 == 0 or n2 == 0:
+            n = np.maximum(n1, n2) + k
+            p = 1. / ratio
+        else:
+            n = n1 + n2 + k
+            p = 1. / (ratio + 1)
+        return n, k, p
+
+    def threshold(self, model):
+        return self.inliers_threshold
 
 
 def log_binomial(n, k, instance_proba):
@@ -91,5 +119,3 @@ def log_betainc(a, b, x):
         bt = np.exp(logbt)
         # Use continued fraction after making the symmetry transformation.
         return np.log(1.0 - bt * special.betainc(b, a, 1. - x) / b)
-
-

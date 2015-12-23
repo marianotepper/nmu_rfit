@@ -30,20 +30,20 @@ class Line(object):
     def distances(self, data):
         if data.shape[1] == 2:
             data = np.hstack((data, np.ones((data.shape[0], 1))))
-        return np.abs(np.dot(data, self.eq))
+        return np.dot(data, self.eq)
 
     def project(self, data):
-        u, x0 = self.point_and_basis()
+        u, x0 = self._basis_and_point()
         s = np.dot(data - x0, u)
         proj = x0 + np.atleast_2d(s).T * u
         return proj, s
 
-    def point_and_basis(self):
+    def _basis_and_point(self):
         u = np.array([self.eq[1], -self.eq[0]])
+        u /= np.linalg.norm(u)
         i_max = np.argmax(np.abs(self.eq[:2]))
         x0 = np.zeros((2,))
         x0[i_max] -= self.eq[2] / self.eq[i_max]
-        u /= np.linalg.norm(u)
         return u, x0
 
     def plot(self, limits=None, **kwargs):

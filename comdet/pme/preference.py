@@ -61,12 +61,10 @@ def plot(array, bic_list=[], palette='Set1'):
 
 
 def build_preference_matrix(n_elements, ransac_gen, ac_tester):
-    filtered = ac.ifilter(ac_tester, ransac_gen)
-
     pref_matrix = create_preference_matrix(n_elements)
     original_models = []
-    for i, (model, inliers) in enumerate(filtered):
-        pref_matrix = add_col(pref_matrix, inliers)
+    for model in ac.ifilter(ac_tester, ransac_gen):
+        pref_matrix = add_col(pref_matrix, ac_tester.inliers(model))
         original_models.append(model)
 
     return pref_matrix, original_models

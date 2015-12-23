@@ -74,7 +74,6 @@ def frobenius_norm(array):
 
 
 class UpdatableSVD:
-
     def __init__(self, array):
         self.shape = array.shape
         self.u, self.s, self.vt = np.linalg.svd(array, full_matrices=False)
@@ -101,6 +100,7 @@ class UpdatableSVD:
         self.u = np.dot(np.hstack((self.u, np.atleast_2d(p).T)), inner_u)
         self.s = s_new
         self.vt = np.dot(inner_vt, np.vstack((self.vt, np.atleast_2d(q))))
+        self.trim()
 
     def remove_column(self, idx):
         b = np.zeros((self.shape[1],))
@@ -120,6 +120,7 @@ class UpdatableSVD:
         #     self.u = np.zeros_like(self.u)
         #     self.s = np.zeros_like(self.s)
         #     self.vt = np.zeros_like(self.vt)
+        #     print 'failed: all close'
         #     return
 
         try:
@@ -128,6 +129,7 @@ class UpdatableSVD:
             self.u[:] = np.nan
             self.s[:] = np.nan
             self.vt[:] = np.nan
+            print 'failed'
             return
 
         if s_new.size > self.s.size:
@@ -135,10 +137,10 @@ class UpdatableSVD:
             self.u = np.hstack((self.u, p))
             self.vt = np.vstack((self.vt, q))
         # update and crop
-        self.u = np.dot(self.u, inner_u)[:, :-1]
-        self.s = s_new[:-1]
-        self.vt = np.dot(inner_vt, self.vt)[:-1, :]
-        self.s[self.s < np.finfo(np.float32).resolution] = 0
+        self.u = np.dot(self.u, inner_u)
+        self.s = s_new
+        self.vt = np.dot(inner_vt, self.vt)
+        self.trim()
 
     def trim(self):
         orig_size = min(self.shape)

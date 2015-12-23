@@ -133,11 +133,10 @@ def bicluster(deflator, n=None, share_points=True):
 
             u, v = nmf_robust_rank1(deflator.array_compressed)
             v = binarize(v)
-
             idx_v = sp.find(v)[1]
+
             array_cropped = deflator.array[:, idx_v]
             v_cropped = utils.sparse(np.ones((1, idx_v.size)))
-
             idx_u, _, u_data = sp.find(u)
             u_init = utils.sparse((u_data, (deflator.selection[idx_u],
                                             np.zeros_like(idx_u))),
@@ -149,7 +148,6 @@ def bicluster(deflator, n=None, share_points=True):
             idx_v = sp.find(v)[1]
 
         u = binarize(u)
-        idx_u = sp.find(u)[0]
         bic_list.append((u, v))
 
         deflator.remove_columns(idx_v)
@@ -161,7 +159,7 @@ def bicluster(deflator, n=None, share_points=True):
             cl = online_mdl.add_rank1_approximation(deflator.array, u, v)
             total_codelength.append(cl)
 
-        if idx_u.size <= 1 and idx_v.size <= 1:
+        if u.nnz <= 1 and v.nnz <= 1:
             break
 
     if n is not None:

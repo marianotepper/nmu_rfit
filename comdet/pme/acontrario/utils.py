@@ -1,15 +1,13 @@
 import numpy as np
-import scipy.sparse as sp
 import scipy.special as special
 import abc
-import operator
 import itertools
 
 
-def ifilter(ac_tester, mig):
-    def inner_meaningful((model, inliers)):
-        return ac_tester.meaningful(model, inliers.sum())
-    return itertools.ifilter(inner_meaningful, mig)
+def ifilter(ac_tester, model_generator):
+    def inner_meaningful(model):
+        return ac_tester.meaningful(model)
+    return itertools.ifilter(inner_meaningful, model_generator)
 
 
 def meaningful(value, epsilon):
@@ -23,29 +21,41 @@ class BinomialNFA(object):
         self.data = data
         self.epsilon = epsilon
 
-    def nfa(self, model, n_inliers, data=None, inliers_threshold=None):
+    def nfa(self, model, data=None, inliers_threshold=None):
         if data is None:
             data = self.data
         if inliers_threshold is None:
             inliers_threshold = self.threshold(model)
         try:
-            n, p = self._total_and_probability(model, data, inliers_threshold)
+            n, k, p = self._binomial_params(model, data, inliers_threshold)
         except ValueError:
             return np.inf
-        pfa = log_binomial(n, n_inliers - model.min_sample_size, p)
+        pfa = log_binomial(n, k - model.min_sample_size, p)
         n_tests = log_nchoosek(n, model.min_sample_size)
         return (pfa + n_tests) / np.log(10)
 
-    def meaningful(self, model, n_inliers):
-        return self.nfa(model, n_inliers) < self.epsilon
+    def meaningful(self, model, data=None, inliers_threshold=None):
+        return self.nfa(model, data=data,
+                        inliers_threshold=inliers_threshold) < self.epsilon
 
     @abc.abstractmethod
     def threshold(self, model):
         pass
 
     @abc.abstractmethod
-    def _total_and_probability(self, model, data, inliers_threshold):
+    def _binomial_params(self, model, data, inliers_threshold):
         pass
+
+    def inliers(self, model, data=None, inliers_threshold=None):
+        if data is None:
+            data = self.data
+        if inliers_threshold is None:
+            inliers_threshold = self.threshold(model)
+        return self.inner_inliers(model.distances(data), inliers_threshold)
+
+    # noinspection PyMethodMayBeStatic
+    def inner_inliers(self, distances, inliers_threshold):
+        return distances <= inliers_threshold
 
 
 def log_binomial(n, k, instance_proba):
@@ -82,56 +92,4 @@ def log_betainc(a, b, x):
         # Use continued fraction after making the symmetry transformation.
         return np.log(1.0 - bt * special.betainc(b, a, 1. - x) / b)
 
-
-def optimal_nfa(ac_tester, model, inliers, considered=None):
-    if considered is None:
-        data_considered = None
-    else:
-        if considered.sum() == inliers.sum():
-            return -np.inf
-        data_considered = ac_tester.data[considered]
-    if sp.issparse(inliers):
-        inliers = np.squeeze(inliers.toarray())
-    if model.min_sample_size >= inliers.sum():
-        return np.inf
-    dist = model.distances(ac_tester.data[inliers])
-    dist.sort()
-    min_nfa = np.inf
-    for k, s in enumerate(dist):
-        if k < model.min_sample_size:
-            continue
-        if considered is not None and k + 1 >= len(data_considered):
-            continue
-        if s < np.finfo(np.float32).resolution:
-            continue
-        nfa = ac_tester.nfa(model, k + 1, inliers_threshold=s,
-                            data=data_considered)
-        if nfa < min_nfa:
-            stats = k + 1, s
-        min_nfa = np.minimum(nfa, min_nfa)
-    # print stats
-    return min_nfa + np.log10(len(dist) - model.min_sample_size)
-
-
-def exclusion_principle(ac_tester, mod_inliers_list):
-    nfa_list = [(i, optimal_nfa(ac_tester, mod, in_a))
-                for i, (mod, in_a) in enumerate(mod_inliers_list)]
-    nfa_list = filter(lambda e: meaningful(e[1], ac_tester.epsilon), nfa_list)
-    nfa_list = sorted(nfa_list, key=operator.itemgetter(1))
-    idx = zip(*nfa_list)[0]
-
-    keep_list = list(idx)
-    for pick in idx:
-        mod, in_a = mod_inliers_list[pick]
-        in_list = [mod_inliers_list[k][1] for k in keep_list if k < pick]
-        if not in_list:
-            continue
-        excluded = reduce(lambda x, y: np.logical_or(x, y), in_list)
-        considered = np.logical_not(excluded)
-        inliers = in_a - np.logical_and(in_a, excluded)
-        nfa = optimal_nfa(ac_tester, mod, inliers, considered=considered)
-        if not meaningful(nfa, ac_tester.epsilon):
-            keep_list.remove(pick)
-
-    return keep_list
 

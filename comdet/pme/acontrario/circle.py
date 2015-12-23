@@ -11,10 +11,12 @@ class GlobalNFA(utils.BinomialNFA):
     def threshold(self, model):
         return self.inliers_threshold
 
-    def _total_and_probability(self, model, data, inliers_threshold):
+    def _binomial_params(self, model, data, inliers_threshold):
+        inliers_mask = self.inliers(model, data, inliers_threshold)
         # (a + b)**2 - (a - b)**2 == 4ab
         ring_area = np.pi * 4 * model.radius * inliers_threshold
-        return len(data), min(ring_area / self.area, 1)
+        p = min(ring_area / self.area, 1)
+        return len(data), inliers_mask.sum(), p
 
 
 class LocalNFA(utils.BinomialNFA):
@@ -22,14 +24,15 @@ class LocalNFA(utils.BinomialNFA):
         super(LocalNFA, self).__init__(data, epsilon)
         self.inliers_threshold = inliers_threshold
 
-    def _total_and_probability(self, model, data, inliers_threshold):
+    def _binomial_params(self, model, data, inliers_threshold):
         if model.radius <= inliers_threshold:
             raise ValueError('Inliers threshold too big for this circle')
 
         dist = model.distances(data)
         upper_threshold = np.maximum(inliers_threshold * 3,
                                      np.min(dist[dist > inliers_threshold]))
-        region_mask = dist <= upper_threshold
+        n = self.inner_inliers(dist, upper_threshold).sum()
+        k = self.inner_inliers(dist, inliers_threshold).sum()
 
         if model.radius < upper_threshold:
             p = 4 * model.radius * inliers_threshold
@@ -37,7 +40,7 @@ class LocalNFA(utils.BinomialNFA):
         else:
             p = inliers_threshold / upper_threshold
 
-        return region_mask.sum(), p
+        return n, k, p
 
     def threshold(self, model):
         return self.inliers_threshold

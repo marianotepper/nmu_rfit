@@ -34,7 +34,8 @@ class GlobalNFA(utils.BinomialNFA, VanishingThresholder):
         VanishingThresholder.__init__(self, threshold_in_image, img_radius,
                                       img_center)
 
-    def _total_and_probability(self, model, data, inliers_threshold):
+    def _binomial_params(self, model, data, inliers_threshold):
+        inliers_mask = self.inliers(model, data, inliers_threshold)
         if model.point[2] != 0 and inliers_threshold == self.threshold_in_image:
             p = self.threshold_in_image / self.img_radius
         elif model.point[2] != 0:
@@ -53,7 +54,7 @@ class GlobalNFA(utils.BinomialNFA, VanishingThresholder):
                 p = inliers_threshold / self.img_radius
         else:
             p = inliers_threshold / (2 * np.pi)
-        return len(data), p
+        return len(data), inliers_mask.sum(), p
 
     def threshold(self, model):
         return VanishingThresholder.threshold(self, model)
@@ -66,13 +67,14 @@ class LocalNFA(utils.BinomialNFA, VanishingThresholder):
         VanishingThresholder.__init__(self, threshold_in_image, img_radius,
                                       img_center)
 
-    def _total_and_probability(self, model, data, inliers_threshold):
+    def _binomial_params(self, model, data, inliers_threshold):
         dist = model.distances(data)
         upper_threshold = np.maximum(inliers_threshold * 3,
                                      np.min(dist[dist > inliers_threshold]))
-        region_mask = dist <= upper_threshold
+        n = self.inner_inliers(dist, upper_threshold).sum()
+        k = self.inner_inliers(dist, inliers_threshold).sum()
         p = inliers_threshold / upper_threshold
-        return region_mask.sum(), p
+        return n, k, p
 
     def threshold(self, model):
         return VanishingThresholder.threshold(self, model)

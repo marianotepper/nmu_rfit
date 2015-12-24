@@ -171,7 +171,7 @@ def run():
 
         test(model_class, data, example, ransac_gen, ac_tester, gt_groups)
 
-    plt.show()
+    # plt.show()
 
 if __name__ == '__main__':
     run()

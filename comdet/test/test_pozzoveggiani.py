@@ -11,6 +11,7 @@ import comdet.test.utils as utils
 
 
 def run(subsampling=1):
+    sys.stdout = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
     inliers_threshold = 0.5
     sigma = 1
     epsilon = 0
@@ -56,10 +57,8 @@ def run(subsampling=1):
 
 
 if __name__ == '__main__':
-    sys.stdout = utils.Logger("pozzoveggiani.txt")
-
     run(subsampling=10)
-    # run(subsampling=5)
-    # run(subsampling=2)
-    # run(subsampling=1)
-    plt.show()
+    run(subsampling=5)
+    run(subsampling=2)
+    run(subsampling=1)
+    # plt.show()

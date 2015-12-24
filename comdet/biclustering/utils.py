@@ -103,6 +103,9 @@ class UpdatableSVD:
         self.trim()
 
     def remove_column(self, idx):
+        if self.s is None:
+            return
+
         b = np.zeros((self.shape[1],))
         b[idx] = 1
         n = self.vt[:, idx]
@@ -126,10 +129,9 @@ class UpdatableSVD:
         try:
             inner_u, s_new, inner_vt = np.linalg.svd(k)
         except np.linalg.LinAlgError:
-            self.u[:] = np.nan
-            self.s[:] = np.nan
-            self.vt[:] = np.nan
-            print 'failed'
+            self.u = None
+            self.s = None
+            self.vt = None
             return
 
         if s_new.size > self.s.size:

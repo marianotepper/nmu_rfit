@@ -47,7 +47,6 @@ def select_leverage_scores(projected_mat, s, nrows_original):
     # leverage_scores /= sum
     idx = leverage_scores.size - s
     selection = np.argpartition(leverage_scores, idx)[idx:]
-    # print '#########', selection.size, np.min(leverage_scores[selection]), np.max(leverage_scores[selection])
     return selection
 
 
@@ -97,20 +96,20 @@ class OnlineColumnCompressor:
         self.svd = utils.UpdatableSVD(subsampled_mat)
 
     def compress(self):
+        if self.svd.s is None:
+            return None
         self.apply_downdates()
-        self.svd.trim()
-        r_inv = OnlineColumnCompressor._invert_r(self.svd)
+        r_inv = self._invert_r()
         projected_mat = self.mat.dot(utils.sparse(r_inv)).toarray()
         selection = select_leverage_scores(projected_mat, self.n_samples,
                                            self.nrows_original)
         # TODO scale nonzero rows
         return selection
 
-    @staticmethod
-    def _invert_r(svd, rcond=1e-6):
-        mask = svd.s > rcond * np.max(svd.s)
-        s = 1. / svd.s[mask]
-        vt = svd.vt[mask, :]
+    def _invert_r(self, rcond=1e-6):
+        mask = self.svd.s > rcond * np.max(self.svd.s)
+        s = 1. / self.svd.s[mask]
+        vt = self.svd.vt[mask, :]
         return vt.T * s
 
     def additive_downdate(self, u, v):

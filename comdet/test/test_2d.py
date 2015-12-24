@@ -13,8 +13,7 @@ import comdet.pme.preference as pref
 import comdet.pme.sampling as sampling
 import comdet.pme.line as line
 import comdet.pme.circle as circle
-import comdet.pme.acontrario.line as ac_line
-import comdet.pme.acontrario.circle as ac_circle
+import comdet.pme.acontrario as ac
 
 
 def base_plot(x):
@@ -70,8 +69,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
     t1 = timeit.default_timer() - t
     print 'Time:', t1
 
-    mod_inliers_list, bic_list = test_utils.clean(model_class, x, ac_tester,
-                                                  bic_list)
+    models, bic_list = test_utils.clean(model_class, x, ac_tester, bic_list)
 
     palette = sns.color_palette(palette, len(bic_list))
 
@@ -79,7 +77,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
     pref.plot(pref_matrix, bic_list=bic_list, palette=palette)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
-    plot_final_models(x, [mi[0] for mi in mod_inliers_list], palette=palette)
+    plot_final_models(x, models, palette=palette)
     plt.savefig(output_prefix + '_final_models.pdf', dpi=600)
 
     plot_original_models(x, original_models, [bic[1] for bic in bic_list],
@@ -122,26 +120,26 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
                      ac_tester, gt_groups, output_prefix + '_bic_comp')
 
 
-if __name__ == '__main__':
+def run():
     sys.stdout = test_utils.Logger("test_2d.txt")
 
-    sampling_factor = 20
+    sampling_factor = 5
     inliers_threshold = 0.03
     epsilon = 0
 
     configuration = {'Star': (line.Line, sampling.UniformSampler(),
-                              ac_line.LocalNFA),
+                               ac.LocalNFA),
                      'Stairs': (line.Line, sampling.UniformSampler(),
-                                ac_line.LocalNFA),
+                                ac.LocalNFA),
                      'Circles': (circle.Circle, sampling.UniformSampler(),
-                                 ac_circle.LocalNFA),
+                                 ac.circle.LocalNFA),
                      }
 
-    examples = scipy.io.loadmat('../data/JLinkageExamples.mat')
-    for current_example in examples:
+    mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
+    for example in mat.keys():
         exp_type = None
         for c in configuration:
-            if current_example.find(c) == 0:
+            if example.find(c) == 0:
                 exp_type = c
                 break
         else:
@@ -149,23 +147,18 @@ if __name__ == '__main__':
                 continue
 
         model_class, sampler, ac_tester_class = configuration[exp_type]
-        data = examples[current_example].T
+        data = mat[example].T
 
-        def inliers(model):
-            return sampling.inliers(model, data, inliers_threshold)
-
-        sampler.n_samples = data.shape[0] * sampling_factor
-        mg = sampling.ModelGenerator(model_class, data)
-        ransac_gen = sampling.RansacGenerator(sampler, mg, inliers)
+        sampler.n_samples = data.shape[0] * sampling_factor * model_class().min_sample_size
+        ransac_gen = sampling.ModelGenerator(model_class, data, sampler)
         ac_tester = ac_tester_class(data, epsilon, inliers_threshold)
 
-        match = re.match(exp_type + '[0-9]*_', current_example)
+        match = re.match(exp_type + '[0-9]*_', example)
         try:
             match = re.match('[0-9]+', match.group()[len(exp_type):])
             n_groups = int(match.group())
         except AttributeError:
             n_groups = 4
-            continue
         gt_groups = ground_truth(data.shape[0], n_groups=n_groups,
                                  group_size=50)
 
@@ -175,7 +168,9 @@ if __name__ == '__main__':
         print 'seed:', seed
         np.random.seed(seed)
 
-        test(model_class, data, current_example, ransac_gen, ac_tester,
-             gt_groups)
+        test(model_class, data, example, ransac_gen, ac_tester, gt_groups)
 
-    # plt.show()
+    plt.show()
+
+if __name__ == '__main__':
+    run()

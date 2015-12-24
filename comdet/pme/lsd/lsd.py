@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 class Segment(object):
-    def __init__(self, p_a, p_b, quality=None, width=None, precision=None):
+    def __init__(self, p_a, p_b, nfa=None, width=None, precision=None):
         def homogeneous(p):
             if len(p) == 2:
                 return np.append(p, [1])
@@ -15,7 +15,8 @@ class Segment(object):
 
         self.p_a = homogeneous(p_a)
         self.p_b = homogeneous(p_b)
-        self.quality = quality
+        self.nfa = nfa
+        self.length = np.linalg.norm(p_a - p_b)
         self.width = width
         self.precision = precision
         line_ab = np.cross(self.p_a, self.p_b)
@@ -46,7 +47,7 @@ def compute(gray_image, epsilon=0):
         l = line.split(' ')
         values = [float(s) for s in l if s and s != '\n']
         segments.append(Segment(values[0:2], values[2:4], width=values[4],
-                                precision=values[5], quality=values[6]))
+                                precision=values[5], nfa=values[6]))
 
     return segments
 

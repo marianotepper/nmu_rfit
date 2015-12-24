@@ -1,11 +1,13 @@
 from __future__ import absolute_import
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io
 import comdet.test.test_3d as test_3d
 import comdet.pme.plane as plane
 import comdet.pme.sampling as sampling
-import comdet.pme.acontrario.plane as ac_plane
+import comdet.pme.acontrario as ac
+import comdet.test.utils as utils
 
 
 def run(subsampling=1):
@@ -38,10 +40,8 @@ def run(subsampling=1):
 
     n_samples = data.shape[0] * 2
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
-    ac_tester = ac_plane.LocalNFA(data, epsilon, inliers_threshold)
-
-    ransac_gen = sampling.ransac_generator(plane.Plane, data, sampler,
-                                           inliers_threshold)
+    ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
+    ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
 
     projector = test_3d.Projector(data, visibility, proj_mat, dirname, None)
 
@@ -56,8 +56,10 @@ def run(subsampling=1):
 
 
 if __name__ == '__main__':
+    sys.stdout = utils.Logger("pozzoveggiani.txt")
+
     run(subsampling=10)
-    run(subsampling=5)
-    run(subsampling=2)
-    run(subsampling=1)
+    # run(subsampling=5)
+    # run(subsampling=2)
+    # run(subsampling=1)
     plt.show()

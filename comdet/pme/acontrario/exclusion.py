@@ -5,9 +5,7 @@ from . import utils
 
 def exclusion_principle(ac_tester, models):
     mod_inliers_list = [(mod, ac_tester.inliers(mod)) for mod in models]
-    nfa_list = [(i, ac_tester.nfa(mod))
-                for i, (mod, in_a) in enumerate(mod_inliers_list)]
-
+    nfa_list = [(i, ac_tester.nfa(mod)) for i, mod in enumerate(models)]
     nfa_list = filter(lambda e: utils.meaningful(e[1], ac_tester.epsilon), nfa_list)
     nfa_list = sorted(nfa_list, key=operator.itemgetter(1))
     idx = zip(*nfa_list)[0]

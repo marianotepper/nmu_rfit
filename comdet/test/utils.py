@@ -17,29 +17,28 @@ def clean(model_class, x, ac_tester, bic_list, restimate=True):
                 if bic[1].nnz > 1 and
                 bic[0].nnz > model_class().min_sample_size]
 
-    mod_inliers_list = []
+    models = []
     for rf, _ in bic_list:
         inliers = np.squeeze(rf.toarray())
         mod = model_class(x[inliers])
-        if restimate:
-            inliers = mod.distances(x) <= ac_tester.threshold(mod)
-        mod_inliers_list.append((mod, inliers))
+        models.append(mod)
 
-    survivors = ac.exclusion_principle(ac_tester, mod_inliers_list)
+    survivors = ac.exclusion_principle(ac_tester, models)
 
-    mod_inliers_list = [mod_inliers_list[s] for s in survivors]
+    models = [models[s] for s in survivors]
     bic_list = [bic_list[s] for s in survivors]
-    return mod_inliers_list, bic_list
+    return models, bic_list
 
 
 class Logger(object):
     def __init__(self, filename="Console.log"):
         self.terminal = sys.stdout
-        self.log = open(filename, "a")
+        self.log = open(filename, "w")
 
     def write(self, message):
         self.terminal.write(message)
         self.log.write(message)
+        self.log.flush()
 
     def __getattr__(self, attr):
         return getattr(self.terminal, attr)

@@ -64,7 +64,7 @@ class LocalNFA(BinomialNFA):
         dist = model.distances(data)
         dist_abs = np.abs(dist)
         min_dist = np.min(dist_abs[dist_abs > inliers_threshold])
-        upper_threshold = np.maximum(inliers_threshold * 3, min_dist)
+        upper_threshold = np.maximum(inliers_threshold * (ratio + 1), min_dist)
         inliers = dist_abs <= inliers_threshold
         region1 = np.logical_and(dist >= -upper_threshold,
                                  dist < -inliers_threshold)

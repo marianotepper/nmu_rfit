@@ -15,10 +15,12 @@ def optimal_nfa(ac_tester, model, inliers, considered=None):
         inliers = np.squeeze(inliers.toarray())
     if model.min_sample_size >= inliers.sum():
         return np.inf
-    dist = model.distances(ac_tester.data[inliers])
+    dist = np.abs(model.distances(ac_tester.data[inliers]))
     dist.sort()
     min_nfa = np.inf
-    for s in dist:
+    for k, s in enumerate(dist):
+        if k + 1 < model.min_sample_size:
+            continue
         if s < np.finfo(np.float32).resolution:
             continue
         nfa = ac_tester.nfa(model, inliers_threshold=s, data=data_considered)
@@ -28,8 +30,11 @@ def optimal_nfa(ac_tester, model, inliers, considered=None):
 
 def exclusion_principle(ac_tester, models):
     mod_inliers_list = [(mod, ac_tester.inliers(mod)) for mod in models]
-    nfa_list = [(i, optimal_nfa(ac_tester, mod, in_a))
+    # nfa_list = [(i, optimal_nfa(ac_tester, mod, in_a))
+    #             for i, (mod, in_a) in enumerate(mod_inliers_list)]
+    nfa_list = [(i, ac_tester.nfa(mod))
                 for i, (mod, in_a) in enumerate(mod_inliers_list)]
+
     nfa_list = filter(lambda e: utils.meaningful(e[1], ac_tester.epsilon), nfa_list)
     nfa_list = sorted(nfa_list, key=operator.itemgetter(1))
     idx = zip(*nfa_list)[0]

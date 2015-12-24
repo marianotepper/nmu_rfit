@@ -1,5 +1,5 @@
 import numpy as np
-import comdet.pme.acontrario.utils as utils
+from . import utils
 
 
 class GlobalNFA(utils.BinomialNFA):
@@ -28,19 +28,43 @@ class LocalNFA(utils.BinomialNFA):
         if model.radius <= inliers_threshold:
             raise ValueError('Inliers threshold too big for this circle')
 
+        ratio = 2.
         dist = model.distances(data)
-        upper_threshold = np.maximum(inliers_threshold * 3,
-                                     np.min(dist[dist > inliers_threshold]))
-        n = self.inner_inliers(dist, upper_threshold).sum()
-        k = self.inner_inliers(dist, inliers_threshold).sum()
-
-        if model.radius < upper_threshold:
-            p = 4 * model.radius * inliers_threshold
-            p /= (model.radius + upper_threshold) ** 2
+        dist_abs = np.abs(dist)
+        min_dist = np.min(dist_abs[dist_abs > inliers_threshold])
+        upper_threshold = np.maximum(inliers_threshold * (ratio + 1), min_dist)
+        inliers = dist_abs <= inliers_threshold
+        region_in = np.logical_and(dist >= -upper_threshold,
+                                   dist < -inliers_threshold)
+        region_out = np.logical_and(dist <= upper_threshold,
+                                    dist > inliers_threshold)
+        n_in = region_in.sum()
+        n_out = region_out.sum()
+        k = inliers.sum()
+        n = k
+        ring_inliers = ring_area(model.radius + inliers_threshold,
+                                 model.radius - inliers_threshold)
+        if n_in == 0:
+            ring_in = 0
         else:
-            p = inliers_threshold / upper_threshold
-
+            n += n_in
+            if model.radius < upper_threshold:
+                ring_in = ring_area(model.radius - inliers_threshold, 0)
+            else:
+                ring_in = ring_area(model.radius - inliers_threshold,
+                                    model.radius - upper_threshold)
+        if n_out == 0:
+            ring_out = 0
+        else:
+            n += n_out
+            ring_out = ring_area(model.radius + upper_threshold,
+                                    model.radius + inliers_threshold)
+        p = ring_inliers / (ring_inliers + ring_in + ring_out)
         return n, k, p
 
     def threshold(self, model):
         return self.inliers_threshold
+
+
+def ring_area(upper, lower):
+    return np.pi * (upper ** 2 - lower ** 2)

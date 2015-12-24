@@ -1,3 +1,4 @@
+*.txt
 /comdet/results/*
 /comdet/pme/lsd/lsd
 /comdet/pme/lsd/lsd_call_example

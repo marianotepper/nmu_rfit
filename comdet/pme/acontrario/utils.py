@@ -32,7 +32,7 @@ class BinomialNFA(object):
             return np.inf
         if n == k:
             return -np.inf
-        pfa = log_binomial(n, k - model.min_sample_size, p)
+        pfa = log_binomial(n, k, p)
         n_tests = log_nchoosek(n, model.min_sample_size)
         return (pfa + n_tests) / np.log(10)
 
@@ -69,6 +69,7 @@ class LocalNFA(BinomialNFA):
         k = inliers.sum()
         outliers = dist_abs > inliers_threshold
         if outliers.sum() == 0:
+            k -= model.min_sample_size
             return k, k, 1
 
         upper_threshold = np.maximum(inliers_threshold * (ratio + 1),
@@ -86,6 +87,7 @@ class LocalNFA(BinomialNFA):
         else:
             n = n1 + n2 + k
             p = 1. / (ratio + 1)
+        k -= model.min_sample_size
         return n, k, p
 
     def threshold(self, model):

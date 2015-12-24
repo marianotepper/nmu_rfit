@@ -123,7 +123,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 def run():
     sys.stdout = test_utils.Logger("test_2d.txt")
 
-    sampling_factor = 3
+    sampling_factor = 5
     inliers_threshold = 0.03
     epsilon = 0
 

@@ -16,7 +16,7 @@ class Segment(object):
         self.p_a = homogeneous(p_a)
         self.p_b = homogeneous(p_b)
         self.nfa = nfa
-        self.length = np.linalg.norm(p_a - p_b)
+        self.length = np.linalg.norm(self.p_a - self.p_b)
         self.width = width
         self.precision = precision
         line_ab = np.cross(self.p_a, self.p_b)

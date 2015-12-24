@@ -7,6 +7,7 @@ import numpy as np
 import scipy.sparse as sp
 import timeit
 import os
+import comdet.pme.preference as pref
 import comdet.biclustering as bc
 import comdet.test.utils as test_utils
 
@@ -153,14 +154,15 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
     t1 = timeit.default_timer() - t
     print 'Time:', t1
 
-    mod_inliers_list, bic_list = test_utils.clean(model_class, x, ac_tester,
-                                                  bic_list)
+    models, bic_list = test_utils.clean(model_class, x, ac_tester, bic_list)
 
     palette = sns.color_palette(palette, len(bic_list), desat=.5)
 
     plt.figure()
-    bc.preference.plot(pref_matrix, bic_list=bic_list, palette=palette)
+    pref.plot(pref_matrix, bic_list=bic_list, palette=palette)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
+
+    mod_inliers_list = [(mod, ac_tester.inliers(mod)) for mod in models]
 
     filename = output_prefix + '_final_models'
     plot_final_models(x, mod_inliers_list, palette, filename=filename,
@@ -183,13 +185,13 @@ def test(model_class, x, name, ransac_gen, ac_tester, projector=None):
     base_plot(x)
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 
-    pref_matrix, orig_models = test_utils.build_preference_matrix(x.shape[0],
-                                                                  ransac_gen,
-                                                                  ac_tester)
+    pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
+                                                            ransac_gen,
+                                                            ac_tester)
     print 'Preference matrix size:', pref_matrix.shape
 
     plt.figure()
-    bc.preference.plot(pref_matrix)
+    pref.plot(pref_matrix)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print 'Running compressed bi-clustering'

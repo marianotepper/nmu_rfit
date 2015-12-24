@@ -31,16 +31,20 @@ class LocalNFA(utils.BinomialNFA):
         ratio = 2.
         dist = model.distances(data)
         dist_abs = np.abs(dist)
+        inliers = dist_abs <= inliers_threshold
+        k = inliers.sum()
+        outliers = dist_abs > inliers_threshold
+        if outliers.sum() == 0:
+            return k, k, 1
+
         min_dist = np.min(dist_abs[dist_abs > inliers_threshold])
         upper_threshold = np.maximum(inliers_threshold * (ratio + 1), min_dist)
-        inliers = dist_abs <= inliers_threshold
         region_in = np.logical_and(dist >= -upper_threshold,
                                    dist < -inliers_threshold)
         region_out = np.logical_and(dist <= upper_threshold,
                                     dist > inliers_threshold)
         n_in = region_in.sum()
         n_out = region_out.sum()
-        k = inliers.sum()
         n = k
         ring_inliers = ring_area(model.radius + inliers_threshold,
                                  model.radius - inliers_threshold)

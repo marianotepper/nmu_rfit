@@ -26,10 +26,12 @@ class BinomialNFA(object):
             data = self.data
         if inliers_threshold is None:
             inliers_threshold = self.threshold(model)
-        try:
-            n, k, p = self._binomial_params(model, data, inliers_threshold)
-        except ValueError:
+
+        n, k, p = self._binomial_params(model, data, inliers_threshold)
+        if k == 0:
             return np.inf
+        if n == k:
+            return -np.inf
         pfa = log_binomial(n, k - model.min_sample_size, p)
         n_tests = log_nchoosek(n, model.min_sample_size)
         return (pfa + n_tests) / np.log(10)
@@ -63,16 +65,21 @@ class LocalNFA(BinomialNFA):
         ratio = 2.
         dist = model.distances(data)
         dist_abs = np.abs(dist)
-        min_dist = np.min(dist_abs[dist_abs > inliers_threshold])
-        upper_threshold = np.maximum(inliers_threshold * (ratio + 1), min_dist)
         inliers = dist_abs <= inliers_threshold
+        k = inliers.sum()
+        outliers = dist_abs > inliers_threshold
+        if outliers.sum() == 0:
+            return k, k, 1
+
+        upper_threshold = np.maximum(inliers_threshold * (ratio + 1),
+                                     np.min(dist_abs[outliers]))
         region1 = np.logical_and(dist >= -upper_threshold,
                                  dist < -inliers_threshold)
         region2 = np.logical_and(dist <= upper_threshold,
                                  dist > inliers_threshold)
         n1 = region1.sum()
         n2 = region2.sum()
-        k = inliers.sum()
+
         if n1 == 0 or n2 == 0:
             n = np.maximum(n1, n2) + k
             p = 1. / ratio

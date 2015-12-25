@@ -1,5 +1,5 @@
 import numpy as np
-import comdet.pme.acontrario.utils as utils
+from . import utils
 
 
 class VanishingThresholder(object):
@@ -55,26 +55,6 @@ class GlobalNFA(utils.BinomialNFA, VanishingThresholder):
         else:
             p = inliers_threshold / (2 * np.pi)
         return len(data), inliers_mask.sum(), p
-
-    def threshold(self, model):
-        return VanishingThresholder.threshold(self, model)
-
-
-class LocalNFA(utils.BinomialNFA, VanishingThresholder):
-    def __init__(self, data, epsilon, threshold_in_image, img_radius,
-                 img_center):
-        utils.BinomialNFA.__init__(self, data, epsilon)
-        VanishingThresholder.__init__(self, threshold_in_image, img_radius,
-                                      img_center)
-
-    def _binomial_params(self, model, data, inliers_threshold):
-        dist = model.distances(data)
-        upper_threshold = np.maximum(inliers_threshold * 3,
-                                     np.min(dist[dist > inliers_threshold]))
-        n = self.inner_inliers(dist, upper_threshold).sum()
-        k = self.inner_inliers(dist, inliers_threshold).sum()
-        p = inliers_threshold / upper_threshold
-        return n, k, p
 
     def threshold(self, model):
         return VanishingThresholder.threshold(self, model)

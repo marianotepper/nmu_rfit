@@ -66,5 +66,10 @@ def build_preference_matrix(n_elements, ransac_gen, ac_tester):
     for model in ac.ifilter(ac_tester, ransac_gen):
         pref_matrix = add_col(pref_matrix, ac_tester.inliers(model))
         original_models.append(model)
+        # If sampler allows it, bias sampling towards points with
+        # 'low participation' in the preference matrix. If not, this
+        #  has now effect.
+        distribution = np.squeeze(np.asarray(pref_matrix.sum(axis=1)))
+        ransac_gen.sampler.distribution = distribution
 
     return pref_matrix, original_models

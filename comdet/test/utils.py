@@ -18,8 +18,8 @@ def clean(model_class, x, ac_tester, bic_list, restimate=True):
                 bic[0].nnz > model_class().min_sample_size]
 
     models = []
-    for rf, _ in bic_list:
-        inliers = np.squeeze(rf.toarray())
+    for lf, _ in bic_list:
+        inliers = np.squeeze(lf.toarray())
         mod = model_class(x[inliers])
         models.append(mod)
 

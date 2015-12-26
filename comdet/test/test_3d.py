@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import PIL.Image
@@ -152,7 +152,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
     t = timeit.default_timer()
     bic_list = bc.bicluster(deflator)
     t1 = timeit.default_timer() - t
-    print 'Time:', t1
+    print('Time:', t1)
 
     models, bic_list = test_utils.clean(model_class, x, ac_tester, bic_list)
 
@@ -178,7 +178,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
 
 
 def test(model_class, x, name, ransac_gen, ac_tester, projector=None):
-    print name, x.shape
+    print(name, x.shape)
 
     output_prefix = '../results/' + name
 
@@ -188,20 +188,20 @@ def test(model_class, x, name, ransac_gen, ac_tester, projector=None):
     pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
                                                             ransac_gen,
                                                             ac_tester)
-    print 'Preference matrix size:', pref_matrix.shape
+    print('Preference matrix size:', pref_matrix.shape)
 
     plt.figure()
     pref.plot(pref_matrix)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
-    print 'Running compressed bi-clustering'
+    print('Running compressed bi-clustering')
     compression_level = 128
     deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
     run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
                      ac_tester, output_prefix + '_bic_comp',
                      projector=projector)
 
-    print 'Running regular bi-clustering'
+    print('Running regular bi-clustering')
     deflator = bc.deflation.Deflator(pref_matrix)
     run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
                      ac_tester, output_prefix + '_bic_reg')

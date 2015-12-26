@@ -55,6 +55,8 @@ def run(subsampling=1):
     test_3d.test(plane.Plane, data, output_prefix, ransac_gen, ac_tester,
                  projector=projector)
 
+    plt.close('all')
+
 
 if __name__ == '__main__':
     run(subsampling=10)

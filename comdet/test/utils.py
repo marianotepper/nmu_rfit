@@ -12,7 +12,7 @@ def compute_measures(gt_groups, left_factors):
     print measures_str.format(gnmi, prec, rec)
 
 
-def clean(model_class, x, ac_tester, bic_list, restimate=True):
+def clean(model_class, x, ac_tester, bic_list):
     bic_list = [bic for bic in bic_list
                 if bic[1].nnz > 1 and
                 bic[0].nnz > model_class().min_sample_size]

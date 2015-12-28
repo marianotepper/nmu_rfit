@@ -37,7 +37,7 @@ class AdaptiveSampler(object):
             if unique_sample.size < min_sample_size:
                 remainder = min_sample_size - unique_sample.size
                 comp = np.random.randint(0, n_elements, size=remainder)
-                sample = np.append(sample, [comp])
+                sample = np.append(unique_sample, [comp])
             yield sample
 
 

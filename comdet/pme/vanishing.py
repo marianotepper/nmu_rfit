@@ -24,13 +24,11 @@ class VanishingPoint():
             sol = np.linalg.lstsq(lines[:, :2], -lines[:, 2])
             point_plane = np.append(sol[0], [1])
             dists_plane = distances(point_plane, data)
-            print np.max(np.abs(dists_plane))
 
             angles = _normalize(np.arctan2(lines[:, 0], lines[:, 1]))
             alpha = np.mean(angles)
             point_inf = np.array([np.cos(alpha), np.sin(alpha), 0])
             dists_inf = distances(point_inf, data)
-            print np.max(np.abs(dists_inf))
 
             if np.max(np.abs(dists_plane)) < np.max(np.abs(dists_inf)):
                 self.point = point_plane

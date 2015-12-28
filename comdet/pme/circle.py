@@ -28,13 +28,6 @@ class Circle(object):
     def distances(self, data):
         return np.linalg.norm(data - self.center, axis=1) - self.radius
 
-    def project(self, data):
-        vecs = data - self.center
-        angles = np.arctan2(vecs[:, 1], vecs[:, 0])
-        proj = np.vstack((self.center[0] + self.radius * np.cos(angles),
-                          self.center[1] + self.radius * np.sin(angles))).T
-        return proj, angles
-
     def plot(self, **kwargs):
         t = np.arange(0, 2*np.pi + 0.1, 0.1)
         x = self.center[0] + self.radius * np.cos(t)

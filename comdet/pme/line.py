@@ -32,20 +32,6 @@ class Line(object):
             data = np.hstack((data, np.ones((data.shape[0], 1))))
         return np.dot(data, self.eq)
 
-    def project(self, data):
-        u, x0 = self._basis_and_point()
-        s = np.dot(data - x0, u)
-        proj = x0 + np.atleast_2d(s).T * u
-        return proj, s
-
-    def _basis_and_point(self):
-        u = np.array([self.eq[1], -self.eq[0]])
-        u /= np.linalg.norm(u)
-        i_max = np.argmax(np.abs(self.eq[:2]))
-        x0 = np.zeros((2,))
-        x0[i_max] -= self.eq[2] / self.eq[i_max]
-        return u, x0
-
     def plot(self, limits=None, **kwargs):
         if limits is None:
             xlim = plt.xlim()

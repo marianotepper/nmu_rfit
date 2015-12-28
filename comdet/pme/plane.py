@@ -32,13 +32,6 @@ class Plane(object):
         proj = x0 + s.dot(basis)
         return proj, s
 
-    def point_and_basis(self):
-        basis = self.basis()
-        i_max = np.argmax(np.abs(self.eq[:2]))
-        x0 = np.zeros((3,))
-        x0[i_max] -= self.eq[3] / self.eq[i_max]
-        return basis, x0
-
     def basis(self):
         n = self.eq[:3] / np.linalg.norm(self.eq[:3])
         basis1 = np.array([-n[1], n[0], 0])

@@ -5,11 +5,13 @@ import comdet.pme.acontrario as ac
 import comdet.pme.measures as mes
 
 
-def compute_measures(gt_groups, left_factors):
+def compute_measures(gt_groups, left_factors, verbose=True):
     gnmi = mes.gnmi(gt_groups, left_factors)
     prec, rec = mes.mean_precision_recall(gt_groups, left_factors)
     measures_str = 'GNMI: {0:1.3f}; Precision: {1:1.3f}; Recall: {2:1.3f}'
-    print measures_str.format(gnmi, prec, rec)
+    if verbose:
+        print measures_str.format(gnmi, prec, rec)
+    return gnmi, prec, rec
 
 
 def clean(model_class, x, ac_tester, bic_list):

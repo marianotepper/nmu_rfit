@@ -159,7 +159,7 @@ def mean_precision_recall(gt_groups, groups):
     :return: precision and recall
     """
     conf = confusion_matrix(gt_groups, groups)
-    idx = hungarian.linear_assignment(1. / conf)
+    idx = hungarian.linear_assignment(conf.max() - conf)
     conf = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
     precision = np.trace(conf) / sum([size(c) for c in groups])
     recall = np.trace(conf) / sum([size(c) for c in gt_groups])

@@ -19,7 +19,8 @@ def exclusion_principle(ac_tester, models):
             continue
         excluded = reduce(lambda x, y: np.logical_or(x, y), in_list)
         considered = np.logical_not(excluded)
-        if not ac_tester.meaningful(mod, data=ac_tester.data[considered]):
+        print considered.sum(), np.logical_and(in_a, considered).sum(), ac_tester.nfa(mod, considered=considered)
+        if not ac_tester.meaningful(mod, considered=considered):
             keep_list.remove(pick)
 
     return keep_list

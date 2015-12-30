@@ -150,17 +150,17 @@ def size(c):
     return c.astype(float).sum()
 
 
-def mean_precision_recall(groups1, groups2):
+def mean_precision_recall(gt_groups, groups):
     """
     Compute the precision and recall.
 
-    :param groups1: first set of groups
-    :param groups2: second set of groups
-    :return: recall
+    :param gt_groups: set of ground truth groups
+    :param groups: set of tested groups
+    :return: precision and recall
     """
-    conf = confusion_matrix(groups1, groups2)
+    conf = confusion_matrix(gt_groups, groups)
     idx = hungarian.linear_assignment(1. / conf)
     conf = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
-    precision = np.trace(conf) / sum([size(c) for c in groups2])
-    recall = np.trace(conf) / sum([size(c) for c in groups1])
+    precision = np.trace(conf) / sum([size(c) for c in groups])
+    recall = np.trace(conf) / sum([size(c) for c in gt_groups])
     return precision, recall

@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import sys
 import matplotlib.pyplot as plt
@@ -112,7 +112,7 @@ def run(subsampling=1):
 
     seed = 0
     # seed = np.random.randint(0, np.iinfo(np.uint32).max)
-    print 'seed:', seed
+    print('seed:', seed)
     np.random.seed(seed)
 
     output_prefix = name + '_n{0}'.format(data.shape[0])

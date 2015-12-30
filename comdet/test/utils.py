@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import sys
 import numpy as np
 import comdet.pme.acontrario as ac
-import comdet.measures as mes
+import comdet.test.measures as mes
 
 
 def compute_measures(gt_groups, left_factors, verbose=True):

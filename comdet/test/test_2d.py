@@ -84,7 +84,10 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
                          palette)
     plt.savefig(output_prefix + '_bundles.pdf', dpi=600)
 
-    test_utils.compute_measures(gt_groups, [bic[0] for bic in bic_list])
+    bc_groups = [bic[0] for bic in bic_list]
+    gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
+
+    return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
 def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
@@ -110,14 +113,18 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 
     print('Running regular bi-clustering')
     deflator = bc.deflation.Deflator(pref_matrix)
-    run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
-                     ac_tester, gt_groups, output_prefix + '_bic_reg')
+    stats_reg = run_biclustering(x, orig_models, pref_matrix, deflator,
+                                 ac_tester, output_prefix + '_bic_reg',
+                                 gt_groups=gt_groups)
 
     print('Running compressed bi-clustering')
-    compression_level = 128
+    compression_level = 32
     deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
-    run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
-                     ac_tester, gt_groups, output_prefix + '_bic_comp')
+    stats_comp = run_biclustering(x, orig_models, pref_matrix, deflator,
+                                  ac_tester, output_prefix + '_bic_comp',
+                                  gt_groups=gt_groups)
+
+    return stats_reg, stats_comp
 
 
 def run():
@@ -135,6 +142,7 @@ def run():
                                  ac.circle.LocalNFA),
                      }
 
+    stats_list = []
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
     for example in mat.keys():
         exp_type = None
@@ -169,11 +177,19 @@ def run():
         print('seed:', seed)
         np.random.seed(seed)
 
-        test(model_class, data, example, ransac_gen, ac_tester, gt_groups)
+        res = test(model_class, data, example, ransac_gen, ac_tester, gt_groups)
+        stats_list.append(res)
 
         plt.close('all')
 
-    # plt.show()
+    reg_list, comp_list = zip(*stats_list)
+
+    print('Statistics of regular bi-clustering')
+    test_utils.print_stats(reg_list)
+    print('Statistics of compressed bi-clustering')
+    test_utils.print_stats(comp_list)
+
+    plt.show()
 
 if __name__ == '__main__':
     run()

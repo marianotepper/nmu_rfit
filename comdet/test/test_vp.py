@@ -98,10 +98,10 @@ def run_biclustering(image, x, original_models, pref_matrix, deflator, ac_tester
         return dict(time=t1)
 
 
-def test(image, x, name, ransac_gen, ac_tester, gt_groups=None):
+def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
     print(name, len(x))
 
-    output_prefix = '../results/vp/'
+    output_prefix = '../results/' + res_dir_name + '/'
     if not os.path.exists(output_prefix):
         os.mkdir(output_prefix)
     output_prefix += name
@@ -158,9 +158,8 @@ def print_stats(stats):
     inner_print('Recall')
 
 
-if __name__ == '__main__':
-    log_filename = 'test_vp_lsd.txt'
-    run_with_lsd = True
+def evaluate_york(res_dir_name, run_with_lsd=False):
+    log_filename = res_dir_name + '.txt'
     sampling_factor = 5
     inliers_threshold = 2 * np.pi * 0.01
     epsilon = 0
@@ -170,10 +169,6 @@ if __name__ == '__main__':
 
     stats_list = []
     for i, example in enumerate(os.listdir(dir_name)):
-        # if i > 10:
-        #     continue
-        if example != 'P1020824':
-            continue
         if not os.path.isdir(dir_name + example):
             continue
         img_name = dir_name + '{0}/{0}.jpg'.format(example)
@@ -196,8 +191,6 @@ if __name__ == '__main__':
             segments = gt_segments
             gt_groups = [gt_association == v for v in np.unique(gt_association)]
 
-
-
         ac_tester = ac.LocalNFA(segments, epsilon, inliers_threshold)
         sampler = sampling.AdaptiveSampler(int(len(segments) * sampling_factor))
         ransac_gen = sampling.ModelGenerator(vp.VanishingPoint, segments,
@@ -209,11 +202,11 @@ if __name__ == '__main__':
         print('seed:', seed)
         np.random.seed(seed)
 
-        res = test(gray_image, segments, example, ransac_gen, ac_tester,
-                   gt_groups=gt_groups)
+        res = test(gray_image, segments, res_dir_name, example, ransac_gen,
+                   ac_tester, gt_groups=gt_groups)
         stats_list.append(res)
 
-        # plt.close('all')
+        plt.close('all')
 
     reg_list, comp_list = zip(*stats_list)
 
@@ -223,3 +216,8 @@ if __name__ == '__main__':
     print_stats(comp_list)
 
     plt.show()
+
+
+if __name__ == '__main__':
+    evaluate_york('test_vp_lsd', run_with_lsd=True)
+    evaluate_york('test_vp_gt', run_with_lsd=False)

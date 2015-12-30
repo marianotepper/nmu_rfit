@@ -21,14 +21,16 @@ class BinomialNFA(object):
         self.data = data
         self.epsilon = epsilon
 
-    def nfa(self, model, data=None, inliers_threshold=None):
-        if data is None:
+    def nfa(self, model, considered=None, inliers_threshold=None):
+        if considered is None:
             data = self.data
+        else:
+            data = self.data[considered]
         if inliers_threshold is None:
             inliers_threshold = self.threshold(model)
 
         n, k, p = self._binomial_params(model, data, inliers_threshold)
-        if k == 0:
+        if k <= 0:
             return np.inf
         if n == k:
             return -np.inf
@@ -36,8 +38,8 @@ class BinomialNFA(object):
         n_tests = log_nchoosek(n, model.min_sample_size)
         return (pfa + n_tests) / np.log(10)
 
-    def meaningful(self, model, data=None, inliers_threshold=None):
-        return self.nfa(model, data=data,
+    def meaningful(self, model, considered=None, inliers_threshold=None):
+        return self.nfa(model, considered=considered,
                         inliers_threshold=inliers_threshold) < self.epsilon
 
     @abc.abstractmethod

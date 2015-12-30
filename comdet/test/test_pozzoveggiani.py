@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import PIL.Image
 import numpy as np
 import scipy.io
-import comdet.test.test_3d as test_3d
 import comdet.pme.plane as plane
 import comdet.pme.sampling as sampling
 import comdet.pme.acontrario as ac
 import comdet.test.utils as utils
+import comdet.test.test_3d as test_3d
 
 
 class Projector(object):

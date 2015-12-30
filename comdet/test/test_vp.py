@@ -140,24 +140,6 @@ def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
     return stats_reg, stats_comp
 
 
-def print_stats(stats):
-    def inner_print(attr):
-        try:
-            vals = [s[attr.lower()] for s in stats]
-            val_str = attr.capitalize() + ' -> '
-            val_str += 'mean: {0:1.3f}, '
-            val_str += 'std: {1:1.3f}, '
-            val_str += 'median: {2:1.3f}'
-            print(val_str.format(np.mean(vals), np.std(vals), np.median(vals)))
-        except KeyError:
-            pass
-
-    inner_print('time')
-    inner_print('GNMI')
-    inner_print('Precision')
-    inner_print('Recall')
-
-
 def evaluate_york(res_dir_name, run_with_lsd=False):
     log_filename = res_dir_name + '.txt'
     sampling_factor = 5
@@ -211,9 +193,9 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
     reg_list, comp_list = zip(*stats_list)
 
     print('Statistics of regular bi-clustering')
-    print_stats(reg_list)
+    test_utils.print_stats(reg_list)
     print('Statistics of compressed bi-clustering')
-    print_stats(comp_list)
+    test_utils.print_stats(comp_list)
 
     plt.show()
 

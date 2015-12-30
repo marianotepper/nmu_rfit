@@ -1,7 +1,6 @@
 from __future__ import absolute_import, print_function
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import PIL.Image
 import seaborn.apionly as sns
 import numpy as np
 import scipy.sparse as sp
@@ -10,67 +9,6 @@ import os
 import comdet.pme.preference as pref
 import comdet.biclustering as bc
 import comdet.test.utils as test_utils
-
-
-class Projector(object):
-    def __init__(self, data, visibility, proj_mat, dirname_in,
-                 dirname_out=None):
-        self.data = data
-        self.visibility = visibility
-        self.proj_mat = proj_mat
-        self.dirname_in = dirname_in
-        self.dirname_out = dirname_out
-
-    def _project(self, points, k):
-        n = points.shape[0]
-        data_homogeneous = np.hstack((points, np.ones((n, 1))))
-        img_data = data_homogeneous.dot(self.proj_mat[:, :, k].T)
-        img_data /= np.atleast_2d(img_data[:, 2]).T
-        return img_data
-
-    def plot(self, mod_inliers_list, palette, show_data=True):
-
-        for i, filename in enumerate(os.listdir(self.dirname_in)):
-            plt.figure()
-            self.inner_plot(mod_inliers_list, palette, filename,
-                            show_data=show_data)
-            plt.close()
-
-    def inner_plot(self, mod_inliers_list, palette, filename, show_data=True):
-        try:
-            idx = int(filename[-7:-4])
-            k = idx - 1
-        except ValueError:
-            return
-        if np.any(np.isnan(self.proj_mat[:, :, k])):
-            return
-
-        img = PIL.Image.open(self.dirname_in + filename).convert('L')
-
-        plt.imshow(img, cmap='gray')
-        plt.axis('off')
-        plt.hold(True)
-
-        for (mod, inliers), color in zip(mod_inliers_list, palette):
-            visible = np.logical_and(self.visibility[:, k], inliers)
-            if visible.sum() < 3:
-                continue
-
-            img_data = self._project(self.data[visible, :], k)
-            plt.scatter(img_data[:, 0], img_data[:, 1], c='w')
-
-            lower = self.data[visible, :].min(axis=0)
-            upper = self.data[visible, :].max(axis=0)
-            limits = [(lower[i], upper[i]) for i in range(self.data.shape[1])]
-            points = mod.plot_points(limits[0], limits[1], limits[2])
-            if not points:
-                continue
-            points = np.array(points)
-            img_points = self._project(points, k)
-            plt.fill(img_points[:, 0], img_points[:, 1], color=color, alpha=0.5)
-
-        if self.dirname_out is not None:
-            plt.savefig(self.dirname_out + filename + '.pdf', dpi=600)
 
 
 def base_plot(x, size=2, filename=None):
@@ -148,7 +86,7 @@ def plot_original_models(x, original_models, bic_list, palette, filename=None):
 
 
 def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
-                     ac_tester, output_prefix, projector=None, palette='Set1'):
+                     ac_tester, output_prefix, plotter=None, palette='Set1'):
     t = timeit.default_timer()
     bic_list = bc.bicluster(deflator)
     t1 = timeit.default_timer() - t
@@ -170,14 +108,14 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
     plot_final_models(x, mod_inliers_list, palette, show_data=False,
                       filename=filename + '_clean', save_animation=True)
 
-    if projector is not None:
+    if plotter is not None:
         if not os.path.exists(output_prefix):
             os.mkdir(output_prefix)
-        projector.dirname_out = output_prefix + '/'
-        projector.plot(mod_inliers_list, palette, show_data=False)
+        plotter.dirname_out = output_prefix + '/'
+        plotter.plot(mod_inliers_list, palette, show_data=False)
 
 
-def test(model_class, x, name, ransac_gen, ac_tester, projector=None):
+def test(model_class, x, name, ransac_gen, ac_tester, plotter=None):
     print(name, x.shape)
 
     output_prefix = '../results/' + name
@@ -199,7 +137,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, projector=None):
     deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
     run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
                      ac_tester, output_prefix + '_bic_comp',
-                     projector=projector)
+                     plotter=plotter)
 
     print('Running regular bi-clustering')
     deflator = bc.deflation.Deflator(pref_matrix)

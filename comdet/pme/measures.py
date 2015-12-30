@@ -111,9 +111,9 @@ def gnmi(groups1, groups2):
             lc2 = size(c2)
             l12 = intersect_size(c1, c2)
 
-            ent = np.array([[-plogp((lc1 - l12) / n), -plogp(l12 / n)],
-                            [-plogp((n - lc1 + lc2 - l12) / n),
-                             -plogp((lc2 - l12) / n)]])
+            ent = np.array([[-plogp((n - lc1 - lc2 + l12) / n),
+                             -plogp((lc1 - l12) / n)],
+                            [-plogp((lc2 - l12) / n), -plogp(l12 / n)]])
 
             if ent[1, 1] + ent[0, 0] > ent[0, 1] + ent[1, 0]:
                 h12 = np.sum(ent) - h2[i2]
@@ -131,19 +131,19 @@ def gnmi(groups1, groups2):
 
     # H(Yk|X) norm summed
     mask = np.logical_and(tested2, h2 > 0)
-    sum_h12 = np.sum(min_h21[mask] / h2[mask]) + np.sum(np.logical_not(mask))
-    sum_h12 /= len(groups2)
+    sum_h21 = np.sum(min_h21[mask] / h2[mask]) + np.sum(np.logical_not(mask))
+    sum_h21 /= len(groups2)
 
     # N(X|Y)
-    return 1 - (sum_h12 + sum_h12)/2
+    return 1 - (sum_h12 + sum_h21)/2
 
 
 def intersect_size(c1, c2):
     if sp.issparse(c1):
-        c1 = np.squeeze(c1.toarray())
+        c1 = c1.toarray()
     if sp.issparse(c2):
-        c2 = np.squeeze(c2.toarray())
-    return (c1 * c2).astype(float).sum()
+        c2 = c2.toarray()
+    return (np.squeeze(c1) * np.squeeze(c2)).astype(float).sum()
 
 
 def size(c):
@@ -161,6 +161,6 @@ def mean_precision_recall(groups1, groups2):
     conf = confusion_matrix(groups1, groups2)
     idx = hungarian.linear_assignment(1. / conf)
     conf = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
-    precision = conf.max(axis=0).sum() / sum([size(c) for c in groups2])
-    recall = conf.max(axis=1).sum() / sum([size(c) for c in groups1])
+    precision = np.trace(conf) / sum([size(c) for c in groups2])
+    recall = np.trace(conf) / sum([size(c) for c in groups1])
     return precision, recall

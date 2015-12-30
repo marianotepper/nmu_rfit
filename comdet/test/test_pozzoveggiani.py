@@ -108,7 +108,7 @@ def run(subsampling=1):
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
     ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
 
-    projector = Projector(data, visibility, proj_mat, dirname, None)
+    projector = Projector(data, visibility, proj_mat, dirname)
 
     seed = 0
     # seed = np.random.randint(0, np.iinfo(np.uint32).max)

@@ -59,10 +59,14 @@ class Plane(object):
         x0 = np.insert(x0, i, 0)
         return x0, u
 
+
     def _intersect_in_bounds(self, eq2, xlim, ylim, zlim):
         lower_bound = np.array([xlim[0], ylim[0], zlim[0]])
         upper_bound = np.array([xlim[1], ylim[1], zlim[1]])
-        x0, u = self._intersect(eq2)
+        try:
+            x0, u = self._intersect(eq2)
+        except np.linalg.linalg.LinAlgError:
+            return None, None
 
         mask = u > 0
         if np.any(mask):

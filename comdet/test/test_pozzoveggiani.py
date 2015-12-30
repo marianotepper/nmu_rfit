@@ -12,10 +12,10 @@ import comdet.test.utils as utils
 import comdet.test.test_3d as test_3d
 
 
-class Projector(object):
+class Projector(test_3d.BasePlotter):
     def __init__(self, data, visibility, proj_mat, dirname_in,
                  dirname_out=None):
-        self.data = data
+        super(Projector, self).__init__(data)
         self.visibility = visibility
         self.proj_mat = proj_mat
         self.dirname_in = dirname_in
@@ -28,7 +28,7 @@ class Projector(object):
         img_data /= np.atleast_2d(img_data[:, 2]).T
         return img_data
 
-    def plot(self, mod_inliers_list, palette, show_data=True):
+    def special_plot(self, mod_inliers_list, palette, show_data=True):
 
         for i, filename in enumerate(os.listdir(self.dirname_in)):
             plt.figure()
@@ -124,7 +124,7 @@ def run(subsampling=1):
 
 if __name__ == '__main__':
     run(subsampling=10)
-    run(subsampling=5)
-    run(subsampling=2)
-    run(subsampling=1)
+    # run(subsampling=5)
+    # run(subsampling=2)
+    # run(subsampling=1)
     # plt.show()

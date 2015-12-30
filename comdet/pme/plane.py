@@ -35,7 +35,11 @@ class Plane(object):
     def basis(self):
         n = self.eq[:3] / np.linalg.norm(self.eq[:3])
         basis1 = np.array([-n[1], n[0], 0])
-        basis1 /= np.linalg.norm(basis1)
+        basis1_norm = np.linalg.norm(basis1)
+        if basis1_norm > 0:
+            basis1 /= basis1_norm
+        else:
+            basis1 = np.array([1, 0, 0])
         basis2 = np.cross(n, basis1)
         basis2 /= np.linalg.norm(basis2)
         return np.vstack((basis1, basis2))
@@ -58,7 +62,6 @@ class Plane(object):
         x0 = np.linalg.solve(a, b)
         x0 = np.insert(x0, i, 0)
         return x0, u
-
 
     def _intersect_in_bounds(self, eq2, xlim, ylim, zlim):
         lower_bound = np.array([xlim[0], ylim[0], zlim[0]])
@@ -94,48 +97,10 @@ class Plane(object):
 
     def _sort_vertices(self, points):
         basis = self.basis()
-
-        arr = np.array(points)
-        arr = arr.dot(basis.T)
-        center = np.mean(arr, axis=0)
-
-        def compare(ta, tb):
-            a = ta[1]
-            b = tb[1]
-            if b[0] < center[0] <= a[0]:
-                return -1
-            if a[0] < center[0] <= b[0]:
-                return 1
-            if a[0] == center[0] and b[0] == center[0]:
-                if a[1] >= center[1] or b[1] >= center[1]:
-                    if a[1] > b[1]:
-                        return -1
-                    else:
-                        return 1
-                if b[1] > a[1]:
-                    return -1
-                else:
-                    return 1
-
-            a2 = a - center
-            b2 = b - center
-            # compute the cross product of vectors
-            # (center -> a) x (center -> b)
-            det = np.cross(a2, b2)
-            if det < 0:
-                return -1
-            if det > 0:
-                return 1
-
-            # points a and b are on the same line from the center
-            # check which point is closer to the center
-            if np.linalg.norm(a2) > np.linalg.norm(b2):
-                return -1
-            else:
-                return 1
-
-        seq = arr.tolist()
-        idx = zip(*sorted(enumerate(seq), cmp=compare))[0]
+        arr = np.array(points).dot(basis.T)
+        arr -= np.mean(arr, axis=0)
+        angles = np.arctan2(arr[:, 1], arr[:, 0])
+        idx = np.argsort(angles)
         return [points[i] for i in idx]
 
     def plot_points(self, xlim, ylim, zlim):

@@ -115,7 +115,8 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
         plotter.plot(mod_inliers_list, palette, show_data=False)
 
 
-def test(model_class, x, name, ransac_gen, ac_tester, plotter=None):
+def test(model_class, x, name, ransac_gen, ac_tester, plotter=None,
+         run_regular=True):
     print(name, x.shape)
 
     output_prefix = '../results/' + name
@@ -139,7 +140,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, plotter=None):
                      ac_tester, output_prefix + '_bic_comp',
                      plotter=plotter)
 
-    print('Running regular bi-clustering')
-    deflator = bc.deflation.Deflator(pref_matrix)
-    run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
-                     ac_tester, output_prefix + '_bic_reg')
+    if run_regular:
+        print('Running regular bi-clustering')
+        deflator = bc.deflation.Deflator(pref_matrix)
+        run_biclustering(model_class, x, orig_models, pref_matrix, deflator,
+                         ac_tester, output_prefix + '_bic_reg')

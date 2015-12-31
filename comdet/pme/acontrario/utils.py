@@ -35,7 +35,7 @@ class BinomialNFA(object):
         if n == k:
             return -np.inf
         pfa = log_binomial(n, k, p)
-        n_tests = log_nchoosek(len(data), model.min_sample_size)
+        n_tests = log_nchoosek(n, model.min_sample_size)
         return (pfa + n_tests) / np.log(10)
 
     def meaningful(self, model, considered=None, inliers_threshold=None):

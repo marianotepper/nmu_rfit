@@ -53,12 +53,14 @@ def plot_original_models(x, original_models, right_factors, palette):
                     color=palette[i], alpha=0.5)
 
 
-def ground_truth(n_elements, n_groups=5, group_size=50):
+def ground_truth(model_class, data, threshold, n_groups, group_size=50):
     gt_groups = []
     for i in range(n_groups):
-        v = np.zeros((n_elements,), dtype=bool)
-        v[i * group_size:(i+1) * group_size] = True
-        gt_groups.append(v)
+        g = np.zeros((len(data),), dtype=bool)
+        g[i * group_size:(i+1) * group_size] = True
+        model = model_class(data=data[g])
+        inliers = np.abs(model.distances(data)) <= threshold
+        gt_groups.append(inliers)
     return gt_groups
 
 
@@ -168,8 +170,7 @@ def run():
             n_groups = int(match.group())
         except AttributeError:
             n_groups = 4
-        gt_groups = ground_truth(data.shape[0], n_groups=n_groups,
-                                 group_size=50)
+        gt_groups = ground_truth(model_class, data, inliers_threshold, n_groups)
 
         print('-'*40)
         seed = 0

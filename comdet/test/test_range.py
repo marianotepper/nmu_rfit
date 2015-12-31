@@ -147,10 +147,10 @@ def run(compression_level, subsampling):
 
 
 if __name__ == '__main__':
-    # compresion_levels = [128, 64, 32, 16]
-    # subsamplings = [20, 10, 5, 2, 1]
-    compresion_levels = [128]
-    subsamplings = [20]
+    compresion_levels = [128, 64, 32, 16]
+    subsamplings = [20, 10, 5, 2, 1]
+    # compresion_levels = [128]
+    # subsamplings = [20]
     for cl, s in zip(compresion_levels, subsamplings):
         run(cl, s)
     plt.show()

@@ -13,8 +13,10 @@ def exclusion_principle(ac_tester, models):
 
     keep_list = list(idx)
     for pick in idx:
+        pos = keep_list.index(pick)
         mod, in_a = mod_inliers_list[pick]
-        in_list = [mod_inliers_list[k][1] for k in keep_list if k < pick]
+        in_list = [mod_inliers_list[k][1] for i, k in enumerate(keep_list)
+                   if i < pos]
         if not in_list:
             continue
         excluded = reduce(lambda x, y: np.logical_or(x, y), in_list)

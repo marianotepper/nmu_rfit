@@ -119,13 +119,6 @@ class UpdatableSVD:
         k = np.dot(np.diag(np.append(self.s, [0])),
                    np.identity(self.s.size + 1) - np.outer(u_a, v_b))
 
-        # if np.allclose(k, np.zeros_like(k)):
-        #     self.u = np.zeros_like(self.u)
-        #     self.s = np.zeros_like(self.s)
-        #     self.vt = np.zeros_like(self.vt)
-        #     print 'failed: all close'
-        #     return
-
         try:
             inner_u, s_new, inner_vt = np.linalg.svd(k)
         except np.linalg.LinAlgError:

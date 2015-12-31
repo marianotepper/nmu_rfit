@@ -71,7 +71,6 @@ def compress(array, s, roc='rows'):
 
 
 class Downdate:
-
     additive = 0
     column_removal = 1
 
@@ -80,8 +79,7 @@ class Downdate:
         self.param = param
 
 
-class OnlineColumnCompressor:
-
+class OnlineRowCompressor(object):
     def __init__(self, array, n_samples):
         self.n_samples = n_samples
         self.nrows_original = array.shape[0]

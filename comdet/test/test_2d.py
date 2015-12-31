@@ -147,8 +147,6 @@ def run_all():
     stats_list = []
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
     for example in mat.keys():
-        if example != 'Star11_S00075_O50':
-            continue
         exp_type = None
         for c in configuration:
             if example.find(c) == 0:

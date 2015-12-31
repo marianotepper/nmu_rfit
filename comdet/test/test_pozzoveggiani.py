@@ -13,13 +13,11 @@ import comdet.test.test_3d as test_3d
 
 
 class Projector(test_3d.BasePlotter):
-    def __init__(self, data, visibility, proj_mat, dirname_in,
-                 dirname_out=None):
+    def __init__(self, data, visibility, proj_mat, dirname_in):
         super(Projector, self).__init__(data)
         self.visibility = visibility
         self.proj_mat = proj_mat
         self.dirname_in = dirname_in
-        self.dirname_out = dirname_out
 
     def _project(self, points, k):
         n = points.shape[0]
@@ -28,15 +26,17 @@ class Projector(test_3d.BasePlotter):
         img_data /= np.atleast_2d(img_data[:, 2]).T
         return img_data
 
-    def special_plot(self, mod_inliers_list, palette, show_data=True):
+    def special_plot(self, mod_inliers_list, palette):
+        if not os.path.exists(self.filename_prefix_out):
+            os.mkdir(self.filename_prefix_out)
+        self.filename_prefix_out += '/'
 
         for i, filename in enumerate(os.listdir(self.dirname_in)):
             plt.figure()
-            self.inner_plot(mod_inliers_list, palette, filename,
-                            show_data=show_data)
+            self.inner_plot(mod_inliers_list, palette, filename)
             plt.close()
 
-    def inner_plot(self, mod_inliers_list, palette, filename, show_data=True):
+    def inner_plot(self, mod_inliers_list, palette, filename):
         try:
             idx = int(filename[-7:-4])
             k = idx - 1
@@ -69,8 +69,8 @@ class Projector(test_3d.BasePlotter):
             img_points = self._project(points, k)
             plt.fill(img_points[:, 0], img_points[:, 1], color=color, alpha=0.5)
 
-        if self.dirname_out is not None:
-            plt.savefig(self.dirname_out + filename + '.pdf', dpi=600)
+        if self.filename_prefix_out is not None:
+            plt.savefig(self.filename_prefix_out + filename + '.pdf', dpi=600)
 
 
 def run(subsampling=1):

@@ -28,19 +28,33 @@ class BinomialNFA(object):
             data = self.data[considered]
         if inliers_threshold is None:
             inliers_threshold = self.threshold(model)
-
-        n, k, p = self._binomial_params(model, data, inliers_threshold)
-        if k <= 0:
-            return np.inf
-        if n == k:
-            return -np.inf
-        pfa = log_binomial(n, k, p)
-        n_tests = log_nchoosek(n, model.min_sample_size)
+        if considered is None:
+            ratios = [2]
+        else:
+            ratios = [2, 3, 4]
+        pfa = self._pfa(model, data, inliers_threshold, ratios=ratios)
+        n_tests = log_nchoosek(len(self.data), model.min_sample_size)
+        n_tests += np.log(len(ratios))
+        # if considered is not None:
+        #     print considered.sum(), n, k, p, pfa, n_tests, (pfa + n_tests) / np.log(10)
         return (pfa + n_tests) / np.log(10)
 
+    def _pfa(self, model, data, inliers_threshold, ratios=[2]):
+        pfa_list = []
+        for r in ratios:
+            n, k, p = self._binomial_params(model, data, inliers_threshold,
+                                            ratio=r)
+            if k <= 0:
+                return np.inf
+            if n == k:
+                return -np.inf
+            pfa_list.append(log_binomial(n, k, p))
+        return min(pfa_list)
+
     def meaningful(self, model, considered=None, inliers_threshold=None):
-        return self.nfa(model, considered=considered,
-                        inliers_threshold=inliers_threshold) < self.epsilon
+        nfa = self.nfa(model, considered=considered,
+                       inliers_threshold=inliers_threshold)
+        return nfa < self.epsilon
 
     @abc.abstractmethod
     def threshold(self, model):
@@ -63,8 +77,7 @@ class LocalNFA(BinomialNFA):
         super(LocalNFA, self).__init__(data, epsilon)
         self.inliers_threshold = inliers_threshold
 
-    def _binomial_params(self, model, data, inliers_threshold):
-        ratio = 2.
+    def _binomial_params(self, model, data, inliers_threshold, ratio=2.):
         dist = model.distances(data)
         dist_abs = np.abs(dist)
         inliers = dist_abs <= inliers_threshold

@@ -136,17 +136,19 @@ def run_all():
     inliers_threshold = 0.03
     epsilon = 0
 
-    configuration = {'Star': (line.Line, sampling.UniformSampler(),
+    configuration = {'Star': (line.Line, sampling.AdaptiveSampler(),
                                ac.LocalNFA),
-                     'Stairs': (line.Line, sampling.UniformSampler(),
+                     'Stairs': (line.Line, sampling.AdaptiveSampler(),
                                 ac.LocalNFA),
-                     'Circles': (circle.Circle, sampling.UniformSampler(),
+                     'Circles': (circle.Circle, sampling.AdaptiveSampler(),
                                  ac.circle.LocalNFA),
                      }
 
     stats_list = []
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
     for example in mat.keys():
+        if example != 'Star11_S00075_O50':
+            continue
         exp_type = None
         for c in configuration:
             if example.find(c) == 0:

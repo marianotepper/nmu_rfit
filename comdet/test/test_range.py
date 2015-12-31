@@ -146,11 +146,15 @@ def run(compression_level, subsampling):
     test_utils.print_stats(stats_list)
 
 
-if __name__ == '__main__':
+def run_all():
     compresion_levels = [128, 64, 32, 16]
     subsamplings = [20, 10, 5, 2, 1]
     # compresion_levels = [128]
     # subsamplings = [20]
     for cl, s in zip(compresion_levels, subsamplings):
         run(cl, s)
+
+
+if __name__ == '__main__':
+    run_all()
     plt.show()

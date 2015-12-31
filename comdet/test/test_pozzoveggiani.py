@@ -122,9 +122,13 @@ def run(subsampling=1):
     plt.close('all')
 
 
-if __name__ == '__main__':
+def run_all():
     run(subsampling=10)
-    # run(subsampling=5)
-    # run(subsampling=2)
-    # run(subsampling=1)
-    # plt.show()
+    run(subsampling=5)
+    run(subsampling=2)
+    run(subsampling=1)
+
+
+if __name__ == '__main__':
+    run_all()
+    plt.show()

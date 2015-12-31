@@ -197,9 +197,12 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
     print('Statistics of compressed bi-clustering')
     test_utils.print_stats(comp_list)
 
-    plt.show()
+
+def run_all():
+    evaluate_york('test_vp_lsd', run_with_lsd=True)
+    evaluate_york('test_vp_gt', run_with_lsd=False)
 
 
 if __name__ == '__main__':
-    evaluate_york('test_vp_lsd', run_with_lsd=True)
-    evaluate_york('test_vp_gt', run_with_lsd=False)
+    run_all()
+    plt.show()

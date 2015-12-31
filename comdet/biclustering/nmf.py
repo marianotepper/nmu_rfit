@@ -188,8 +188,6 @@ def bicluster(deflator, n=None, share_points=True):
             cl = online_mdl.add_rank1_approximation(deflator.array, u, v)
             total_codelength.append(cl)
 
-    print [bic[0].nnz * bic[1].nnz for bic in bic_list]
-
     if n is not None:
         total_codelength = np.array(total_codelength)
         cut_point = np.argmin(total_codelength)

@@ -113,16 +113,16 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 
     print('Running regular bi-clustering')
     deflator = bc.deflation.Deflator(pref_matrix)
-    stats_reg = run_biclustering(x, orig_models, pref_matrix, deflator,
-                                 ac_tester, output_prefix + '_bic_reg',
-                                 gt_groups=gt_groups)
+    stats_reg = run_biclustering(model_class, x, orig_models, pref_matrix,
+                                 deflator, ac_tester, gt_groups,
+                                 output_prefix + '_bic_reg')
 
     print('Running compressed bi-clustering')
     compression_level = 32
     deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
-    stats_comp = run_biclustering(x, orig_models, pref_matrix, deflator,
-                                  ac_tester, output_prefix + '_bic_comp',
-                                  gt_groups=gt_groups)
+    stats_comp = run_biclustering(model_class, x, orig_models, pref_matrix,
+                                  deflator, ac_tester, gt_groups,
+                                  output_prefix + '_bic_comp')
 
     return stats_reg, stats_comp
 

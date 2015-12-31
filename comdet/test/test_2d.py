@@ -130,7 +130,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 def run():
     sys.stdout = test_utils.Logger("test_2d.txt")
 
-    sampling_factor = 5
+    sampling_factor = 10
     inliers_threshold = 0.03
     epsilon = 0
 
@@ -157,8 +157,8 @@ def run():
         model_class, sampler, ac_tester_class = configuration[exp_type]
         data = mat[example].T
 
-        sampler.n_samples = data.shape[0] * sampling_factor *\
-                            model_class().min_sample_size
+        sampler.n_samples = data.shape[0] * sampling_factor
+        sampler.n_samples *= model_class().min_sample_size
         ransac_gen = sampling.ModelGenerator(model_class, data, sampler)
         ac_tester = ac_tester_class(data, epsilon, inliers_threshold)
 

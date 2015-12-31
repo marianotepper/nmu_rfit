@@ -76,7 +76,6 @@ class Projector(test_3d.BasePlotter):
 def run(subsampling=1):
     sys.stdout = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
     inliers_threshold = 0.5
-    sigma = 1
     epsilon = 0
 
     name = 'PozzoVeggiani'
@@ -104,7 +103,7 @@ def run(subsampling=1):
     visibility = visibility[points_considered, :]
 
     n_samples = data.shape[0] * 2
-    sampler = sampling.GaussianLocalSampler(sigma, n_samples)
+    sampler = sampling.AdaptiveSampler(n_samples)
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
     ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
 

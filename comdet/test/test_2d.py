@@ -120,7 +120,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
                                  output_prefix + '_bic_reg')
 
     print('Running compressed bi-clustering')
-    compression_level = 128
+    compression_level = 64
     deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
     stats_comp = run_biclustering(model_class, x, orig_models, pref_matrix,
                                   deflator, ac_tester, gt_groups,
@@ -132,7 +132,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 def run_all():
     sys.stdout = test_utils.Logger("test_2d.txt")
 
-    sampling_factor = 10
+    sampling_factor = 20
     inliers_threshold = 0.03
     epsilon = 0
 
@@ -172,7 +172,6 @@ def run_all():
             n_groups = 4
         gt_groups = ground_truth(model_class, data, inliers_threshold, n_groups)
 
-        print('-'*40)
         seed = 0
         # seed = np.random.randint(0, np.iinfo(np.uint32).max)
         print('seed:', seed)
@@ -181,6 +180,7 @@ def run_all():
         res = test(model_class, data, example, ransac_gen, ac_tester, gt_groups)
         stats_list.append(res)
 
+        print('-'*40)
         plt.close('all')
 
     reg_list, comp_list = zip(*stats_list)

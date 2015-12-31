@@ -4,6 +4,7 @@ import scipy.sparse.linalg as spla
 import scipy.sparse as sp
 from . import utils
 from . import mdl
+import timeit
 
 
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
@@ -142,6 +143,11 @@ def binarize(x):
                         dtype=bool)
 
 
+class DeflationError(RuntimeError):
+    def __init__(self,*args,**kwargs):
+        super(DeflationError, self).__init__(*args, **kwargs)
+
+
 def bicluster(deflator, n=None, share_points=True):
     if n is None:
         n = deflator.array.shape[1]
@@ -156,29 +162,30 @@ def bicluster(deflator, n=None, share_points=True):
 
         try:
             if deflator.n_samples > deflator.selection.size:
-                raise ValueError('Fewer active rows than compression rate')
+                raise DeflationError('Number of active samples lower than'
+                                     'compression rate')
 
-            u, v = nmf_robust_rank1(deflator.array_compressed)
+            u, _ = nmf_robust_rank1(deflator.array_compressed)
             u = binarize(u)
-            v = binarize(v)
             idx_u = sp.find(u)[0]
 
             array_cropped = deflator.array[idx_u, :]
             u_cropped = utils.sparse(np.ones((idx_u.size, 1)))
-            _, idx_v, v_data = sp.find(v)
-            v_init = utils.sparse((v_data, (np.zeros_like(idx_v),
-                                            deflator.selection[idx_v])),
-                                  shape=(1, deflator.array.shape[1]))
+            v_init = u_cropped.T.dot(array_cropped)
+            v_init /= v_init.max()
             v = nmf_robust_rank1_v(array_cropped, u_cropped, v_init)
-
-        except(AttributeError, ValueError):
+        except(AttributeError, DeflationError):
             u, v = nmf_robust_rank1(deflator.array)
             u = binarize(u)
 
         v = binarize(v)
-        idx_v = sp.find(v)[1]
+
+        if u.nnz <= 1 or v.nnz <= 1:
+            break
+
         bic_list.append((u, v))
 
+        idx_v = sp.find(v)[1]
         deflator.remove_columns(idx_v)
         if not share_points:
             idx_u = sp.find(u)[0]

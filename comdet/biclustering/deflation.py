@@ -42,7 +42,7 @@ class L1CompressedDeflator(Deflator):
     #         self.array_compressed = self.array[self.selection, :]
     def __init__(self, array, n_samples):
         Deflator.__init__(self, array)
-        self._compressor = compression.OnlineRowCompressor(array.T, n_samples)
+        self._compressor = compression.OnlineColumnCompressor(array, n_samples)
         self._inner_compress()
 
     def _inner_compress(self):

@@ -56,14 +56,46 @@ class Downdate:
         self.param = param
 
 
-class OnlineRowCompressor(object):
+class BaseCompressor(object):
+    def __init__(self):
+        self.downdates = []
+
+    def _apply_downdates(self):
+        if len(self.downdates) == 0:
+            return
+        current_type = self.downdates[0].type
+        for dd in self.downdates:
+            if dd.type != current_type:
+                if dd.type == Downdate.row_removal:
+                    self.mat_lil = self.mat.tolil()
+                if dd.type == Downdate.column_removal:
+                    self.mat_lil = self.mat.tolil()
+                if dd.type == Downdate.additive:
+                    self.mat = self.mat_lil.tocsc()
+                current_type = dd.type
+
+            if dd.type == current_type:
+                if dd.type == Downdate.row_removal:
+                    self.mat_lil[dd.param, :] = 0
+                if dd.type == Downdate.column_removal:
+                    self.mat_lil[:, dd.param] = 0
+                if dd.type == Downdate.additive:
+                    self.mat = self.mat + dd.param
+
+        if current_type == Downdate.column_removal:
+            self.mat = self.mat_lil.tocsc()
+        if current_type == Downdate.additive:
+            self.mat_lil = self.mat.tolil()
+
+
+class OnlineRowCompressor(BaseCompressor):
     def __init__(self, array, n_samples):
+        super(OnlineRowCompressor, self).__init__()
         self.n_samples = n_samples
         self.nrows_original = array.shape[0]
 
         self.mat = power_of_two_padding(array)
         self.mat_lil = self.mat.tolil()
-        self.downdates = []
 
         self.transform_mat = fct.fast_cauchy_transform(self.mat.shape[0],
                                                        n_samples, n_samples)
@@ -105,40 +137,19 @@ class OnlineRowCompressor(object):
         if v.min() == 0 and v.max() == 0:
             return
         u = utils.sparse(([1], ([idx], [0])), shape=(self.nrows_original, 1))
-        self.additive_downdate(u, v)
-
-    def apply_downdates(self):
-        if len(self.downdates) == 0:
-            return
-        current_type = self.downdates[0].type
-        for dd in self.downdates:
-            if dd.type != current_type:
-                if dd.type == Downdate.column_removal:
-                    self.mat_lil = self.mat.tolil()
-                if dd.type == Downdate.additive:
-                    self.mat = self.mat_lil.tocsc()
-                current_type = dd.type
-
-            if dd.type == current_type:
-                if dd.type == Downdate.column_removal:
-                    self.mat_lil[:, dd.param] = 0
-                if dd.type == Downdate.additive:
-                    self.mat = self.mat + dd.param
-
-        if current_type == Downdate.column_removal:
-            self.mat = self.mat_lil.tocsc()
-        if current_type == Downdate.additive:
-            self.mat_lil = self.mat.tolil()
+        self.additive_downdate(u, v, apply_to_matrix=False)
+        dd = Downdate(Downdate.row_removal, idx)
+        self.downdates.append(dd)
 
 
-class OnlineColumnCompressor(object):
+class OnlineColumnCompressor(BaseCompressor):
     def __init__(self, array, n_samples):
+        super(OnlineColumnCompressor, self).__init__()
         self.n_samples = n_samples
         self.ncols_original = array.shape[1]
 
         self.mat = power_of_two_padding(array, axis=1)
         self.mat_lil = self.mat.tolil()
-        self.downdates = []
 
         self.transform_mat = fct.fast_cauchy_transform(self.mat.shape[1],
                                                        n_samples, n_samples)
@@ -149,7 +160,7 @@ class OnlineColumnCompressor(object):
         if self.svd.s is None:
             selection = None
         else:
-            self.apply_downdates()
+            self._apply_downdates()
             r_inv = utils.sparse(self._invert_r())
             projected_mat = r_inv.T.dot(self.mat).toarray()
             selection = select_leverage_scores(projected_mat, self.n_samples,
@@ -188,30 +199,3 @@ class OnlineColumnCompressor(object):
         self.svd.remove_row(idx)
         dd = Downdate(Downdate.row_removal, idx)
         self.downdates.append(dd)
-
-    def apply_downdates(self):
-        if len(self.downdates) == 0:
-            return
-        current_type = self.downdates[0].type
-        for dd in self.downdates:
-            if dd.type != current_type:
-                if dd.type == Downdate.row_removal:
-                    self.mat_lil = self.mat.tolil()
-                if dd.type == Downdate.column_removal:
-                    self.mat_lil = self.mat.tolil()
-                if dd.type == Downdate.additive:
-                    self.mat = self.mat_lil.tocsc()
-                current_type = dd.type
-
-            if dd.type == current_type:
-                if dd.type == Downdate.row_removal:
-                    self.mat_lil[dd.param, :] = 0
-                if dd.type == Downdate.column_removal:
-                    self.mat_lil[:, dd.param] = 0
-                if dd.type == Downdate.additive:
-                    self.mat = self.mat + dd.param
-
-        if current_type == Downdate.column_removal:
-            self.mat = self.mat_lil.tocsc()
-        if current_type == Downdate.additive:
-            self.mat_lil = self.mat.tolil()

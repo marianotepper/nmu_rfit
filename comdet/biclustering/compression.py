@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import numpy as np
 import multipledispatch
 import scipy.sparse as sp
-import scipy.sparse.linalg as spla
+import collections
 from . import fct
 from . import utils
 
@@ -46,17 +46,14 @@ def select_leverage_scores(projected_mat, s, original_dim_size, axis=0):
     return selection
 
 
-class Downdate:
+Downdate = collections.namedtuple('Downdate', ['type', 'param'])
+
+
+class BaseCompressor(object):
     additive = 0
     column_removal = 1
     row_removal = 2
 
-    def __init__(self, type, param):
-        self.type = type
-        self.param = param
-
-
-class BaseCompressor(object):
     def __init__(self):
         self.downdates = []
 
@@ -66,25 +63,25 @@ class BaseCompressor(object):
         current_type = self.downdates[0].type
         for dd in self.downdates:
             if dd.type != current_type:
-                if dd.type == Downdate.row_removal:
+                if dd.type == BaseCompressor.row_removal:
                     self.mat_lil = self.mat.tolil()
-                if dd.type == Downdate.column_removal:
+                if dd.type == BaseCompressor.column_removal:
                     self.mat_lil = self.mat.tolil()
-                if dd.type == Downdate.additive:
+                if dd.type == BaseCompressor.additive:
                     self.mat = self.mat_lil.tocsc()
                 current_type = dd.type
 
             if dd.type == current_type:
-                if dd.type == Downdate.row_removal:
+                if dd.type == BaseCompressor.row_removal:
                     self.mat_lil[dd.param, :] = 0
-                if dd.type == Downdate.column_removal:
+                if dd.type == BaseCompressor.column_removal:
                     self.mat_lil[:, dd.param] = 0
-                if dd.type == Downdate.additive:
+                if dd.type == BaseCompressor.additive:
                     self.mat = self.mat + dd.param
 
-        if current_type == Downdate.column_removal:
+        if current_type == BaseCompressor.column_removal:
             self.mat = self.mat_lil.tocsc()
-        if current_type == Downdate.additive:
+        if current_type == BaseCompressor.additive:
             self.mat_lil = self.mat.tolil()
 
 
@@ -124,12 +121,12 @@ class OnlineRowCompressor(BaseCompressor):
         u_subsampled = -self.transform_mat.dot(u_padded)
         self.svd.update(np.squeeze(u_subsampled.toarray()),
                         np.squeeze(v.toarray()))
-        dd = Downdate(Downdate.additive, u_padded * v)
+        dd = Downdate(BaseCompressor.additive, u_padded * v)
         self.downdates.append(dd)
 
     def remove_column(self, idx):
         self.svd.remove_column(idx)
-        dd = Downdate(Downdate.column_removal, idx)
+        dd = Downdate(BaseCompressor.column_removal, idx)
         self.downdates.append(dd)
 
     def remove_row(self, idx):
@@ -138,7 +135,7 @@ class OnlineRowCompressor(BaseCompressor):
             return
         u = utils.sparse(([1], ([idx], [0])), shape=(self.nrows_original, 1))
         self.additive_downdate(u, v, apply_to_matrix=False)
-        dd = Downdate(Downdate.row_removal, idx)
+        dd = Downdate(BaseCompressor.row_removal, idx)
         self.downdates.append(dd)
 
 
@@ -171,10 +168,6 @@ class OnlineColumnCompressor(BaseCompressor):
         mask = np.abs(self.svd.s) > rcond * np.max(self.svd.s)
         s = 1. / self.svd.s[mask]
         u = self.svd.u[:, mask]
-        # u, s, vt = spla.svds(self.mat, self.n_samples)
-        # mask = np.abs(s) > rcond * np.max(s)
-        # s = 1. / s[mask]
-        # u = u[:, mask]
         return u * s
 
     def additive_downdate(self, u, v, apply_to_matrix=True):
@@ -183,7 +176,7 @@ class OnlineColumnCompressor(BaseCompressor):
         self.svd.update(np.squeeze(u.toarray()),
                         np.squeeze(v_subsampled.toarray()))
         if apply_to_matrix:
-            dd = Downdate(Downdate.additive, u * v_padded)
+            dd = Downdate(BaseCompressor.additive, u * v_padded)
             self.downdates.append(dd)
 
     def remove_column(self, idx):
@@ -192,10 +185,14 @@ class OnlineColumnCompressor(BaseCompressor):
             return
         v = utils.sparse(([1], ([0], [idx])), shape=(1, self.mat.shape[1]))
         self.additive_downdate(u, v, apply_to_matrix=False)
-        dd = Downdate(Downdate.column_removal, idx)
+        dd = Downdate(BaseCompressor.column_removal, idx)
         self.downdates.append(dd)
 
     def remove_row(self, idx):
-        self.svd.remove_row(idx)
-        dd = Downdate(Downdate.row_removal, idx)
+        v = self.mat[idx, :]
+        if v.min() == 0 and v.max() == 0:
+            return
+        u = utils.sparse(([1], ([idx], [0])), shape=(self.mat.shape[0], 1))
+        self.additive_downdate(u, v, apply_to_matrix=False)
+        dd = Downdate(BaseCompressor.row_removal, idx)
         self.downdates.append(dd)

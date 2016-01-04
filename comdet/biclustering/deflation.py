@@ -24,28 +24,18 @@ class Deflator(object):
 
 
 class L1CompressedDeflator(Deflator):
-    # def __init__(self, array, n_samples):
-    #     Deflator.__init__(self, array)
-    #     self._compressor = compression.OnlineRowCompressor(array, n_samples)
-    #     self._inner_compress()
-    #
-    # def _inner_compress(self):
-    #     selection = self._compressor.compress()
-    #     if selection is None:
-    #         try:
-    #             del self.selection
-    #             del self.array_compressed
-    #         except AttributeError:
-    #             pass
-    #     else:
-    #         self.selection = selection
-    #         self.array_compressed = self.array[self.selection, :]
     def __init__(self, array, n_samples):
         Deflator.__init__(self, array)
-        self._compressor = compression.OnlineColumnCompressor(array, n_samples)
-        self._inner_compress()
+        if n_samples >= array.shape[1]:
+            self._compressor = None
+        else:
+            self._compressor = compression.OnlineColumnCompressor(array,
+                                                                  n_samples)
+            self._inner_compress()
 
     def _inner_compress(self):
+        if self._compressor is None:
+            return
         selection = self._compressor.compress()
         if selection is None:
             try:

@@ -43,10 +43,11 @@ def clean(model_class, x, ac_tester, bic_list):
         mod = model_class(x[inliers])
         models.append(mod)
 
-    survivors = ac.exclusion_principle(ac_tester, models)
+    if models:
+        survivors = ac.exclusion_principle(ac_tester, models)
+        models = [models[s] for s in survivors]
+        bic_list = [bic_list[s] for s in survivors]
 
-    models = [models[s] for s in survivors]
-    bic_list = [bic_list[s] for s in survivors]
     return models, bic_list
 
 

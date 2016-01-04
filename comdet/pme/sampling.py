@@ -25,19 +25,17 @@ class AdaptiveSampler(object):
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
+        all_elems = np.arange(n_elements)
         self.distribution = np.zeros((n_elements,))
         for _ in range(self.n_samples):
-            bins = np.cumsum(self.distribution.max() - self.distribution)
-            if bins[-1] > 0:
-                rnd = np.random.randint(0, bins[-1], size=min_sample_size)
-                sample = np.searchsorted(bins, rnd)
+            dist_max = self.distribution.max()
+            if dist_max > 0:
+                probas = dist_max - self.distribution
             else:
-                sample = np.array([], dtype=np.int)
-            unique_sample = np.unique(sample)
-            if unique_sample.size < min_sample_size:
-                remainder = min_sample_size - unique_sample.size
-                comp = np.random.randint(0, n_elements, size=remainder)
-                sample = np.append(unique_sample, [comp])
+                probas = np.ones((n_elements,))
+            probas /= probas.sum()
+            sample = np.random.choice(all_elems, size=min_sample_size,
+                                      replace=False, p=probas)
             yield sample
 
 

@@ -28,28 +28,17 @@ class BinomialNFA(object):
             data = self.data[considered]
         if inliers_threshold is None:
             inliers_threshold = self.threshold(model)
-        if considered is None:
-            ratios = [2]
-        else:
-            ratios = [2, 3, 4]
-        pfa = self._pfa(model, data, inliers_threshold, ratios=ratios)
+        pfa = self._pfa(model, data, inliers_threshold)
         n_tests = log_nchoosek(len(self.data), model.min_sample_size)
-        n_tests += np.log(len(ratios))
-        # if considered is not None:
-        #     print considered.sum(), n, k, p, pfa, n_tests, (pfa + n_tests) / np.log(10)
         return (pfa + n_tests) / np.log(10)
 
-    def _pfa(self, model, data, inliers_threshold, ratios=[2]):
-        pfa_list = []
-        for r in ratios:
-            n, k, p = self._binomial_params(model, data, inliers_threshold,
-                                            ratio=r)
-            if k <= 0:
-                return np.inf
-            if n == k:
-                return -np.inf
-            pfa_list.append(log_binomial(n, k, p))
-        return min(pfa_list)
+    def _pfa(self, model, data, inliers_threshold):
+        n, k, p = self._binomial_params(model, data, inliers_threshold)
+        if k <= 0:
+            return np.inf
+        if n == k:
+            return -np.inf
+        return log_binomial(n, k, p)
 
     def meaningful(self, model, considered=None, inliers_threshold=None):
         nfa = self.nfa(model, considered=considered,

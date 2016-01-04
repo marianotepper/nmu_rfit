@@ -73,7 +73,7 @@ def ground_truth(association, gt_segments, lsd_segments, threshold):
 def run_biclustering(image, x, original_models, pref_matrix, deflator, ac_tester,
                      output_prefix, gt_groups=None, palette='Set1'):
     t = timeit.default_timer()
-    bic_list = bc.bicluster(deflator, n=5)
+    bic_list = bc.bicluster(deflator)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
@@ -142,8 +142,8 @@ def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
 
 def evaluate_york(res_dir_name, run_with_lsd=False):
     log_filename = res_dir_name + '.txt'
-    sampling_factor = 5
-    inliers_threshold = 2 * np.pi * 0.01
+    sampling_factor = 10
+    inliers_threshold = np.pi * 1e-2
     epsilon = 0
 
     sys.stdout = test_utils.Logger(log_filename)
@@ -200,7 +200,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
 
 def run_all():
     evaluate_york('test_vp_lsd', run_with_lsd=True)
-    evaluate_york('test_vp_gt', run_with_lsd=False)
+    # evaluate_york('test_vp_gt', run_with_lsd=False)
 
 
 if __name__ == '__main__':

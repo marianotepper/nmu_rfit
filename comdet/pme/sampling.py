@@ -10,11 +10,10 @@ class UniformSampler(object):
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
+        all_elems = np.arange(n_elements)
         for _ in range(self.n_samples):
-            while True:
-                sample = np.random.randint(0, n_elements, size=min_sample_size)
-                if np.unique(sample).size == min_sample_size:
-                    break
+            sample = np.random.choice(all_elems, size=min_sample_size,
+                                      replace=False)
             yield sample
 
 

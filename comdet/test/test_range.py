@@ -147,7 +147,7 @@ def run(compression_level, subsampling):
 
 
 def run_all():
-    compresion_levels = [128, 64, 32, 16]
+    compresion_levels = [128, 64, 32, 16, 8]
     subsamplings = [20, 10, 5, 2, 1]
     # compresion_levels = [128]
     # subsamplings = [20]

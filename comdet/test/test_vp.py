@@ -200,7 +200,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
 
 def run_all():
     evaluate_york('test_vp_lsd', run_with_lsd=True)
-    # evaluate_york('test_vp_gt', run_with_lsd=False)
+    evaluate_york('test_vp_gt', run_with_lsd=False)
 
 
 if __name__ == '__main__':

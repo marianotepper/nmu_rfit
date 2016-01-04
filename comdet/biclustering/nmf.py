@@ -181,14 +181,16 @@ def single_bicluster(deflator):
 
 
 def bicluster(deflator, n=None, share_points=True):
-    if n is None:
-        n = deflator.array.shape[1]
-
     bic_list = []
-    online_mdl = mdl.OnlineMDL()
     total_codelength = []
 
-    for _ in range(n):
+    if n is None:
+        n_iters = deflator.array.shape[1]
+        online_mdl = mdl.OnlineMDL()
+    else:
+        n_iters = n
+
+    for _ in range(n_iters):
         if deflator.array.nnz == 0:
             break
 
@@ -205,12 +207,15 @@ def bicluster(deflator, n=None, share_points=True):
             idx_u = sp.find(u)[0]
             deflator.remove_rows(idx_u)
 
-        if n is not None:
+        if n is None:
             cl = online_mdl.add_rank1_approximation(deflator.array, u, v)
             total_codelength.append(cl)
 
-    if n is not None:
+    if not bic_list:
+        return bic_list
+    if n is None:
         total_codelength = np.array(total_codelength)
         cut_point = np.argmin(total_codelength)
-
-    return bic_list[:cut_point+1]
+        return bic_list[:cut_point+1]
+    else:
+        return bic_list

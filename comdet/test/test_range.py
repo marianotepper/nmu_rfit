@@ -92,8 +92,10 @@ def ground_truth(gt_seg, data=None, ac_tester=None):
 
 
 def run(compression_level, subsampling):
-    sys.stdout = utils.Logger('abw_cl{0}_s{1}.txt'.format(compression_level,
+    logger = utils.Logger('abw_cl{0}_s{1}.txt'.format(compression_level,
                                                           subsampling))
+    sys.stdout = logger
+
     inliers_threshold = 1
     sigma = 5
     epsilon = 0
@@ -144,6 +146,9 @@ def run(compression_level, subsampling):
 
     print('Statistics of compressed bi-clustering')
     test_utils.print_stats(stats_list)
+
+    sys.stdout = logger.stdout
+    logger.close()
 
 
 def run_all():

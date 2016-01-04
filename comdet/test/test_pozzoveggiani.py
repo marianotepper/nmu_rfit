@@ -74,7 +74,9 @@ class Projector(test_3d.BasePlotter):
 
 
 def run(subsampling=1):
-    sys.stdout = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
+    logger = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
+    sys.stdout = logger
+
     inliers_threshold = 0.5
     epsilon = 0
 
@@ -119,6 +121,9 @@ def run(subsampling=1):
                  plotter=projector)
 
     plt.close('all')
+
+    sys.stdout = logger.stdout
+    logger.close()
 
 
 def run_all():

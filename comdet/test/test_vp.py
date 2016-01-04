@@ -141,13 +141,13 @@ def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
 
 
 def evaluate_york(res_dir_name, run_with_lsd=False):
-    log_filename = res_dir_name + '.txt'
+    logger = test_utils.Logger(res_dir_name + '.txt')
+    sys.stdout = logger
+
+    dir_name = '/Users/mariano/Documents/datasets/YorkUrbanDB/'
     sampling_factor = 10
     inliers_threshold = np.pi * 1e-2
     epsilon = 0
-
-    sys.stdout = test_utils.Logger(log_filename)
-    dir_name = '/Users/mariano/Documents/datasets/YorkUrbanDB/'
 
     stats_list = []
     for i, example in enumerate(os.listdir(dir_name)):
@@ -196,6 +196,9 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
     test_utils.print_stats(reg_list)
     print('Statistics of compressed bi-clustering')
     test_utils.print_stats(comp_list)
+
+    sys.stdout = logger.stdout
+    logger.close()
 
 
 def run_all():

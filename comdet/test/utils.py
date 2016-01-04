@@ -52,14 +52,17 @@ def clean(model_class, x, ac_tester, bic_list):
 
 class Logger(object):
     def __init__(self, filename="Console.log"):
-        self.terminal = sys.stdout
+        self.stdout = sys.stdout
         self.log = open(filename, "w")
 
     def __del__(self):
         self.log.close()
 
+    def close(self):
+        self.log.close()
+
     def write(self, message):
-        self.terminal.write(message)
+        self.stdout.write(message)
         self.log.write(message)
         self.log.flush()
 

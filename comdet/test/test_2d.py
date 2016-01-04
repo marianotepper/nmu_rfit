@@ -130,7 +130,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
 
 
 def run_all():
-    sys.stdout = test_utils.Logger("test_2d.txt")
+    logger = test_utils.Logger("test_2d.txt")
+    sys.stdout = logger
 
     sampling_factor = 20
     inliers_threshold = 0.03
@@ -189,6 +190,9 @@ def run_all():
     test_utils.print_stats(reg_list)
     print('Statistics of compressed bi-clustering')
     test_utils.print_stats(comp_list)
+
+    sys.stdout = logger.stdout
+    logger.close()
 
 
 if __name__ == '__main__':

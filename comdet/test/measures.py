@@ -96,6 +96,8 @@ def gnmi(groups1, groups2):
     :param groups2: second list of groups
     :return: normalised mutual information
     """
+    if not groups1 or not groups2:
+        return 0
     n = groups1[0].shape[0]
     h1 = entropy_per_group(groups1)
     h2 = entropy_per_group(groups2)
@@ -158,6 +160,8 @@ def mean_precision_recall(gt_groups, groups):
     :param groups: set of tested groups
     :return: precision and recall
     """
+    if not groups:
+        return 0, 0
     conf = confusion_matrix(gt_groups, groups)
     idx = hungarian.linear_assignment(conf.max() - conf)
     conf = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)

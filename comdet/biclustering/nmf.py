@@ -148,18 +148,7 @@ class DeflationError(RuntimeError):
         super(DeflationError, self).__init__(*args, **kwargs)
 
 
-def bicluster(deflator, n=None, share_points=True):
-    if n is None:
-        n = deflator.array.shape[1]
-
-    bic_list = []
-    online_mdl = mdl.OnlineMDL()
-    total_codelength = []
-
-    for _ in range(n):
-        if deflator.array.nnz == 0:
-            break
-
+def single_bicluster(deflator):
         try:
             if deflator.n_samples > deflator.selection.size:
                 raise DeflationError('Number of active samples lower than'
@@ -174,11 +163,36 @@ def bicluster(deflator, n=None, share_points=True):
             v_init = u_cropped.T.dot(array_cropped)
             v_init /= v_init.max()
             v = nmf_robust_rank1_v(array_cropped, u_cropped, v_init)
+
+            v = binarize(v)
+            idx_v = sp.find(v)[1]
+
+            array_cropped = deflator.array[:, idx_v]
+            v_cropped = utils.sparse(np.ones((1, idx_v.size)))
+            u_init = array_cropped.dot(v_cropped.T)
+            u_init /= u_init.max()
+            u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped)
+            u = binarize(u)
         except(AttributeError, DeflationError):
             u, v = nmf_robust_rank1(deflator.array)
             u = binarize(u)
+            v = binarize(v)
+        return u, v
 
-        v = binarize(v)
+
+def bicluster(deflator, n=None, share_points=True):
+    if n is None:
+        n = deflator.array.shape[1]
+
+    bic_list = []
+    online_mdl = mdl.OnlineMDL()
+    total_codelength = []
+
+    for _ in range(n):
+        if deflator.array.nnz == 0:
+            break
+
+        u, v = single_bicluster(deflator)
 
         if u.nnz <= 1 or v.nnz <= 1:
             break

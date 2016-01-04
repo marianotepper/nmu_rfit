@@ -56,6 +56,8 @@ def plot_final_models(image, x, mod_inliers, palette):
                 seg_line = line.Line(np.vstack((seg.p_a[:2], seg.p_b[:2])))
                 seg_line.plot(c=color, linewidth=.2, alpha=.3)
             seg.plot(c=color, linewidth=1)
+    if not all_inliers:
+        all_inliers = [np.zeros((len(x),), dtype=np.bool)]
     remaining_segs = np.logical_not(reduce(np.logical_or, all_inliers))
     for seg in x[remaining_segs]:
         seg.plot(c='k', linewidth=1)
@@ -200,7 +202,6 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
 
 def run_all():
     evaluate_york('test_vp_lsd', run_with_lsd=True)
-    evaluate_york('test_vp_gt', run_with_lsd=False)
 
 
 if __name__ == '__main__':

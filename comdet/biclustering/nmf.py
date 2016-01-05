@@ -182,7 +182,7 @@ def single_bicluster(deflator):
         return u, v
 
 
-def bicluster(deflator, n=None, share_points=True):
+def bicluster(deflator, n=None, share_elements=True):
     bic_list = []
     total_codelength = []
 
@@ -205,7 +205,7 @@ def bicluster(deflator, n=None, share_points=True):
 
         idx_v = sp.find(v)[1]
         deflator.remove_columns(idx_v)
-        if not share_points:
+        if not share_elements:
             idx_u = sp.find(u)[0]
             deflator.remove_rows(idx_u)
 

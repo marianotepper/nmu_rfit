@@ -25,18 +25,15 @@ class Deflator(object):
 
 class L1CompressedDeflator(Deflator):
     def __init__(self, array, n_samples):
-        Deflator.__init__(self, array)
-        self.n_samples = n_samples
+        super(L1CompressedDeflator, self).__init__(array)
         if n_samples >= array.shape[1]:
-            self._compressor = None
+            self._compressor = DummyCompressor(array, n_samples)
         else:
             self._compressor = compression.OnlineColumnCompressor(array,
                                                                   n_samples)
             self._inner_compress()
 
     def _inner_compress(self):
-        if self._compressor is None:
-            return
         selection = self._compressor.compress()
         if selection is None:
             try:
@@ -50,27 +47,38 @@ class L1CompressedDeflator(Deflator):
 
     @property
     def n_samples(self):
-        return self.n_samples
+        return self._compressor.n_samples
 
     def additive_downdate(self, u, v):
         super(L1CompressedDeflator, self).additive_downdate(u, v)
-        if self._compressor is None:
-            return
         self._compressor.additive_downdate(u, v)
         self._inner_compress()
 
     def remove_columns(self, idx_cols):
         super(L1CompressedDeflator, self).remove_columns(idx_cols)
-        if self._compressor is None:
-            return
         for i in idx_cols:
             self._compressor.remove_column(i)
         self._inner_compress()
 
     def remove_rows(self, idx_rows):
         super(L1CompressedDeflator, self).remove_rows(idx_rows)
-        if self._compressor is None:
-            return
         for i in idx_rows:
             self._compressor.remove_row(i)
         self._inner_compress()
+
+
+class DummyCompressor(object):
+    def __init__(self, array, n_samples):
+        self.n_samples = n_samples
+
+    def compress(self):
+        return None
+
+    def additive_downdate(self, u, v):
+        pass
+
+    def remove_column(self, idx):
+        pass
+
+    def remove_row(self, idx):
+        pass

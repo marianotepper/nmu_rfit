@@ -1,4 +1,5 @@
 from __future__ import absolute_import, print_function
+import itertools
 import sys
 import struct
 import PIL.Image
@@ -97,7 +98,6 @@ def run(compression_level, subsampling):
     sys.stdout = logger
 
     inliers_threshold = 1
-    sigma = 5
     epsilon = 0
     sampling_factor = 5  # fraction of the total number of elements
 
@@ -112,7 +112,7 @@ def run(compression_level, subsampling):
                                               subsampling=subsampling)
 
         n_samples = int(data.shape[0] * sampling_factor)
-        sampler = sampling.GaussianLocalSampler(sigma, n_samples)
+        sampler = sampling.AdaptiveSampler(n_samples)
         ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
         ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
         plotter = RangePlotter(data, width, height)
@@ -142,21 +142,23 @@ def run(compression_level, subsampling):
                            gt_groups=gt_groups)
         stats_list.append(res)
 
+        print('-'*40)
         plt.close('all')
 
     print('Statistics of compressed bi-clustering')
     test_utils.print_stats(stats_list)
+    print('-'*40)
 
     sys.stdout = logger.stdout
     logger.close()
 
 
 def run_all():
-    compresion_levels = [128, 64, 32, 16, 8]
+    compresion_levels = [8, 16, 32, 64, 128]
     subsamplings = [20, 10, 5, 2, 1]
-    # compresion_levels = [128]
+    # compresion_levels = [32]
     # subsamplings = [20]
-    for cl, s in zip(compresion_levels, subsamplings):
+    for s, cl in itertools.product(subsamplings, compresion_levels):
         run(cl, s)
 
 

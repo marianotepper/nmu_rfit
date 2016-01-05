@@ -4,13 +4,15 @@ import scipy.sparse.linalg as spla
 import scipy.sparse as sp
 from . import utils
 from . import mdl
-import timeit
 
 
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
                      v_init=None, max_iter=5e2):
     if u_init is None and v_init is None:
-        x, s, y = spla.svds(array, 1)
+        try:
+            x, s, y = spla.svds(array, 1)
+        except spla.ArpackNoConvergence:
+            x, s, y = spla.svds(array, 1, tol=1e-6)
         s = np.sqrt(s)
         x = s * np.abs(x)
         y = s * np.abs(y)

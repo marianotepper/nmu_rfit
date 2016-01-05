@@ -16,10 +16,12 @@ import comdet.test.utils as test_utils
 
 
 class RangePlotter(test_3d.BasePlotter):
-    def __init__(self, data, width, height, dirname_out=None):
+    def __init__(self, data, width, height, dirname_out=None,
+                 save_animation=True):
         super(RangePlotter, self).__init__(data, normalize_axes=False)
         self.width = width
         self.height = height
+        self.save_animation = save_animation
 
     def surface_plot(self, cmap=None, facecolors=None, filename=None):
         img_data = np.reshape(self.data, (self.width, self.height, 3))
@@ -31,7 +33,8 @@ class RangePlotter(test_3d.BasePlotter):
                         linewidth=0, antialiased=True, alpha=0.5)
         if filename is not None:
             plt.savefig(filename, dpi=600)
-            test_3d.BasePlotter.save_animation(fig, ax, filename)
+            if self.save_animation:
+                test_3d.BasePlotter.save_animation(fig, ax, filename)
 
     def special_plot(self, mod_inliers_list, palette):
         membership = np.zeros((self.width * self.height, 3))
@@ -104,6 +107,8 @@ def run(compression_level, subsampling):
     dirname = '../data/ABW-TRAIN-IMAGES/'
     stats_list = []
     for idx in range(10):
+        if idx != 2:
+            continue
         filename = 'abw.train.{0}'.format(idx)
 
         output_prefix = '../results/' + filename
@@ -115,7 +120,7 @@ def run(compression_level, subsampling):
         sampler = sampling.AdaptiveSampler(n_samples)
         ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
         ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
-        plotter = RangePlotter(data, width, height)
+        plotter = RangePlotter(data, width, height, save_animation=False)
 
         gt_seg, _, _ = read_rasterfile(dirname + filename + '.gt-seg',
                                        subsampling=subsampling)
@@ -139,7 +144,7 @@ def run(compression_level, subsampling):
         res = test_3d.test(plane.Plane, data, output_prefix, ransac_gen,
                            ac_tester, plotter=plotter, run_regular=False,
                            compression_level=compression_level,
-                           gt_groups=gt_groups)
+                           gt_groups=gt_groups, save_animation=False)
         stats_list.append(res)
 
         print('-'*40)
@@ -154,10 +159,10 @@ def run(compression_level, subsampling):
 
 
 def run_all():
-    compresion_levels = [8, 16, 32, 64, 128]
-    subsamplings = [20, 10, 5, 2, 1]
-    # compresion_levels = [32]
-    # subsamplings = [20]
+    # compresion_levels = [8, 16, 32, 64, 128]
+    # subsamplings = [20, 10, 5, 2, 1]
+    compresion_levels = [8]
+    subsamplings = [10]
     for s, cl in itertools.product(subsamplings, compresion_levels):
         run(cl, s)
 

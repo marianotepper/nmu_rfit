@@ -97,7 +97,7 @@ class BasePlotter(object):
 
 def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
                      ac_tester, output_prefix, plotter=None, gt_groups=None,
-                     palette='Set1'):
+                     palette='Set1', save_animation=True):
     t = timeit.default_timer()
     bic_list = bc.bicluster(deflator)
     t1 = timeit.default_timer() - t
@@ -115,10 +115,10 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
 
     filename = output_prefix + '_final_models'
     plotter.plot_final_models(mod_inliers_list, palette, filename=filename,
-                              save_animation=True)
+                              save_animation=save_animation)
     plotter.plot_final_models(mod_inliers_list, palette, show_data=False,
                               filename=filename + '_clean',
-                              save_animation=True)
+                              save_animation=save_animation)
 
     try:
         special_plot = plotter.special_plot
@@ -137,7 +137,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
 
 
 def test(model_class, x, name, ransac_gen, ac_tester, compression_level=128,
-         plotter=None, run_regular=True, gt_groups=None):
+         plotter=None, run_regular=True, gt_groups=None, save_animation=True):
     print(name, x.shape)
 
     output_prefix = '../results/' + name
@@ -159,7 +159,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=128,
     stats_comp = run_biclustering(model_class, x, orig_models, pref_matrix,
                                   deflator, ac_tester,
                                   output_prefix + '_bic_comp', plotter=plotter,
-                                  gt_groups=gt_groups)
+                                  gt_groups=gt_groups,
+                                  save_animation=save_animation)
 
     if run_regular:
         print('Running regular bi-clustering')
@@ -167,7 +168,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=128,
         stats_reg = run_biclustering(model_class, x, orig_models, pref_matrix,
                                      deflator, ac_tester,
                                      output_prefix + '_bic_reg',
-                                     plotter=plotter, gt_groups=gt_groups)
+                                     plotter=plotter, gt_groups=gt_groups,
+                                     save_animation=save_animation)
 
         return stats_comp, stats_reg
     else:

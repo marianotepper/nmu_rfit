@@ -190,6 +190,7 @@ def run_all():
     test_utils.print_stats(reg_list)
     print('Statistics of compressed bi-clustering')
     test_utils.print_stats(comp_list)
+    print('-'*40)
 
     sys.stdout = logger.stdout
     logger.close()

@@ -26,6 +26,7 @@ class Deflator(object):
 class L1CompressedDeflator(Deflator):
     def __init__(self, array, n_samples):
         Deflator.__init__(self, array)
+        self.n_samples = n_samples
         if n_samples >= array.shape[1]:
             self._compressor = None
         else:
@@ -49,21 +50,27 @@ class L1CompressedDeflator(Deflator):
 
     @property
     def n_samples(self):
-        return self._compressor.n_samples
+        return self.n_samples
 
     def additive_downdate(self, u, v):
         super(L1CompressedDeflator, self).additive_downdate(u, v)
+        if self._compressor is None:
+            return
         self._compressor.additive_downdate(u, v)
         self._inner_compress()
 
     def remove_columns(self, idx_cols):
         super(L1CompressedDeflator, self).remove_columns(idx_cols)
+        if self._compressor is None:
+            return
         for i in idx_cols:
             self._compressor.remove_column(i)
         self._inner_compress()
 
     def remove_rows(self, idx_rows):
         super(L1CompressedDeflator, self).remove_rows(idx_rows)
+        if self._compressor is None:
+            return
         for i in idx_rows:
             self._compressor.remove_row(i)
         self._inner_compress()

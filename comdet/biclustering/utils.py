@@ -98,6 +98,9 @@ class UpdatableSVD:
         self.u, self.s, self.vt = np.linalg.svd(array, full_matrices=False)
 
     def update(self, a, b):
+        if self.s is None:
+            return
+
         m = self.u.T.dot(a)
         p = a - self.u.dot(m)
         r_a = frobenius_norm(p)
@@ -114,16 +117,14 @@ class UpdatableSVD:
         k = np.diag(np.append(self.s, [0]))
         k += np.outer(u_a, v_b)
 
-        inner_u, s_new, inner_vt = np.linalg.svd(k)
+        self._inner_update(p, q, k)
 
-        self.u = np.dot(np.hstack((self.u, np.atleast_2d(p).T)), inner_u)
-        self.s = s_new
-        self.vt = np.dot(inner_vt, np.vstack((self.vt, np.atleast_2d(q))))
-        self.trim()
 
     def remove_column(self, idx):
         if self.s is None:
             return
+
+        p = np.zeros((self.u.shape[0], 1))
 
         b = np.zeros((self.shape[1],))
         b[idx] = 1
@@ -137,7 +138,9 @@ class UpdatableSVD:
 
         k = np.dot(np.diag(np.append(self.s, [0])),
                    np.identity(self.s.size + 1) - np.outer(u_a, v_b))
+        self._inner_update(p, q, k)
 
+    def _inner_update(self, p, q, k):
         try:
             inner_u, s_new, inner_vt = np.linalg.svd(k)
         except np.linalg.LinAlgError:
@@ -147,7 +150,6 @@ class UpdatableSVD:
             return
 
         if s_new.size > self.s.size:
-            p = np.zeros((self.u.shape[0], 1))
             self.u = np.hstack((self.u, p))
             self.vt = np.vstack((self.vt, q))
         # update and crop
@@ -155,6 +157,7 @@ class UpdatableSVD:
         self.s = s_new
         self.vt = np.dot(inner_vt, self.vt)
         self.trim()
+
 
     def trim(self):
         orig_size = min(self.shape)

@@ -149,6 +149,8 @@ class UpdatableSVD:
             return
 
         if s_new.size > self.s.size:
+            if len(p.shape) == 1:
+                p = np.atleast_2d(p).T
             self.u = np.hstack((self.u, p))
             self.vt = np.vstack((self.vt, q))
         # update and crop

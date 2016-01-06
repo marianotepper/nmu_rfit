@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 import numpy as np
-import scipy.sparse.linalg as spla
 import scipy.sparse as sp
 from . import utils
 from . import mdl
@@ -9,10 +8,7 @@ from . import mdl
 def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
                      v_init=None, max_iter=5e2):
     if u_init is None and v_init is None:
-        try:
-            x, s, y = spla.svds(array, 1)
-        except spla.ArpackNoConvergence:
-            x, s, y = spla.svds(array, 1, tol=1e-6)
+        x, s, y = utils.svds(array, 1)
         s = np.sqrt(s)
         x = s * np.abs(x)
         y = s * np.abs(y)

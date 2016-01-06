@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as sp
+import scipy.sparse.linalg as spla
 import multipledispatch
 
 
@@ -71,6 +72,24 @@ def frobenius_norm(array):
 @multipledispatch.dispatch(sp.spmatrix)
 def frobenius_norm(array):
     return np.sqrt(array.multiply(array).sum())
+
+
+def svds(array, k):
+    success = False
+    tol = 0
+    while not success:
+        if tol > 1e-3:
+            raise spla.ArpackNoConvergence('SVD failed to converge with '
+                                           'tol={0}'.format(tol))
+        try:
+            u, s, vt = spla.svds(array, k, tol=tol)
+            success = True
+        except spla.ArpackNoConvergence:
+            if tol == 0:
+                tol = 1e-10
+            else:
+                tol *= 10
+    return u, s, vt
 
 
 class UpdatableSVD:

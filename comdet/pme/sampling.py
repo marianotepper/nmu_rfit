@@ -43,36 +43,27 @@ class GaussianLocalSampler(object):
         self.n_samples = n_samples
         # p(x[i] | x[j]) = exp(-(dist(x[i], x[j])) / sigma)
         self.var = sigma ** 2
+        self.distribution = None
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
-        distribution = np.zeros((n_elements,))
-        counter_samples = 0
-        counter_total = 0
-        while (counter_samples < self.n_samples and
-               counter_total < self.n_samples * 100):
-            bins = np.cumsum(distribution.max() - distribution)
-            bins /= bins[-1]
-            rnd = np.random.random()
-            j = np.searchsorted(bins, rnd)
+        all_elems = np.arange(n_elements)
+        self.distribution = np.zeros((n_elements,))
+        for _ in range(self.n_samples):
+            dist_max = self.distribution.max()
+            if dist_max > 0:
+                probas = dist_max - self.distribution
+            else:
+                probas = np.ones((n_elements,))
+            probas /= probas.sum()
+            j = np.random.choice(all_elems, p=probas)
+
             dists = distance.cdist(x, np.atleast_2d(x[j]), 'euclidean')
-            bins = np.cumsum(np.exp(-(dists ** 2) / self.var))
-            bins /= bins[-1]
-
-            success = False
-            for _ in range(100):
-                rnd = np.random.random((min_sample_size - 1,))
-                sample = np.searchsorted(bins, rnd)
-                sample = np.append(sample, [j])
-                if np.unique(sample).size == min_sample_size:
-                    success = True
-                    break
-
-            if success:
-                distribution[sample] += 1
-                counter_samples += 1
-                yield sample
-            counter_total += 1
+            bins = np.squeeze(np.exp(-(dists ** 2) / self.var))
+            bins /= bins.sum()
+            sample = np.random.choice(all_elems, size=min_sample_size,
+                                      replace=False, p=bins)
+            yield sample
 
 
 class ModelGenerator(object):

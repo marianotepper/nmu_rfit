@@ -151,35 +151,35 @@ class DeflationError(RuntimeError):
 
 
 def single_bicluster(deflator):
-        try:
-            if deflator.n_samples > deflator.selection.size:
-                raise DeflationError('Number of active samples lower than'
-                                     'compression rate')
+    try:
+        if deflator.n_samples > deflator.selection.size:
+            raise DeflationError('Number of active samples lower than'
+                                 'compression rate')
 
-            u, _ = nmf_robust_rank1(deflator.array_compressed)
-            u = binarize(u)
-            idx_u = sp.find(u)[0]
+        u, _ = nmf_robust_rank1(deflator.array_compressed)
+        u = binarize(u)
+        idx_u = sp.find(u)[0]
 
-            array_cropped = deflator.array[idx_u, :]
-            u_cropped = utils.sparse(np.ones((idx_u.size, 1)))
-            v_init = u_cropped.T.dot(array_cropped)
-            v_init /= v_init.max()
-            v = nmf_robust_rank1_v(array_cropped, u_cropped, v_init)
+        array_cropped = deflator.array[idx_u, :]
+        u_cropped = utils.sparse(np.ones((idx_u.size, 1)))
+        v_init = u_cropped.T.dot(array_cropped)
+        v_init /= v_init.max()
+        v = nmf_robust_rank1_v(array_cropped, u_cropped, v_init)
 
-            v = binarize(v)
-            idx_v = sp.find(v)[1]
+        v = binarize(v)
+        idx_v = sp.find(v)[1]
 
-            array_cropped = deflator.array[:, idx_v]
-            v_cropped = utils.sparse(np.ones((1, idx_v.size)))
-            u_init = array_cropped.dot(v_cropped.T)
-            u_init /= u_init.max()
-            u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped)
-            u = binarize(u)
-        except(AttributeError, DeflationError):
-            u, v = nmf_robust_rank1(deflator.array)
-            u = binarize(u)
-            v = binarize(v)
-        return u, v
+        array_cropped = deflator.array[:, idx_v]
+        v_cropped = utils.sparse(np.ones((1, idx_v.size)))
+        u_init = array_cropped.dot(v_cropped.T)
+        u_init /= u_init.max()
+        u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped)
+        u = binarize(u)
+    except(AttributeError, DeflationError):
+        u, v = nmf_robust_rank1(deflator.array)
+        u = binarize(u)
+        v = binarize(v)
+    return u, v
 
 
 def bicluster(deflator, n=None, share_elements=True):

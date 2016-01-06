@@ -100,15 +100,14 @@ def run(compression_level, subsampling):
                                                           subsampling))
     sys.stdout = logger
 
-    inliers_threshold = 1
+    inliers_threshold = 1.5
     epsilon = 0
-    sampling_factor = 5  # fraction of the total number of elements
+    sigma = 2
+    sampling_factor = 3  # fraction of the total number of elements
 
     dirname = '../data/ABW-TRAIN-IMAGES/'
     stats_list = []
     for idx in range(10):
-        if idx != 2:
-            continue
         filename = 'abw.train.{0}'.format(idx)
 
         output_prefix = '../results/' + filename
@@ -117,7 +116,7 @@ def run(compression_level, subsampling):
                                               subsampling=subsampling)
 
         n_samples = int(data.shape[0] * sampling_factor)
-        sampler = sampling.AdaptiveSampler(n_samples)
+        sampler = sampling.GaussianLocalSampler(sigma, n_samples)
         ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
         ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
         plotter = RangePlotter(data, width, height, save_animation=False)
@@ -144,7 +143,8 @@ def run(compression_level, subsampling):
         res = test_3d.test(plane.Plane, data, output_prefix, ransac_gen,
                            ac_tester, plotter=plotter, run_regular=False,
                            compression_level=compression_level,
-                           gt_groups=gt_groups, save_animation=False)
+                           gt_groups=gt_groups, save_animation=False,
+                           share_elements=False)
         stats_list.append(res)
 
         print('-'*40)
@@ -159,10 +159,10 @@ def run(compression_level, subsampling):
 
 
 def run_all():
-    # compresion_levels = [8, 16, 32, 64, 128]
-    # subsamplings = [20, 10, 5, 2, 1]
-    compresion_levels = [8]
-    subsamplings = [10]
+    compresion_levels = [8, 16, 32, 64, 128]
+    subsamplings = [20, 10, 5, 2, 1]
+    # compresion_levels = [8]
+    # subsamplings = [10]
     for s, cl in itertools.product(subsamplings, compresion_levels):
         run(cl, s)
 

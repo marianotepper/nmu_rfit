@@ -97,9 +97,9 @@ class BasePlotter(object):
 
 def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
                      ac_tester, output_prefix, plotter=None, gt_groups=None,
-                     palette='Set1', save_animation=True):
+                     palette='Set1', save_animation=True, share_elements=True):
     t = timeit.default_timer()
-    bic_list = bc.bicluster(deflator)
+    bic_list = bc.bicluster(deflator, share_elements=share_elements)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
@@ -137,7 +137,8 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
 
 
 def test(model_class, x, name, ransac_gen, ac_tester, compression_level=128,
-         plotter=None, run_regular=True, gt_groups=None, save_animation=True):
+         plotter=None, run_regular=True, gt_groups=None, save_animation=True,
+         share_elements=True):
     print(name, x.shape)
 
     output_prefix = '../results/' + name
@@ -169,7 +170,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=128,
                                      deflator, ac_tester,
                                      output_prefix + '_bic_reg',
                                      plotter=plotter, gt_groups=gt_groups,
-                                     save_animation=save_animation)
+                                     save_animation=save_animation,
+                                     share_elements=share_elements)
 
         return stats_comp, stats_reg
     else:

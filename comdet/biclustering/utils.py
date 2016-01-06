@@ -158,7 +158,6 @@ class UpdatableSVD:
         self.vt = np.dot(inner_vt, self.vt)
         self.trim()
 
-
     def trim(self):
         orig_size = min(self.shape)
         self.u = self.u[:, :orig_size]

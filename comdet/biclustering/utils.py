@@ -119,7 +119,6 @@ class UpdatableSVD:
 
         self._inner_update(p, q, k)
 
-
     def remove_column(self, idx):
         if self.s is None:
             return

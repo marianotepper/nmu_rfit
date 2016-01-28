@@ -83,7 +83,7 @@ def nmf_robust_admm(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
     y = utils.sparse(y)
     u = x
     v = y
-    e = utils.sparse(array.shape)
+    e = utils.sparse(array - u.dot(v))
     gamma_u = utils.sparse(u.shape)
     gamma_v = utils.sparse(v.shape)
     gamma_e = utils.sparse(e.shape)
@@ -125,7 +125,7 @@ def nmf_robust_admm_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2,
     :return:
     """
     u = u_init
-    e = utils.sparse(array.shape)
+    e = utils.sparse(array - u.dot(v))
     gamma_u = utils.sparse(u.shape)
     gamma_e = utils.sparse(e.shape)
 
@@ -163,7 +163,7 @@ def nmf_robust_admm_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2,
     :return:
     """
     v = v_init
-    e = utils.sparse(array.shape)
+    e = utils.sparse(array - u.dot(v))
     gamma_v = utils.sparse(v.shape)
     gamma_e = utils.sparse(e.shape)
 

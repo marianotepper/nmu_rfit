@@ -1,17 +1,80 @@
 from __future__ import absolute_import
 import numpy as np
-import scipy.sparse as sp
 from . import utils
-from . import mdl
 
 
-def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
-                     v_init=None, max_iter=5e2):
+def nmf_robust_multiplicative(array, r, u_init=None, v_init=None, min_iter=20,
+                              max_iter=1e2, update='both', tol=1e-10):
     if u_init is None and v_init is None:
-        x, s, y = utils.svds(array, 1)
-        s = np.sqrt(s)
-        x = s * np.abs(x)
-        y = s * np.abs(y)
+        u, v = _nmf_initialize(array, r)
+    else:
+        if utils.issparse(u_init):
+            u_init = u_init.toarray()
+        u = np.copy(u_init)
+        if utils.issparse(v_init):
+            v_init = v_init.toarray()
+        v = np.copy(v_init)
+
+    if utils.issparse(array):
+        array = array.toarray()
+
+    delta2 = np.finfo(np.float).eps ** 2
+
+    error = []
+    for _ in range(int(max_iter)):
+        weights = array - np.dot(u, v)
+        weights = np.power(np.power(weights, 2) + delta2, -0.5)
+        aw = array * weights
+        if update == 'both' or update == 'left':
+            u = _mul_left_update(aw, u, v, weights)
+        if update == 'both' or update == 'right':
+            v = _mul_right_update(aw, u, v, weights)
+
+        error.append(utils.norm(array - np.dot(u, v), ord=1))
+        if (len(error) >= min_iter and
+                    abs(error[-2] - error[-1]) < tol * error[-2]):
+            break
+    return u, v
+
+
+def _mul_left_update(aw, u, v, weights):
+    eps = np.finfo(np.float).eps
+    uvw = np.dot(u, v) * weights
+    u *= np.dot(aw, v.T) / np.maximum(np.dot(uvw, v.T), eps)
+    return u
+
+
+def _mul_right_update(aw, u, v, weights):
+    eps = np.finfo(np.float).eps
+    uvw = np.dot(u, v) * weights
+    v *= np.dot(u.T, aw) / np.maximum(np.dot(u.T, uvw), eps)
+    return v
+
+
+def _nmf_initialize(array, r):
+    x, s, y = utils.svds(array, r)
+    s = np.atleast_2d(np.sqrt(s))
+    x = np.abs(x) * s
+    y = s.T * np.abs(y)
+    return x, y
+
+
+def nmf_robust_admm(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
+                     v_init=None, max_iter=5e2, tol=1e-4):
+    """
+    Restricted to the rank 1 case.
+    :param array:
+    :param lambda_u:
+    :param lambda_v:
+    :param lambda_e:
+    :param u_init:
+    :param v_init:
+    :param max_iter:
+    :param tol:
+    :return:
+    """
+    if u_init is None and v_init is None:
+        x, y = _nmf_initialize(array, 1)
     else:
         x = u_init.copy()
         y = v_init.copy()
@@ -28,15 +91,8 @@ def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
     error = []
     for _ in range(int(max_iter)):
         temp = array - e
-        num_x = (lambda_e * temp.dot(y.T) + lambda_u * u - gamma_u +
-                 gamma_e.dot(y.T))
-        denom_x = y.dot(y.T).toarray()[0, 0] + lambda_u
-        x = num_x / denom_x
-
-        num_y = (lambda_e * x.T.dot(temp) + lambda_v * v - gamma_v +
-                 x.T.dot(gamma_e))
-        denom_y = x.T.dot(x).toarray()[0, 0] + lambda_v
-        y = num_y / denom_y
+        x = _admm_left_update(temp, u, y, lambda_u, gamma_u, lambda_e, gamma_e)
+        y = _admm_right_update(temp, x, v, lambda_v, gamma_v, lambda_e, gamma_e)
 
         u = projection_positive(x + gamma_u / lambda_u)
         v = projection_positive(y + gamma_v / lambda_v)
@@ -49,12 +105,25 @@ def nmf_robust_rank1(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
         gamma_e += lambda_e * (temp - e)
 
         error.append(utils.relative_error(array, xy + e))
-        if error[-1] < 1e-4:
+        if error[-1] < tol:
             break
     return u, v
 
 
-def nmf_robust_rank1_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2):
+def nmf_robust_admm_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2,
+                       tol=1e-4):
+    """
+    Restricted to the rank 1 case.
+
+    :param array:
+    :param u_init:
+    :param v:
+    :param lambda_u:
+    :param lambda_e:
+    :param max_iter:
+    :param tol:
+    :return:
+    """
     u = u_init
     e = utils.sparse(array.shape)
     gamma_u = utils.sparse(u.shape)
@@ -63,10 +132,7 @@ def nmf_robust_rank1_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2):
     error = []
     for _ in range(int(max_iter)):
         temp = array - e
-        num_x = (lambda_e * temp.dot(v.T) + lambda_u * u - gamma_u +
-                 gamma_e.dot(v.T))
-        denom_x = v.dot(v.T).toarray()[0, 0] + lambda_u
-        x = num_x / denom_x
+        x = _admm_left_update(temp, u, v, lambda_u, gamma_u, lambda_e, gamma_e)
 
         u = projection_positive(x + gamma_u / lambda_u)
         gamma_u += lambda_u * (x - u)
@@ -77,12 +143,25 @@ def nmf_robust_rank1_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2):
         gamma_e += lambda_e * (temp - e)
 
         error.append(utils.relative_error(array, xv + e))
-        if error[-1] < 1e-4:
+        if error[-1] < tol:
             break
     return u
 
 
-def nmf_robust_rank1_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2):
+def nmf_robust_admm_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2,
+                       tol=1e-4):
+    """
+    Restricted to the rank 1 case.
+
+    :param array:
+    :param u:
+    :param v_init:
+    :param lambda_v:
+    :param lambda_e:
+    :param max_iter:
+    :param tol:
+    :return:
+    """
     v = v_init
     e = utils.sparse(array.shape)
     gamma_v = utils.sparse(v.shape)
@@ -91,10 +170,7 @@ def nmf_robust_rank1_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2):
     error = []
     for _ in range(int(max_iter)):
         temp = array - e
-        num_y = lambda_e * u.T.dot(temp) + lambda_v * v - gamma_v +\
-                u.T.dot(gamma_e)
-        denom_y = u.T.dot(u).toarray()[0, 0] + lambda_v
-        y = num_y / denom_y
+        y = _admm_right_update(temp, u, v, lambda_v, gamma_v, lambda_e, gamma_e)
 
         v = projection_positive(y + gamma_v / lambda_v)
         gamma_v += lambda_v * (y - v)
@@ -105,14 +181,27 @@ def nmf_robust_rank1_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2):
         gamma_e += lambda_e * (temp - e)
 
         error.append(utils.relative_error(array, uy + e))
-        if error[-1] < 1e-4:
+        if error[-1] < tol:
             break
-
     return v
 
 
+def _admm_left_update(mat, u, y, lambda_u, gamma_u, lambda_e, gamma_e):
+    numerator = (lambda_e * mat.dot(y.T) + lambda_u * u - gamma_u +
+             gamma_e.dot(y.T))
+    denominator = y.dot(y.T).toarray()[0, 0] + lambda_u
+    return numerator / denominator
+
+
+def _admm_right_update(mat, x, v, lambda_v, gamma_v, lambda_e, gamma_e):
+    numerator = (lambda_e * x.T.dot(mat) + lambda_v * v - gamma_v +
+             x.T.dot(gamma_e))
+    denominator = x.T.dot(x).toarray()[0, 0] + lambda_v
+    return numerator / denominator
+
+
 def projection_positive(x):
-    (i, j, data) = sp.find(x)
+    (i, j, data) = utils.find(x)
     mask = data > 0
     i = i[mask]
     j = j[mask]
@@ -121,8 +210,8 @@ def projection_positive(x):
 
 
 def shrinkage(t, alpha):
-    if sp.issparse(t):
-        i, j, x = sp.find(t)
+    if utils.issparse(t):
+        i, j, x = utils.find(t)
         mask = np.abs(x) > alpha
         i = i[mask]
         j = j[mask]
@@ -132,88 +221,3 @@ def shrinkage(t, alpha):
     else:
         f = t.sign() * (t.abs() - alpha).maximum(0)
     return f
-
-
-def binarize(x):
-    i, j, v = sp.find(x)
-    mask = v > (1e-4 * v.max())
-    return utils.sparse((v[mask], (i[mask], j[mask])), shape=x.shape,
-                        dtype=bool)
-
-
-class DeflationError(RuntimeError):
-    def __init__(self,*args,**kwargs):
-        super(DeflationError, self).__init__(*args, **kwargs)
-
-
-def single_bicluster(deflator):
-    try:
-        if deflator.n_samples > deflator.selection.size:
-            raise DeflationError('Number of active samples lower than'
-                                 'compression rate')
-
-        u, _ = nmf_robust_rank1(deflator.array_compressed)
-        u = binarize(u)
-        idx_u = sp.find(u)[0]
-
-        array_cropped = deflator.array[idx_u, :]
-        u_cropped = utils.sparse(np.ones((idx_u.size, 1)))
-        v_init = u_cropped.T.dot(array_cropped)
-        v_init /= v_init.max()
-        v = nmf_robust_rank1_v(array_cropped, u_cropped, v_init)
-
-        v = binarize(v)
-        idx_v = sp.find(v)[1]
-
-        array_cropped = deflator.array[:, idx_v]
-        v_cropped = utils.sparse(np.ones((1, idx_v.size)))
-        u_init = array_cropped.dot(v_cropped.T)
-        u_init /= u_init.max()
-        u = nmf_robust_rank1_u(array_cropped, u_init, v_cropped)
-        u = binarize(u)
-    except(AttributeError, DeflationError):
-        u, v = nmf_robust_rank1(deflator.array)
-        u = binarize(u)
-        v = binarize(v)
-    return u, v
-
-
-def bicluster(deflator, n=None, share_elements=True):
-    bic_list = []
-    total_codelength = []
-
-    if n is None:
-        n_iters = deflator.array.shape[1]
-        online_mdl = mdl.OnlineMDL()
-    else:
-        n_iters = n
-
-    for _ in range(n_iters):
-        if deflator.array.nnz == 0:
-            break
-
-        u, v = single_bicluster(deflator)
-
-        if u.nnz <= 1 or v.nnz <= 1:
-            break
-
-        bic_list.append((u, v))
-
-        idx_v = sp.find(v)[1]
-        deflator.remove_columns(idx_v)
-        if not share_elements:
-            idx_u = sp.find(u)[0]
-            deflator.remove_rows(idx_u)
-
-        if n is None:
-            cl = online_mdl.add_rank1_approximation(deflator.array, u, v)
-            total_codelength.append(cl)
-
-    if not bic_list:
-        return bic_list
-    if n is None:
-        total_codelength = np.array(total_codelength)
-        cut_point = np.argmin(total_codelength)
-        return bic_list[:cut_point+1]
-    else:
-        return bic_list

@@ -8,6 +8,21 @@ def sparse(*args, **kwargs):
     return sp.csc_matrix(*args, **kwargs)
 
 
+def find(mat):
+    return sp.find(mat)
+
+
+def issparse(mat):
+    return sp.issparse(mat)
+
+
+def binarize(x, tol=1e-3):
+    i, j, v = find(x)
+    mask = v > (1e-4 * v.max())
+    return sparse((v[mask], (i[mask], j[mask])), shape=x.shape,
+                  dtype=bool)
+
+
 @multipledispatch.dispatch(sp.spmatrix, sp.spmatrix)
 def relative_error(mat_ref, mat, ord='fro'):
     if ord == 'fro':
@@ -26,9 +41,9 @@ def relative_error(mat_ref, mat, ord='fro'):
     else:
         def reshape(arr):
             return arr
-    mat_ref_flat = reshape(mat_ref)
-    num = np.linalg.norm(mat_ref_flat - reshape(mat), ord=ord)
-    denom = np.linalg.norm(mat_ref_flat, ord=ord)
+    mat_ref = reshape(mat_ref)
+    num = np.linalg.norm(mat_ref - reshape(mat), ord=ord)
+    denom = np.linalg.norm(mat_ref, ord=ord)
     return num / denom
 
 
@@ -65,13 +80,13 @@ def count_nonzero(array):
 
 
 @multipledispatch.dispatch(np.ndarray)
-def frobenius_norm(array):
-    return np.linalg.norm(array)
+def norm(array, ord=None):
+    return np.linalg.norm(array, ord=ord)
 
 
 @multipledispatch.dispatch(sp.spmatrix)
-def frobenius_norm(array):
-    return np.sqrt(array.multiply(array).sum())
+def norm(array, ord=None):
+    return np.linalg.norm(sp.find(array)[2], ord=ord)
 
 
 def svds(array, k):
@@ -103,12 +118,12 @@ class UpdatableSVD:
 
         m = self.u.T.dot(a)
         p = a - self.u.dot(m)
-        r_a = frobenius_norm(p)
+        r_a = norm(p)
         p /= r_a
 
         n = self.vt.dot(b)
         q = b - self.vt.T.dot(n)
-        r_b = frobenius_norm(q)
+        r_b = norm(q)
         q /= r_b
 
         u_a = np.append(m, [r_a])
@@ -129,7 +144,7 @@ class UpdatableSVD:
         b[idx] = 1
         n = self.vt[:, idx]
         q = b - self.vt.T.dot(n)
-        r_b = frobenius_norm(q)
+        r_b = norm(q)
         q = np.atleast_2d(q) / r_b
 
         u_a = np.append(n, [0])

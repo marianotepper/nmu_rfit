@@ -15,10 +15,10 @@ def create_blockdiagonal_matrix(func, n_blocks):
     return sp.block_diag(diag)
 
 
-def basis(size):
-    rows = np.random.randint(size[0], size=(size[1],))
-    cols = range(size[1])
-    data = np.ones((size[1],))
+def basis(k, m):
+    rows = np.random.randint(k, size=(m,))
+    cols = range(m)
+    data = np.ones((m,))
     return utils.sparse((data, (rows, cols)))
 
 
@@ -40,7 +40,7 @@ def spread_matrix(m, s):
 
 def fast_cauchy_transform(m, s, k):
     h = spread_matrix(m, s)
-    d = cauchy(2*m, 2*s)
-    b = basis((k, 2*m))
+    d = cauchy(2 * m, 2 * s)
+    b = basis(k, 2 * m)
     transform_mat = 4 * b.dot(d.dot(h))
     return transform_mat

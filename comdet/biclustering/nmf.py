@@ -18,7 +18,6 @@ def nmf_robust_multiplicative(array, r, u_init=None, v_init=None, min_iter=20,
 
     if utils.issparse(array):
         array = array.toarray()
-    # print array.shape
 
     delta2 = np.finfo(np.float).eps ** 2
 

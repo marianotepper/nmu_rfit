@@ -3,20 +3,12 @@ import numpy as np
 from . import utils
 from . import nmf
 from . import mdl
-
-
-class DeflationError(RuntimeError):
-    def __init__(self,*args,**kwargs):
-        super(DeflationError, self).__init__(*args, **kwargs)
+from . import deflation
 
 
 def single_bicluster(deflator):
     try:
-        if deflator.n_samples > deflator.selection.size:
-            raise DeflationError('Number of active samples smaller than'
-                                 'compression rate')
-
-        u, v = nmf.nmf_robust_multiplicative(deflator.array_compressed, 1)
+        u, v = nmf.nmf_robust_multiplicative(deflator.compressed_array, 1)
         # u, v = nmf.nmf_robust_rank1(deflator.array_compressed)
         u = utils.binarize(u)
         idx_u = utils.find(u)[0]
@@ -25,7 +17,7 @@ def single_bicluster(deflator):
         u_cropped = utils.sparse(np.ones((idx_u.size, 1)))
         v_init = u_cropped.T.dot(array_cropped)
         v_init /= v_init.max()
-        v = nmf.nmf_robust_rank1_v(array_cropped, u_cropped, v_init)
+        v = nmf.nmf_robust_admm_v(array_cropped, u_cropped, v_init)
         v = utils.binarize(v)
         idx_v = utils.find(v)[1]
 
@@ -33,11 +25,11 @@ def single_bicluster(deflator):
         v_cropped = utils.sparse(np.ones((1, idx_v.size)))
         u_init = array_cropped.dot(v_cropped.T)
         u_init /= u_init.max()
-        u = nmf.nmf_robust_rank1_u(array_cropped, u_init, v_cropped)
+        u = nmf.nmf_robust_admm_u(array_cropped, u_init, v_cropped)
         u = utils.binarize(u)
 
-    except(AttributeError, DeflationError):
-        u, v = nmf.nmf_robust_rank1(deflator.array)
+    except deflation.DeflationError:
+        u, v = nmf.nmf_robust_admm(deflator.array)
         u = utils.binarize(u)
         v = utils.binarize(v)
     return u, v

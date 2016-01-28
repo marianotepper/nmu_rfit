@@ -37,13 +37,34 @@ class L1CompressedDeflator(Deflator):
         selection = self._compressor.compress()
         if selection is None:
             try:
-                del self.selection
-                del self.array_compressed
+                del self._selection
+                del self._compressed_array
             except AttributeError:
                 pass
         else:
-            self.selection = selection
-            self.array_compressed = self.array[:, self.selection]
+            self._selection = selection
+            self._compressed_array = self.array[:, self.selection]
+
+    @property
+    def compressed_array(self):
+        if self.n_samples > self._selection.size:
+            raise DeflationError('Number of active samples smaller than'
+                                 'compression rate')
+        try:
+            return self._compressed_array
+        except AttributeError:
+            raise DeflationError('Could not compress the array.')
+
+    @property
+    def selection(self):
+        if self.n_samples > self._selection.size:
+            raise DeflationError('Number of active samples smaller than'
+                                 'compression rate')
+        try:
+            return self._selection
+        except AttributeError:
+            raise DeflationError('Could not compress the array.')
+
 
     @property
     def n_samples(self):
@@ -65,6 +86,11 @@ class L1CompressedDeflator(Deflator):
         for i in idx_rows:
             self._compressor.remove_row(i)
         self._inner_compress()
+
+
+class DeflationError(RuntimeError):
+    def __init__(self,*args,**kwargs):
+        super(DeflationError, self).__init__(*args, **kwargs)
 
 
 class DummyCompressor(object):

@@ -4,7 +4,6 @@ from . import utils
 from . import nmf
 from . import mdl
 from . import deflation
-import timeit
 
 
 def bicluster(deflator, n=None, share_elements=True):

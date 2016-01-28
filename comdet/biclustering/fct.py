@@ -10,7 +10,7 @@ def normalized_hadamard(n):
     return scipy.linalg.hadamard(n) / math.sqrt(n)
 
 
-def create_blockdiagonal_matrix(func, blocksize, n_blocks):
+def create_blockdiagonal_matrix(func, n_blocks):
     diag = [utils.sparse(func()) for _ in range(n_blocks)]
     return sp.block_diag(diag)
 
@@ -23,12 +23,10 @@ def basis(size):
 
 
 def cauchy(m, block_side):
-    block_size = (block_side, block_side)
-
     def diag_cauchy():
         return np.diag(np.random.standard_cauchy((block_side,)))
 
-    return create_blockdiagonal_matrix(diag_cauchy, block_size, m / block_side)
+    return create_blockdiagonal_matrix(diag_cauchy, m / block_side)
 
 
 def spread_matrix(m, s):
@@ -37,8 +35,7 @@ def spread_matrix(m, s):
     def create_block():
         return gs
 
-    block_size = (2*s, s)
-    return create_blockdiagonal_matrix(create_block, block_size, m / s)
+    return create_blockdiagonal_matrix(create_block, m / s)
 
 
 def fast_cauchy_transform(m, s, k):

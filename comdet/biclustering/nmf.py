@@ -4,7 +4,8 @@ from . import utils
 
 
 def nmf_robust_multiplicative(array, r, u_init=None, v_init=None, min_iter=20,
-                              max_iter=1e2, update='both', tol=1e-10):
+                              max_iter=1e2, update='both', tol=1e-4,
+                              relative_tol=1e-4):
     if u_init is None and v_init is None:
         u, v = _nmf_initialize(array, r)
     else:
@@ -17,6 +18,7 @@ def nmf_robust_multiplicative(array, r, u_init=None, v_init=None, min_iter=20,
 
     if utils.issparse(array):
         array = array.toarray()
+    # print array.shape
 
     delta2 = np.finfo(np.float).eps ** 2
 
@@ -30,10 +32,12 @@ def nmf_robust_multiplicative(array, r, u_init=None, v_init=None, min_iter=20,
         if update == 'both' or update == 'right':
             v = _mul_right_update(aw, u, v, weights)
 
-        error.append(utils.norm(array - np.dot(u, v), ord=1))
-        if (len(error) >= min_iter and
-                    abs(error[-2] - error[-1]) < tol * error[-2]):
-            break
+        error.append(utils.relative_error(array, np.dot(u, v), ord=1))
+        if len(error) >= min_iter:
+            if error[-1] < tol:
+                break
+            if abs(error[-2] - error[-1]) < relative_tol * error[-2]:
+                break
     return u, v
 
 

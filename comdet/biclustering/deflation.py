@@ -7,6 +7,14 @@ class Deflator(object):
         self.array = array
         self._array_lil = None
 
+    @property
+    def compressed_array(self):
+        raise DeflationError('Could not compress the array.')
+
+    @property
+    def selection(self):
+        raise DeflationError('Could not compress the array.')
+
     def additive_downdate(self, u, v):
         self.array -= u.dot(v)
 

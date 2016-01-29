@@ -45,7 +45,6 @@ class OnlineMDL:
     def __init__(self):
         self.code_u = 0
         self.code_v = 0
-        self._code_length = 0
 
     def add_rank1_approximation(self, remainder, u, v):
         self.code_u += universal_bernoulli(u)

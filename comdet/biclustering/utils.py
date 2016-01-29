@@ -119,12 +119,14 @@ class UpdatableSVD:
         m = self.u.T.dot(a)
         p = a - self.u.dot(m)
         r_a = norm(p)
-        p /= r_a
+        if r_a != 0:
+            p /= r_a
 
         n = self.vt.dot(b)
         q = b - self.vt.T.dot(n)
         r_b = norm(q)
-        q /= r_b
+        if r_b != 0:
+            q /= r_b
 
         u_a = np.append(m, [r_a])
         v_b = np.append(n, [r_b])
@@ -145,7 +147,8 @@ class UpdatableSVD:
         n = self.vt[:, idx]
         q = b - self.vt.T.dot(n)
         r_b = norm(q)
-        q = np.atleast_2d(q) / r_b
+        if r_b != 0:
+            q = np.atleast_2d(q) / r_b
 
         u_a = np.append(n, [0])
         v_b = np.append(n, [r_b])

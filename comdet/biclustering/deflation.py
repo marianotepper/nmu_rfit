@@ -43,7 +43,7 @@ class L1CompressedDeflator(Deflator):
 
     def _inner_compress(self):
         selection = self._compressor.compress()
-        if selection is None or self.n_samples > self._selection.size:
+        if selection is None or self.n_samples > selection.size:
             try:
                 del self._selection
                 del self._compressed_array

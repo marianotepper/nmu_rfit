@@ -62,11 +62,12 @@ def _nmf_initialize(array, r):
     return x, y
 
 
-def nmf_robust_admm(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
-                     v_init=None, max_iter=5e2, tol=1e-4):
+def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
+                    u_init=None, v_init=None, max_iter=5e2, tol=1e-4):
     """
     Restricted to the rank 1 case.
     :param array:
+    :param update:
     :param lambda_u:
     :param lambda_v:
     :param lambda_e:
@@ -82,25 +83,27 @@ def nmf_robust_admm(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
         x = u_init.copy()
         y = v_init.copy()
 
-    x = utils.sparse(x)
-    y = utils.sparse(y)
-    u = x
-    v = y
+    if update == 'both' or update == 'left':
+        x = utils.sparse(x)
+        u = x
+        gamma_u = utils.sparse(u.shape)
+    if update == 'both' or update == 'right':
+        y = utils.sparse(y)
+        v = y
+        gamma_v = utils.sparse(v.shape)
+
     e = utils.sparse(array - u.dot(v))
-    gamma_u = utils.sparse(u.shape)
-    gamma_v = utils.sparse(v.shape)
     gamma_e = utils.sparse(e.shape)
 
     error = []
     for _ in range(int(max_iter)):
         temp = array - e
-        x = _admm_left_update(temp, u, y, lambda_u, gamma_u, lambda_e, gamma_e)
-        y = _admm_right_update(temp, x, v, lambda_v, gamma_v, lambda_e, gamma_e)
-
-        u = projection_positive(x + gamma_u / lambda_u)
-        v = projection_positive(y + gamma_v / lambda_v)
-        gamma_u += lambda_u * (x - u)
-        gamma_v += lambda_v * (y - v)
+        if update == 'both' or update == 'left':
+            x, u, gamma_u = _admm_left_update(temp, u, y, lambda_u, gamma_u,
+                                              lambda_e, gamma_e)
+        if update == 'both' or update == 'right':
+            y, v, gamma_v = _admm_right_update(temp, x, v, lambda_v, gamma_v,
+                                               lambda_e, gamma_e)
 
         xy = x.dot(y)
         temp = array - xy
@@ -110,97 +113,28 @@ def nmf_robust_admm(array, lambda_u=1, lambda_v=1, lambda_e=1, u_init=None,
         error.append(utils.relative_error(array, xy + e))
         if error[-1] < tol:
             break
+
+    if update == 'left':
+        return u
+    if update == 'right':
+        return v
     return u, v
 
 
-def nmf_robust_admm_u(array, u_init, v, lambda_u=1, lambda_e=1, max_iter=5e2,
-                       tol=1e-4):
-    """
-    Restricted to the rank 1 case.
-
-    :param array:
-    :param u_init:
-    :param v:
-    :param lambda_u:
-    :param lambda_e:
-    :param max_iter:
-    :param tol:
-    :return:
-    """
-    u = u_init
-    e = utils.sparse(array - u.dot(v))
-    gamma_u = utils.sparse(u.shape)
-    gamma_e = utils.sparse(e.shape)
-
-    error = []
-    for _ in range(int(max_iter)):
-        temp = array - e
-        x = _admm_left_update(temp, u, v, lambda_u, gamma_u, lambda_e, gamma_e)
-
-        u = projection_positive(x + gamma_u / lambda_u)
-        gamma_u += lambda_u * (x - u)
-
-        xv = x.dot(v)
-        temp = array - xv
-        e = shrinkage(temp + gamma_e / lambda_e, 1. / lambda_e)
-        gamma_e += lambda_e * (temp - e)
-
-        error.append(utils.relative_error(array, xv + e))
-        if error[-1] < tol:
-            break
-    return u
-
-
-def nmf_robust_admm_v(array, u, v_init, lambda_v=1, lambda_e=1, max_iter=5e2,
-                       tol=1e-4):
-    """
-    Restricted to the rank 1 case.
-
-    :param array:
-    :param u:
-    :param v_init:
-    :param lambda_v:
-    :param lambda_e:
-    :param max_iter:
-    :param tol:
-    :return:
-    """
-    v = v_init
-    e = utils.sparse(array - u.dot(v))
-    gamma_v = utils.sparse(v.shape)
-    gamma_e = utils.sparse(e.shape)
-
-    error = []
-    for _ in range(int(max_iter)):
-        temp = array - e
-        y = _admm_right_update(temp, u, v, lambda_v, gamma_v, lambda_e, gamma_e)
-
-        v = projection_positive(y + gamma_v / lambda_v)
-        gamma_v += lambda_v * (y - v)
-
-        uy = u.dot(y)
-        temp = array - uy
-        e = shrinkage(temp + gamma_e / lambda_e, 1. / lambda_e)
-        gamma_e += lambda_e * (temp - e)
-
-        error.append(utils.relative_error(array, uy + e))
-        if error[-1] < tol:
-            break
-    return v
-
-
 def _admm_left_update(mat, u, y, lambda_u, gamma_u, lambda_e, gamma_e):
-    numerator = (lambda_e * mat.dot(y.T) + lambda_u * u - gamma_u +
-             gamma_e.dot(y.T))
-    denominator = y.dot(y.T).toarray()[0, 0] + lambda_u
-    return numerator / denominator
+    x = lambda_e * mat.dot(y.T) + lambda_u * u - gamma_u + gamma_e.dot(y.T)
+    x /= y.dot(y.T).toarray()[0, 0] + lambda_u
+    u = projection_positive(x + gamma_u / lambda_u)
+    gamma_u += lambda_u * (x - u)
+    return x, u, gamma_u
 
 
 def _admm_right_update(mat, x, v, lambda_v, gamma_v, lambda_e, gamma_e):
-    numerator = (lambda_e * x.T.dot(mat) + lambda_v * v - gamma_v +
-             x.T.dot(gamma_e))
-    denominator = x.T.dot(x).toarray()[0, 0] + lambda_v
-    return numerator / denominator
+    y = lambda_e * x.T.dot(mat) + lambda_v * v - gamma_v + x.T.dot(gamma_e)
+    y /= x.T.dot(x).toarray()[0, 0] + lambda_v
+    v = projection_positive(y + gamma_v / lambda_v)
+    gamma_v += lambda_v * (y - v)
+    return y, v, gamma_v
 
 
 def projection_positive(x):

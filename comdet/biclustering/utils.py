@@ -16,9 +16,9 @@ def issparse(mat):
     return sp.issparse(mat)
 
 
-def binarize(x, tol=1e-3):
+def binarize(x, tol=1e-4):
     i, j, v = find(x)
-    mask = v > (1e-4 * v.max())
+    mask = v > (tol * v.max())
     return sparse((v[mask], (i[mask], j[mask])), shape=x.shape,
                   dtype=bool)
 

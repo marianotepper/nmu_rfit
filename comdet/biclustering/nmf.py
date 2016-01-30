@@ -92,7 +92,7 @@ def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
         v = y
         gamma_v = utils.sparse(v.shape)
 
-    e = utils.sparse(array - u.dot(v))
+    e = utils.sparse(array - x.dot(y))
     gamma_e = utils.sparse(e.shape)
 
     error = []

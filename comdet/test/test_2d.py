@@ -105,6 +105,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
                                                             ac_tester)
     print('Preference matrix size:', pref_matrix.shape)
 
+    scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
+
     base_plot(x)
     plot_models(orig_models, alpha=0.2)
     plt.savefig(output_prefix + '_original_models.pdf', dpi=600)
@@ -133,41 +135,38 @@ def run_all():
     logger = test_utils.Logger("test_2d.txt")
     sys.stdout = logger
 
-    sampling_factor = 20
-    inliers_threshold = 0.03
+    inliers_threshold = 0.015
     epsilon = 0
 
-    configuration = {'Star': (line.Line, sampling.AdaptiveSampler(),
-                               ac.LocalNFA),
-                     'Stairs': (line.Line, sampling.AdaptiveSampler(),
-                                ac.LocalNFA),
-                     'Circles': (circle.Circle, sampling.AdaptiveSampler(),
-                                 ac.circle.LocalNFA),
-                     }
+    config = {'Star': (line.Line, sampling.AdaptiveSampler(),
+                       ac.LocalNFA, 20),
+              'Stairs': (line.Line, sampling.AdaptiveSampler(),
+                         ac.LocalNFA, 20),
+              'Circles': (circle.Circle, sampling.AdaptiveSampler(),
+                          ac.circle.LocalNFA, 40),
+              }
 
     stats_list = []
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
     for example in mat.keys():
-        exp_type = None
-        for c in configuration:
+        for c in config:
             if example.find(c) == 0:
-                exp_type = c
+                ex_type = c
                 break
         else:
-            if exp_type is None:
-                continue
+            continue
 
-        model_class, sampler, ac_tester_class = configuration[exp_type]
+        model_class, sampler, tester_class, sampling_factor = config[ex_type]
         data = mat[example].T
 
         sampler.n_samples = data.shape[0] * sampling_factor
         sampler.n_samples *= model_class().min_sample_size
         ransac_gen = sampling.ModelGenerator(model_class, data, sampler)
-        ac_tester = ac_tester_class(data, epsilon, inliers_threshold)
+        ac_tester = tester_class(data, epsilon, inliers_threshold)
 
-        match = re.match(exp_type + '[0-9]*_', example)
+        match = re.match(type + '[0-9]*_', example)
         try:
-            match = re.match('[0-9]+', match.group()[len(exp_type):])
+            match = re.match('[0-9]+', match.group()[len(ex_type):])
             n_groups = int(match.group())
         except AttributeError:
             n_groups = 4

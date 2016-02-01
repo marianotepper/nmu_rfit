@@ -9,11 +9,12 @@ from . import deflation
 def bicluster(deflator, n=None, share_elements=True):
     if n is None:
         n_iters = deflator.array.shape[1]
-        array_copy = deflator.array.copy()
+        online_mdl = mdl.OnlineMDL()
     else:
         n_iters = n
 
     bic_list = []
+    total_codelength = []
     for _ in range(n_iters):
         if deflator.array.nnz == 0:
             break
@@ -31,11 +32,13 @@ def bicluster(deflator, n=None, share_elements=True):
             idx_u = utils.find(u)[0]
             deflator.remove_rows(idx_u)
 
-    if not bic_list:
-        return bic_list
+        if n is None:
+            cl = online_mdl.add_rank1_approximation(deflator.array, u, v)
+            total_codelength.append(cl)
 
-    if n is None:
-        bic_list = mdl_cleanup(array_copy, bic_list, share_elements)
+    if n is None and bic_list:
+        cut_point = np.argmin(np.array(total_codelength))
+        bic_list = bic_list[:cut_point+1]
 
     return bic_list
 
@@ -80,25 +83,3 @@ def crop_right(array, idx_v):
     arr_sum = array_cropped.sum(axis=1)
     u_init[arr_sum > 0] /= arr_sum[arr_sum > 0]
     return array_cropped, u_init, v_cropped
-
-
-def mdl_cleanup(array, bic_list, share_elements):
-    bic_list = sorted(bic_list, key=lambda bic: bic[0].nnz * bic[1].nnz,
-                      reverse=True)
-
-    mdl_deflator = deflation.Deflator(array)
-    online_mdl = mdl.OnlineMDL()
-
-    total_codelength = []
-    for u, v in bic_list:
-        idx_v = utils.find(v)[1]
-        mdl_deflator.remove_columns(idx_v)
-        if not share_elements:
-            idx_u = utils.find(u)[0]
-            mdl_deflator.remove_rows(idx_u)
-
-        cl = online_mdl.add_rank1_approximation(mdl_deflator.array, u, v)
-        total_codelength.append(cl)
-
-    cut_point = np.argmin(np.array(total_codelength))
-    return bic_list[:cut_point+1]

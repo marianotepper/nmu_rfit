@@ -29,7 +29,7 @@ class BinomialNFA(object):
         if inliers_threshold is None:
             inliers_threshold = self.threshold(model)
         pfa = self._pfa(model, data, inliers_threshold)
-        n_tests = log_nchoosek(len(self.data), model.min_sample_size)
+        n_tests = log_nchoosek(len(data), model.min_sample_size)
         return (pfa + n_tests) / np.log(10)
 
     def _pfa(self, model, data, inliers_threshold):

@@ -4,27 +4,21 @@ from . import utils
 
 
 def exclusion_principle(ac_tester, models):
-    mod_inliers_list = [(mod, ac_tester.inliers(mod)) for mod in models]
     nfa_list = [(i, ac_tester.nfa(mod)) for i, mod in enumerate(models)]
-    # nfa_list = filter(lambda e: utils.meaningful(e[1], ac_tester.epsilon),
-    #                   nfa_list)
+    nfa_list = filter(lambda e: e[1] < ac_tester.epsilon, nfa_list)
     nfa_list = sorted(nfa_list, key=operator.itemgetter(1))
-    idx = zip(*nfa_list)[0]
+    candidates = zip(*nfa_list)[0]
 
-    keep_list = list(idx)
-    for pick in idx:
-        pos = keep_list.index(pick)
-        mod, in_a = mod_inliers_list[pick]
-        in_list = [mod_inliers_list[k][1] for i, k in enumerate(keep_list)
-                   if i < pos]
+    inliers_list = [ac_tester.inliers(mod) for mod in models]
+    keep_list = []
+    for cand in candidates:
+        cand_mod = models[cand]
+        in_list = [inliers_list[other] for other in keep_list]
         if not in_list:
+            keep_list.append(cand)
             continue
         excluded = reduce(lambda x, y: np.logical_or(x, y), in_list)
         considered = np.logical_not(excluded)
-        # print len(in_list), considered.sum(), in_a.sum(),
-        # print np.logical_and(considered, in_a).sum(),
-        # print ac_tester.nfa(mod, considered=considered)
-        if not ac_tester.meaningful(mod, considered=considered):
-            keep_list.remove(pick)
-
+        if ac_tester.meaningful(cand_mod, considered=considered):
+            keep_list.append(cand)
     return keep_list

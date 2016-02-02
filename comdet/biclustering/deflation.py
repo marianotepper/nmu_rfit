@@ -1,11 +1,16 @@
 from __future__ import absolute_import
 from . import compression
+from . import utils
 
 
-class Deflator(object):
+class DeflationError(RuntimeError):
+    def __init__(self, *args, **kwargs):
+        super(DeflationError, self).__init__(*args, **kwargs)
+
+
+class Deflator(utils.Downdater):
     def __init__(self, array):
-        self.array = array
-        self._array_lil = None
+        super(Deflator, self).__init__(array)
 
     @property
     def compressed_array(self):
@@ -14,21 +19,6 @@ class Deflator(object):
     @property
     def selection(self):
         raise DeflationError('Could not compress the array.')
-
-    def additive_downdate(self, u, v):
-        self.array -= u.dot(v)
-
-    def remove_columns(self, idx_cols):
-        if self._array_lil is None:
-            self._array_lil = self.array.tolil()
-        self._array_lil[:, idx_cols] = 0
-        self.array = self._array_lil.tocsc()
-
-    def remove_rows(self, idx_rows):
-        if self._array_lil is None:
-            self._array_lil = self.array.tolil()
-        self._array_lil[idx_rows, :] = 0
-        self.array = self._array_lil.tocsc()
 
 
 class L1CompressedDeflator(Deflator):
@@ -67,7 +57,6 @@ class L1CompressedDeflator(Deflator):
         except AttributeError:
             raise DeflationError('Could not compress the array.')
 
-
     @property
     def n_samples(self):
         return self._compressor.n_samples
@@ -79,20 +68,13 @@ class L1CompressedDeflator(Deflator):
 
     def remove_columns(self, idx_cols):
         super(L1CompressedDeflator, self).remove_columns(idx_cols)
-        for i in idx_cols:
-            self._compressor.remove_column(i)
+        self._compressor.remove_columns(idx_cols)
         self._inner_compress()
 
     def remove_rows(self, idx_rows):
         super(L1CompressedDeflator, self).remove_rows(idx_rows)
-        for i in idx_rows:
-            self._compressor.remove_row(i)
+        self._compressor.remove_rows(idx_rows)
         self._inner_compress()
-
-
-class DeflationError(RuntimeError):
-    def __init__(self,*args,**kwargs):
-        super(DeflationError, self).__init__(*args, **kwargs)
 
 
 class DummyCompressor(object):

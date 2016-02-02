@@ -107,78 +107,23 @@ def svds(array, k):
     return u, s, vt
 
 
-class UpdatableSVD:
+class Downdater(object):
     def __init__(self, array):
-        self.shape = array.shape
-        self.u, self.s, self.vt = np.linalg.svd(array, full_matrices=False)
+        self.array = array
+        self._array_lil = None
 
-    def update(self, a, b):
-        if self.s is None:
-            return
+    def additive_downdate(self, u, v):
+        self.array -= u.dot(v)
+        self._array_lil = None
 
-        m = self.u.T.dot(a)
-        p = a - self.u.dot(m)
-        r_a = norm(p)
-        if r_a != 0:
-            p /= r_a
+    def remove_columns(self, idx_cols):
+        if self._array_lil is None:
+            self._array_lil = self.array.tolil()
+        self._array_lil[:, idx_cols] = 0
+        self.array = self._array_lil.tocsc()
 
-        n = self.vt.dot(b)
-        q = b - self.vt.T.dot(n)
-        r_b = norm(q)
-        if r_b != 0:
-            q /= r_b
-
-        u_a = np.append(m, [r_a])
-        v_b = np.append(n, [r_b])
-
-        k = np.diag(np.append(self.s, [0]))
-        k += np.outer(u_a, v_b)
-
-        self._inner_update(p, q, k)
-
-    def remove_column(self, idx):
-        if self.s is None:
-            return
-
-        p = np.zeros((self.u.shape[0], 1))
-
-        b = np.zeros((self.shape[1],))
-        b[idx] = 1
-        n = self.vt[:, idx]
-        q = b - self.vt.T.dot(n)
-        r_b = norm(q)
-        if r_b != 0:
-            q = np.atleast_2d(q) / r_b
-
-        u_a = np.append(n, [0])
-        v_b = np.append(n, [r_b])
-
-        k = np.dot(np.diag(np.append(self.s, [0])),
-                   np.identity(self.s.size + 1) - np.outer(u_a, v_b))
-        self._inner_update(p, q, k)
-
-    def _inner_update(self, p, q, k):
-        try:
-            inner_u, s_new, inner_vt = np.linalg.svd(k)
-        except np.linalg.LinAlgError:
-            self.u = None
-            self.s = None
-            self.vt = None
-            return
-
-        if s_new.size > self.s.size:
-            if len(p.shape) == 1:
-                p = np.atleast_2d(p).T
-            self.u = np.hstack((self.u, p))
-            self.vt = np.vstack((self.vt, q))
-        # update and crop
-        self.u = np.dot(self.u, inner_u)
-        self.s = s_new
-        self.vt = np.dot(inner_vt, self.vt)
-        self.trim()
-
-    def trim(self):
-        orig_size = min(self.shape)
-        self.u = self.u[:, :orig_size]
-        self.s = self.s[:orig_size]
-        self.vt = self.vt[:orig_size, :]
+    def remove_rows(self, idx_rows):
+        if self._array_lil is None:
+            self._array_lil = self.array.tolil()
+        self._array_lil[idx_rows, :] = 0
+        self.array = self._array_lil.tocsc()

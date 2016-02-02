@@ -46,153 +46,35 @@ def select_leverage_scores(projected_mat, s, original_dim_size, axis=0):
     return selection
 
 
-Downdate = collections.namedtuple('Downdate', ['type', 'param'])
-
-
-class BaseCompressor(object):
-    additive = 0
-    column_removal = 1
-    row_removal = 2
-
-    def __init__(self):
-        self.downdates = []
-
-    def _apply_downdates(self):
-        if len(self.downdates) == 0:
-            return
-        current_type = self.downdates[0].type
-        for dd in self.downdates:
-            if dd.type != current_type:
-                if dd.type == BaseCompressor.row_removal:
-                    self.mat_lil = self.mat.tolil()
-                if dd.type == BaseCompressor.column_removal:
-                    self.mat_lil = self.mat.tolil()
-                if dd.type == BaseCompressor.additive:
-                    self.mat = self.mat_lil.tocsc()
-                current_type = dd.type
-
-            if dd.type == current_type:
-                if dd.type == BaseCompressor.row_removal:
-                    self.mat_lil[dd.param, :] = 0
-                if dd.type == BaseCompressor.column_removal:
-                    self.mat_lil[:, dd.param] = 0
-                if dd.type == BaseCompressor.additive:
-                    self.mat = self.mat + dd.param
-
-        if current_type == BaseCompressor.column_removal:
-            self.mat = self.mat_lil.tocsc()
-        if current_type == BaseCompressor.additive:
-            self.mat_lil = self.mat.tolil()
-
-
-class OnlineRowCompressor(BaseCompressor):
-    def __init__(self, array, n_samples):
-        super(OnlineRowCompressor, self).__init__()
-        self.n_samples = n_samples
-        self.nrows_original = array.shape[0]
-
-        self.mat = power_of_two_padding(array)
-        self.mat_lil = self.mat.tolil()
-
-        self.transform_mat = fct.fast_cauchy_transform(self.mat.shape[0],
-                                                       n_samples, n_samples)
-        subsampled_mat = self.transform_mat.dot(self.mat).toarray()
-        self.svd = utils.UpdatableSVD(subsampled_mat)
-
-    def compress(self):
-        if self.svd.s is None:
-            return None
-        self.apply_downdates()
-        r_inv = self._invert_r()
-        projected_mat = self.mat.dot(utils.sparse(r_inv)).toarray()
-        selection = select_leverage_scores(projected_mat, self.n_samples,
-                                           self.nrows_original)
-        # TODO scale nonzero rows
-        return selection
-
-    def _invert_r(self, rcond=1e-10):
-        mask = np.abs(self.svd.s) > rcond * np.max(self.svd.s)
-        s = 1. / self.svd.s[mask]
-        vt = self.svd.vt[mask, :]
-        return vt.T * s
-
-    def additive_downdate(self, u, v):
-        u_padded = power_of_two_padding(u)
-        u_subsampled = -self.transform_mat.dot(u_padded)
-        self.svd.update(np.squeeze(u_subsampled.toarray()),
-                        np.squeeze(v.toarray()))
-        dd = Downdate(BaseCompressor.additive, u_padded * v)
-        self.downdates.append(dd)
-
-    def remove_column(self, idx):
-        self.svd.remove_column(idx)
-        dd = Downdate(BaseCompressor.column_removal, idx)
-        self.downdates.append(dd)
-
-    def remove_row(self, idx):
-        v = self.mat[idx, :]
-        if v.min() == 0 and v.max() == 0:
-            return
-        u = utils.sparse(([1], ([idx], [0])), shape=(self.nrows_original, 1))
-        self.additive_downdate(u, v, apply_to_matrix=False)
-        dd = Downdate(BaseCompressor.row_removal, idx)
-        self.downdates.append(dd)
-
-
-class OnlineColumnCompressor(BaseCompressor):
+class OnlineColumnCompressor(object):
     def __init__(self, array, n_samples):
         super(OnlineColumnCompressor, self).__init__()
         self.n_samples = n_samples
         self.ncols_original = array.shape[1]
 
-        self.mat = power_of_two_padding(array, axis=1)
-        self.mat_lil = self.mat.tolil()
-
-        self.transform_mat = fct.fast_cauchy_transform(self.mat.shape[1],
-                                                       n_samples, n_samples)
-        subsampled_mat = self.mat.dot(self.transform_mat.T).toarray()
-        self.svd = utils.UpdatableSVD(subsampled_mat)
+        mat = power_of_two_padding(array, axis=1)
+        self.fct = fct.fast_cauchy_transform(mat.shape[1], n_samples, n_samples)
+        self.downdater = utils.Downdater(mat)
 
     def compress(self):
-        if self.svd.s is None:
-            selection = None
-        else:
-            self._apply_downdates()
-            r_inv = utils.sparse(self._invert_r())
-            projected_mat = r_inv.T.dot(self.mat).toarray()
-            selection = select_leverage_scores(projected_mat, self.n_samples,
-                                               self.ncols_original, axis=1)
+        r_inv = utils.sparse(self._invert_r())
+        projected_mat = r_inv.T.dot(self.downdater.array).toarray()
+        selection = select_leverage_scores(projected_mat, self.n_samples,
+                                           self.ncols_original, axis=1)
         return selection
 
     def _invert_r(self, rcond=1e-10):
-        mask = np.abs(self.svd.s) > rcond * np.max(self.svd.s)
-        s = 1. / self.svd.s[mask]
-        u = self.svd.u[:, mask]
-        return u * s
+        subsampled_mat = self.downdater.array.dot(self.fct.T).toarray()
+        u, s, _ = np.linalg.svd(subsampled_mat, full_matrices=False)
+        mask = np.abs(s) > rcond * np.max(s)
+        return u[:, mask] / s[mask]
 
     def additive_downdate(self, u, v, apply_to_matrix=True):
         v_padded = power_of_two_padding(v, axis=1)
-        v_subsampled = -v_padded.dot(self.transform_mat.T)
-        self.svd.update(np.squeeze(u.toarray()),
-                        np.squeeze(v_subsampled.toarray()))
-        if apply_to_matrix:
-            dd = Downdate(BaseCompressor.additive, u * v_padded)
-            self.downdates.append(dd)
+        self.downdater.additive_downdate(u, v_padded)
 
-    def remove_column(self, idx):
-        u = self.mat[:, idx]
-        if u.min() == 0 and u.max() == 0:
-            return
-        v = utils.sparse(([1], ([0], [idx])), shape=(1, self.mat.shape[1]))
-        self.additive_downdate(u, v, apply_to_matrix=False)
-        dd = Downdate(BaseCompressor.column_removal, idx)
-        self.downdates.append(dd)
+    def remove_columns(self, idx_cols):
+        self.downdater.remove_columns(idx_cols)
 
-    def remove_row(self, idx):
-        v = self.mat[idx, :]
-        if v.min() == 0 and v.max() == 0:
-            return
-        u = utils.sparse(([1], ([idx], [0])), shape=(self.mat.shape[0], 1))
-        self.additive_downdate(u, v, apply_to_matrix=False)
-        dd = Downdate(BaseCompressor.row_removal, idx)
-        self.downdates.append(dd)
+    def remove_rows(self, idx_rows):
+        self.downdater.remove_rows(idx_rows)

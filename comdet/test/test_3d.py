@@ -5,7 +5,7 @@ import seaborn.apionly as sns
 import numpy as np
 import scipy.sparse as sp
 import timeit
-import os
+import scipy.io
 import comdet.pme.preference as pref
 import comdet.biclustering as bc
 import comdet.test.utils as test_utils
@@ -150,6 +150,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=128,
                                                             ransac_gen,
                                                             ac_tester)
     print('Preference matrix size:', pref_matrix.shape)
+
+    scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
 
     plt.figure()
     pref.plot(pref_matrix)

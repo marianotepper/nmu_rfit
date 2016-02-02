@@ -164,7 +164,7 @@ def run_all():
         ransac_gen = sampling.ModelGenerator(model_class, data, sampler)
         ac_tester = tester_class(data, epsilon, inliers_threshold)
 
-        match = re.match(type + '[0-9]*_', example)
+        match = re.match(ex_type + '[0-9]*_', example)
         try:
             match = re.match('[0-9]+', match.group()[len(ex_type):])
             n_groups = int(match.group())

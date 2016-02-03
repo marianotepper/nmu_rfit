@@ -136,7 +136,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
         return dict(time=t1)
 
 
-def test(model_class, x, name, ransac_gen, ac_tester, compression_level=128,
+def test(model_class, x, name, ransac_gen, ac_tester, compression_level=32,
          plotter=None, run_regular=True, gt_groups=None, save_animation=True,
          share_elements=True):
     print(name, x.shape)

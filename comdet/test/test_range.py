@@ -158,13 +158,23 @@ def run(compression_level, subsampling):
     logger.close()
 
 
-def run_all():
+def run_exp1():
     compresion_levels = [8, 16, 32, 64, 128]
-    subsamplings = [20, 10, 5, 2, 1]
-    # compresion_levels = [8]
-    # subsamplings = [10]
+    subsamplings = [20]
     for s, cl in itertools.product(subsamplings, compresion_levels):
         run(cl, s)
+
+
+def run_exp2():
+    compresion_levels = [32]
+    subsamplings = [20, 10, 5, 2, 1]
+    for s, cl in itertools.product(subsamplings, compresion_levels):
+        run(cl, s)
+
+
+def run_all():
+    run_exp1()
+    run_exp2()
 
 
 if __name__ == '__main__':

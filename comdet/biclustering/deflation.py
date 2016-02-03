@@ -16,10 +16,6 @@ class Deflator(utils.Downdater):
     def compressed_array(self):
         raise DeflationError('Could not compress the array.')
 
-    @property
-    def selection(self):
-        raise DeflationError('Could not compress the array.')
-
 
 class L1CompressedDeflator(Deflator):
     def __init__(self, array, n_samples):

@@ -83,8 +83,8 @@ class DummyCompressor(object):
     def additive_downdate(self, u, v):
         pass
 
-    def remove_column(self, idx):
+    def remove_columns(self, idx):
         pass
 
-    def remove_row(self, idx):
+    def remove_rows(self, idx):
         pass

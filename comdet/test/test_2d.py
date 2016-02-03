@@ -131,7 +131,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     return stats_reg, stats_comp
 
 
-def run_all():
+def run_all(oversampling=1):
     logger = test_utils.Logger("test_2d.txt")
     sys.stdout = logger
 
@@ -139,11 +139,11 @@ def run_all():
     epsilon = 0
 
     config = {'Star': (line.Line, sampling.AdaptiveSampler(),
-                       ac.LocalNFA, 20),
+                       ac.LocalNFA, oversampling * 20),
               'Stairs': (line.Line, sampling.AdaptiveSampler(),
-                         ac.LocalNFA, 20),
+                         ac.LocalNFA, oversampling * 20),
               'Circles': (circle.Circle, sampling.AdaptiveSampler(),
-                          ac.circle.LocalNFA, 40),
+                          ac.circle.LocalNFA, oversampling * 40),
               }
 
     stats_list = []
@@ -196,5 +196,5 @@ def run_all():
 
 
 if __name__ == '__main__':
-    run_all()
+    run_all(oversampling=1)
     plt.show()

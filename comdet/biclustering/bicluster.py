@@ -45,25 +45,24 @@ def bicluster(deflator, n=None, share_elements=True):
 
 def single_bicluster(deflator):
     try:
-        u, v = nmf.nmf_robust_multiplicative(deflator.compressed_array, 1)
-        u = utils.binarize(u)
-        idx_u, _, vals_u = utils.find(u)
-
-        array_crop, u_crop, v_init = crop_left(deflator.array, idx_u)
-        v = nmf.nmf_robust_admm(array_crop, u_init=u_crop, v_init=v_init,
-                                update='right')
-        v = utils.binarize(v)
-        idx_v = utils.find(v)[1]
-
-        array_crop, u_init, v_crop = crop_right(deflator.array, idx_v)
-        u = nmf.nmf_robust_admm(array_crop, u_init=u_init, v_init=v_crop,
-                                update='left')
-        u = utils.binarize(u)
-
+        array = deflator.compressed_array
     except deflation.DeflationError:
-        u, v = nmf.nmf_robust_admm(deflator.array)
-        u = utils.binarize(u)
-        v = utils.binarize(v)
+        array = deflator.array
+
+    u, v = nmf.nmf_robust_multiplicative(array, 1)
+    u = utils.binarize(u)
+    idx_u, _, vals_u = utils.find(u)
+
+    array_crop, u_crop, v_init = crop_left(deflator.array, idx_u)
+    v = nmf.nmf_robust_admm(array_crop, u_init=u_crop, v_init=v_init,
+                            update='right')
+    v = utils.binarize(v)
+    idx_v = utils.find(v)[1]
+
+    array_crop, u_init, v_crop = crop_right(deflator.array, idx_v)
+    u = nmf.nmf_robust_admm(array_crop, u_init=u_init, v_init=v_crop,
+                            update='left')
+    u = utils.binarize(u)
     return u, v
 
 

@@ -17,11 +17,9 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
 
     bic_list = []
     total_codelength = []
-    for i in range(n_iters):
+    for _ in range(n_iters):
         if downdater.array.nnz == 0:
             break
-
-        print(i)
 
         u, v = single_bicluster(downdater.array, comp_level=comp_level)
 

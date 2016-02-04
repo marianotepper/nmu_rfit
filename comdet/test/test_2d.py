@@ -64,10 +64,10 @@ def ground_truth(model_class, data, threshold, n_groups, group_size=50):
     return gt_groups
 
 
-def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
+def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
                      ac_tester, gt_groups, output_prefix, palette='Set1'):
     t = timeit.default_timer()
-    bic_list = bc.bicluster(deflator)
+    bic_list = bc.bicluster(pref_matrix, comp_level=comp_level)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
@@ -116,16 +116,16 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print('Running regular bi-clustering')
+    compression_level = None
     deflator = bc.deflation.Deflator(pref_matrix)
     stats_reg = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                 deflator, ac_tester, gt_groups,
+                                 compression_level, ac_tester, gt_groups,
                                  output_prefix + '_bic_reg')
 
     print('Running compressed bi-clustering')
     compression_level = 32
-    deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
     stats_comp = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                  deflator, ac_tester, gt_groups,
+                                  compression_level, ac_tester, gt_groups,
                                   output_prefix + '_bic_comp')
 
     return stats_reg, stats_comp

@@ -34,9 +34,8 @@ def power_of_two_padding(mat, axis=0):
         return mat
 
 
-def select_leverage_scores(projected_mat, s, original_dim_size, axis=0):
+def select_leverage_scores(projected_mat, s, axis=0):
     leverage_scores = np.linalg.norm(projected_mat, 1, axis=1 - axis)
-    leverage_scores = leverage_scores[:original_dim_size]
     sum_ls = np.sum(leverage_scores)
     if sum_ls == 0:
         return None
@@ -46,35 +45,40 @@ def select_leverage_scores(projected_mat, s, original_dim_size, axis=0):
     return selection
 
 
-class OnlineColumnCompressor(object):
-    def __init__(self, array, n_samples):
-        super(OnlineColumnCompressor, self).__init__()
-        self.n_samples = n_samples
-        self.ncols_original = array.shape[1]
+def compress_columns(array, n_samples, rcond=1e-10):
+    mat = power_of_two_padding(array, axis=1)
+    transform = fct.fast_cauchy_transform(mat.shape[1], n_samples, n_samples)
 
-        mat = power_of_two_padding(array, axis=1)
-        self.fct = fct.fast_cauchy_transform(mat.shape[1], n_samples, n_samples)
-        self.downdater = utils.Downdater(mat)
+    subsampled_mat = mat.dot(transform.T).toarray()
+    u, s, _ = np.linalg.svd(subsampled_mat, full_matrices=False)
+    mask = np.abs(s) > rcond * np.max(s)
+    s[mask] = 1. / s[mask]
+    s[np.logical_not(mask)] = 0
+    r_inv = utils.sparse(u * s)
 
-    def compress(self):
-        r_inv = utils.sparse(self._invert_r())
-        projected_mat = r_inv.T.dot(self.downdater.array).toarray()
-        selection = select_leverage_scores(projected_mat, self.n_samples,
-                                           self.ncols_original, axis=1)
-        return selection
+    projected_mat = r_inv.T.dot(array).toarray()
+    selection = select_leverage_scores(projected_mat, n_samples, axis=1)
+    if selection is None or n_samples > selection.size:
+        print(selection is None, array.nnz, array.size)
+        return array
+    else:
+        return array[:, selection]
 
-    def _invert_r(self, rcond=1e-10):
-        subsampled_mat = self.downdater.array.dot(self.fct.T).toarray()
-        u, s, _ = np.linalg.svd(subsampled_mat, full_matrices=False)
-        mask = np.abs(s) > rcond * np.max(s)
-        return u[:, mask] / s[mask]
 
-    def additive_downdate(self, u, v, apply_to_matrix=True):
-        v_padded = power_of_two_padding(v, axis=1)
-        self.downdater.additive_downdate(u, v_padded)
+def compress_rows(array, n_samples, rcond=1e-10):
+    mat = power_of_two_padding(array, axis=0)
+    transform = fct.fast_cauchy_transform(mat.shape[0], n_samples, n_samples)
 
-    def remove_columns(self, idx_cols):
-        self.downdater.remove_columns(idx_cols)
+    subsampled_mat = transform.dot(mat).toarray()
+    u, s, v = np.linalg.svd(subsampled_mat, full_matrices=False)
+    mask = np.abs(s) > rcond * np.max(s)
+    s[mask] = 1. / s[mask]
+    s[np.logical_not(mask)] = 0
 
-    def remove_rows(self, idx_rows):
-        self.downdater.remove_rows(idx_rows)
+    r_inv = utils.sparse(v.T * s)
+    projected_mat = array.dot(r_inv).toarray()
+    selection = select_leverage_scores(projected_mat, n_samples, axis=0)
+    if selection is None or n_samples > selection.size:
+        return array
+    else:
+        return array[selection, :]

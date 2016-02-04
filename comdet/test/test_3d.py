@@ -95,11 +95,12 @@ class BasePlotter(object):
                   extra_args=['-vcodec', 'libx264'])
 
 
-def run_biclustering(model_class, x, original_models, pref_matrix, deflator,
+def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
                      ac_tester, output_prefix, plotter=None, gt_groups=None,
                      palette='Set1', save_animation=True, share_elements=True):
     t = timeit.default_timer()
-    bic_list = bc.bicluster(deflator, share_elements=share_elements)
+    bic_list = bc.bicluster(pref_matrix, comp_level=comp_level,
+                            share_elements=share_elements)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
@@ -158,18 +159,17 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=32,
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print('Running compressed bi-clustering')
-    deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
     stats_comp = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                  deflator, ac_tester,
+                                  compression_level, ac_tester,
                                   output_prefix + '_bic_comp', plotter=plotter,
                                   gt_groups=gt_groups,
                                   save_animation=save_animation)
 
     if run_regular:
         print('Running regular bi-clustering')
-        deflator = bc.deflation.Deflator(pref_matrix)
+        compression_level = None
         stats_reg = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                     deflator, ac_tester,
+                                     compression_level, ac_tester,
                                      output_prefix + '_bic_reg',
                                      plotter=plotter, gt_groups=gt_groups,
                                      save_animation=save_animation,

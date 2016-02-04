@@ -127,16 +127,17 @@ def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print('Running regular bi-clustering')
-    deflator = bc.deflation.Deflator(pref_matrix)
-    stats_reg = run_biclustering(image, x, orig_models, pref_matrix, deflator,
-                                 ac_tester, output_prefix + '_bic_reg',
+    compression_level = None
+    stats_reg = run_biclustering(image, x, orig_models, pref_matrix,
+                                 compression_level, ac_tester,
+                                 output_prefix + '_bic_reg',
                                  gt_groups=gt_groups)
 
     print('Running compressed bi-clustering')
     compression_level = 32
-    deflator = bc.deflation.L1CompressedDeflator(pref_matrix, compression_level)
-    stats_comp = run_biclustering(image, x, orig_models, pref_matrix, deflator,
-                                  ac_tester, output_prefix + '_bic_comp',
+    stats_comp = run_biclustering(image, x, orig_models, pref_matrix,
+                                  compression_level, ac_tester,
+                                  output_prefix + '_bic_comp',
                                   gt_groups=gt_groups)
 
     return stats_reg, stats_comp

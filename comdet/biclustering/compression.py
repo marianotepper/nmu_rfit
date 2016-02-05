@@ -59,7 +59,6 @@ def compress_columns(array, n_samples, rcond=1e-10):
     projected_mat = r_inv.T.dot(array).toarray()
     selection = select_leverage_scores(projected_mat, n_samples, axis=1)
     if selection is None or n_samples > selection.size:
-        print(selection is None, array.nnz, array.size)
         return array
     else:
         return array[:, selection]

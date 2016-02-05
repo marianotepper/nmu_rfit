@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import sys
 import numpy as np
+import comdet.biclustering.utils as bic_utils
 import comdet.pme.acontrario as ac
 import comdet.test.measures as mes
 
@@ -37,18 +38,21 @@ def clean(model_class, x, ac_tester, bic_list):
                 if bic[1].nnz > 1 and
                 bic[0].nnz > model_class().min_sample_size]
 
+    bic_list_new = []
     models = []
-    for lf, _ in bic_list:
+    for lf, rf in bic_list:
         inliers = np.squeeze(lf.toarray())
         mod = model_class(x[inliers])
+        inliers = np.atleast_2d(ac_tester.inliers(mod)).T
         models.append(mod)
+        bic_list_new.append((bic_utils.sparse(inliers), rf))
 
     if models:
         survivors = ac.exclusion_principle(ac_tester, models)
         models = [models[s] for s in survivors]
-        bic_list = [bic_list[s] for s in survivors]
+        bic_list_new = [bic_list_new[s] for s in survivors]
 
-    return models, bic_list
+    return models, bic_list_new
 
 
 class Logger(object):

@@ -15,22 +15,27 @@ def compute_measures(gt_groups, left_factors, verbose=True):
     return gnmi, prec, rec
 
 
-def print_stats(stats):
+def compute_stats(stats, verbose=True):
     def inner_print(attr):
         try:
             vals = [s[attr.lower()] for s in stats]
             val_str = attr.capitalize() + ' -> '
-            val_str += 'mean: {0:1.3f}, '
-            val_str += 'std: {1:1.3f}, '
-            val_str += 'median: {2:1.3f}'
-            print(val_str.format(np.mean(vals), np.std(vals), np.median(vals)))
+            val_str += 'mean: {mean:1.3f}, '
+            val_str += 'std: {std:1.3f}, '
+            val_str += 'median: {median:1.3f}'
+            summary = {'mean': np.mean(vals), 'std': np.std(vals),
+                       'median': np.median(vals)}
+            if verbose:
+                print(val_str.format(**summary))
+            return summary
         except KeyError:
-            pass
+            return {}
 
-    inner_print('time')
-    inner_print('GNMI')
-    inner_print('Precision')
-    inner_print('Recall')
+    measures = ['Time', 'GNMI', 'Precision', 'Recall']
+    global_summary = {}
+    for m in measures:
+        global_summary[m] = inner_print(m)
+    return global_summary
 
 
 def clean(model_class, x, ac_tester, bic_list):

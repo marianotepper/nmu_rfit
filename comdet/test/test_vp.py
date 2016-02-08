@@ -193,7 +193,6 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
         stats_list.append(res)
 
         plt.close('all')
-        break
 
     reg_list, comp_list = zip(*stats_list)
 

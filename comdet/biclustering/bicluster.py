@@ -50,24 +50,25 @@ def single_bicluster(array, comp_level=None):
         array_nmf = compression.compress_columns(array, comp_level)
     else:
         array_nmf = array
-    u, v = nmf.nmf_robust_multiplicative(array_nmf, 1)
+
+    u, _ = nmf.nmf_robust_multiplicative(array_nmf, 1)
     u = utils.binarize(u)
 
-    idx_u = utils.find(u)[0]
-    array_crop, u_crop, v_init = crop_left(array, idx_u, comp_level=comp_level)
-    v = nmf.nmf_robust_admm(array_crop, u_init=u_crop, v_init=v_init,
-                            update='right')
-    v = utils.binarize(v)
+    if u.nnz == 0:
+        return u, utils.sparse((1, array.shape[1]))
 
-    idx_v = utils.find(v)[1]
-    array_crop, u_init, v_crop = crop_right(array, idx_v, comp_level=comp_level)
-    u = nmf.nmf_robust_admm(array_crop, u_init=u_init, v_init=v_crop,
-                            update='left')
-    u = utils.binarize(u)
+    v = update_right(array, u, comp_level=comp_level)
+
+    if v.nnz == 0:
+        return u, v
+
+    u = update_left(array, v, comp_level=comp_level)
+
     return u, v
 
 
-def crop_left(array, idx_u, comp_level=None):
+def update_right(array, u, comp_level=None):
+    idx_u = utils.find(u)[0]
     array_crop = utils.sparse(array[idx_u, :])
 
     if comp_level is not None and comp_level < array_crop.shape[0]:
@@ -75,12 +76,16 @@ def crop_left(array, idx_u, comp_level=None):
 
     u_crop = utils.sparse(np.ones((array_crop.shape[0], 1)))
     v_init = u_crop.T.dot(array_crop)
-    arr_sum = array_crop.sum(axis=0)
-    v_init[arr_sum > 0] /= arr_sum[arr_sum > 0]
-    return array_crop, u_crop, v_init
+    v_init = (v_init / array_crop.shape[0]).rint()
+    v_init = utils.binarize(v_init)
+
+    v = nmf.nmf_robust_admm(array_crop, u_init=u_crop, v_init=v_init,
+                            update='right')
+    return utils.binarize(v)
 
 
-def crop_right(array, idx_v, comp_level=None):
+def update_left(array, v, comp_level=None):
+    idx_v = utils.find(v)[1]
     array_crop = utils.sparse(array[:, idx_v])
 
     if comp_level is not None and comp_level < array_crop.shape[1]:
@@ -88,6 +93,9 @@ def crop_right(array, idx_v, comp_level=None):
 
     v_crop = utils.sparse(np.ones((1, array_crop.shape[1])))
     u_init = array_crop.dot(v_crop.T)
-    arr_sum = array_crop.sum(axis=1)
-    u_init[arr_sum > 0] /= arr_sum[arr_sum > 0]
-    return array_crop, u_init, v_crop
+    u_init = (u_init / array_crop.shape[1]).rint()
+    u_init = utils.binarize(u_init)
+
+    u = nmf.nmf_robust_admm(array_crop, u_init=u_init, v_init=v_crop,
+                            update='left')
+    return utils.binarize(u)

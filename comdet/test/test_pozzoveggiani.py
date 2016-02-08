@@ -52,6 +52,7 @@ class Projector(test_3d.BasePlotter):
         plt.hold(True)
 
         for (mod, inliers), color in zip(mod_inliers_list, palette):
+            inliers = np.squeeze(inliers.toarray())
             visible = np.logical_and(self.visibility[:, k], inliers)
             if visible.sum() < 3:
                 continue
@@ -73,11 +74,11 @@ class Projector(test_3d.BasePlotter):
             plt.savefig(self.filename_prefix_out + filename + '.pdf', dpi=600)
 
 
-def run(subsampling=1):
+def run(subsampling=1, inliers_threshold=0.2):
     logger = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
     sys.stdout = logger
 
-    inliers_threshold = 0.5
+    sigma = 1
     epsilon = 0
 
     name = 'PozzoVeggiani'
@@ -104,8 +105,9 @@ def run(subsampling=1):
     data = data[points_considered, :]
     visibility = visibility[points_considered, :]
 
-    n_samples = data.shape[0] * 2
-    sampler = sampling.AdaptiveSampler(n_samples)
+    n_samples = data.shape[0]
+    sampler = sampling.GaussianLocalSampler(sigma, n_samples)
+    # sampler = sampling.AdaptiveSampler(n_samples)
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
     ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
 
@@ -118,7 +120,7 @@ def run(subsampling=1):
 
     output_prefix = name + '_n{0}'.format(data.shape[0])
     test_3d.test(plane.Plane, data, output_prefix, ransac_gen, ac_tester,
-                 plotter=projector)
+                 plotter=projector, run_regular=True)
 
     plt.close('all')
 
@@ -127,10 +129,10 @@ def run(subsampling=1):
 
 
 def run_all():
-    run(subsampling=10)
-    run(subsampling=5)
-    run(subsampling=2)
-    run(subsampling=1)
+    run(subsampling=10, inliers_threshold=0.2)
+    run(subsampling=5, inliers_threshold=0.2)
+    run(subsampling=2, inliers_threshold=0.2)
+    run(subsampling=1, inliers_threshold=0.2)
 
 
 if __name__ == '__main__':

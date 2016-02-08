@@ -50,6 +50,7 @@ class BasePlotter(object):
             size = 0
         fig, ax = self.base_plot(size=size)
         for (mod, inliers), color in zip(mod_inliers_list, palette):
+            inliers = np.squeeze(inliers.toarray())
             lower = self.data[inliers, :].min(axis=0)
             upper = self.data[inliers, :].max(axis=0)
             limits = zip(lower, upper)
@@ -105,6 +106,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
     print('Time:', t1)
 
     models, bic_list = test_utils.clean(model_class, x, ac_tester, bic_list)
+    bic_groups = [bic[0] for bic in bic_list]
 
     palette = sns.color_palette(palette, len(bic_list), desat=.5)
 
@@ -112,7 +114,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
     pref.plot(pref_matrix, bic_list=bic_list, palette=palette)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
-    mod_inliers_list = [(mod, ac_tester.inliers(mod)) for mod in models]
+    mod_inliers_list = zip(models, bic_groups)
 
     filename = output_prefix + '_final_models'
     plotter.plot_final_models(mod_inliers_list, palette, filename=filename,
@@ -130,8 +132,7 @@ def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
         special_plot(mod_inliers_list, palette)
 
     if gt_groups is not None:
-        bc_groups = [bic[0] for bic in bic_list]
-        gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
+        gnmi, prec, rec = test_utils.compute_measures(gt_groups, bic_groups)
         return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
     else:
         return dict(time=t1)

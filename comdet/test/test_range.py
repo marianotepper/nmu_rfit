@@ -39,6 +39,7 @@ class RangePlotter(test_3d.BasePlotter):
     def special_plot(self, mod_inliers_list, palette):
         membership = np.zeros((self.width * self.height, 3))
         for (mod, inliers), color in zip(mod_inliers_list, palette):
+            inliers = np.squeeze(inliers.toarray())
             membership[inliers, :] = color
         membership = np.reshape(membership, (self.width, self.height, 3))
         plt.figure()

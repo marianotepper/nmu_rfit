@@ -18,9 +18,14 @@ def issparse(mat):
 
 def binarize(x, tol=1e-4):
     i, j, v = find(x)
-    mask = v > (tol * v.max())
-    return sparse((v[mask], (i[mask], j[mask])), shape=x.shape,
-                  dtype=bool)
+    if v.size == 0:
+        return sparse(x.shape, dtype=bool)
+    if tol is None:
+        thresh = 0
+    else:
+        thresh = tol * v.max()
+    mask = v > thresh
+    return sparse((v[mask], (i[mask], j[mask])), shape=x.shape, dtype=bool)
 
 
 @multipledispatch.dispatch(sp.spmatrix, sp.spmatrix)

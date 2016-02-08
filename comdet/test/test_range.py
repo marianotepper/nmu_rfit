@@ -6,7 +6,7 @@ import PIL.Image
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from mpl_toolkits.mplot3d import Axes3D
+import seaborn.apionly as sns
 import comdet.pme.plane as plane
 import comdet.pme.sampling as sampling
 import comdet.pme.acontrario as ac
@@ -101,10 +101,10 @@ def run(compression_level, subsampling):
                                                           subsampling))
     sys.stdout = logger
 
-    inliers_threshold = 1.5
+    inliers_threshold = .5
     epsilon = 0
     sigma = 2
-    sampling_factor = 3  # fraction of the total number of elements
+    sampling_factor = 10  # fraction of the total number of elements
 
     dirname = '../data/ABW-TRAIN-IMAGES/'
     stats_list = []
@@ -142,10 +142,10 @@ def run(compression_level, subsampling):
         output_prefix = filename + '_cl{0}_s{1}'.format(compression_level,
                                                         subsampling)
         res = test_3d.test(plane.Plane, data, output_prefix, ransac_gen,
-                           ac_tester, plotter=plotter, run_regular=False,
+                           ac_tester, plotter=plotter, run_regular=True,
                            compression_level=compression_level,
                            gt_groups=gt_groups, save_animation=False,
-                           share_elements=False)
+                           share_elements=True)
         stats_list.append(res)
 
         print('-'*40)
@@ -161,13 +161,11 @@ def run(compression_level, subsampling):
     return stats_summary
 
 
-def run_exp1():
+def run_compression(subsampling=20):
     compresion_levels = [8, 16, 32, 64, 128]
-    subsamplings = [20]
-
     summary = []
-    for s, cl in itertools.product(subsamplings, compresion_levels):
-        summary.append(run(cl, s))
+    for cl in compresion_levels:
+        summary.append(run(cl, subsampling))
 
     measures = ['Time', 'GNMI', 'Precision', 'Recall']
     for m in measures:
@@ -176,30 +174,33 @@ def run_exp1():
         vals_std = [ms['std'] for ms in measure_summary]
         vals_median = [ms['median'] for ms in measure_summary]
 
-        plt.figure()
-        plt.bar(range(len(compresion_levels)), vals_mean, yerr=vals_std,
-                align='center', ecolor='k')
-        for i in range(len(compresion_levels)):
-            plt.plot([i - .4, i + .4], [vals_median[i]] * 2, '#e41a1c')
-        plt.xticks(range(len(compresion_levels)), compresion_levels)
-        plt.xlabel('Compression level')
-        if m == 'Time':
-            plt.ylabel('Seconds')
-        plt.title(m.upper())
-        plt.savefig('range_compression_' + m.lower() + '.pdf', dpi=600)
+        with sns.axes_style("whitegrid"):
+            plt.figure()
+            plt.bar(range(len(compresion_levels)), vals_mean, yerr=vals_std,
+                    align='center', ecolor='k')
+            for i in range(len(compresion_levels)):
+                plt.plot([i - .4, i + .4], [vals_median[i]] * 2, '#e41a1c')
+            plt.xticks(range(len(compresion_levels)), compresion_levels)
+            plt.xlabel('Compression level')
+            if m == 'Time':
+                plt.ylabel('Seconds')
+            plt.title(m.upper())
+            filename = 'range_compression_s{0}_{1}.pdf'
+            plt.savefig(filename.format(subsampling,  m.lower()), dpi=600)
+            plt.close()
 
 
-def run_exp2():
-    compresion_levels = [32]
+def run_subsampling():
+    compresion_level = 32
     subsamplings = [20, 10, 5, 2, 1]
-
-    for s, cl in itertools.product(subsamplings, compresion_levels):
-        run(cl, s)
+    for s, in subsamplings:
+        run(compresion_level, s)
 
 
 def run_all():
-    run_exp1()
-    run_exp2()
+    run_compression(subsampling=20)
+    run_compression(subsampling=10)
+    run_subsampling()
 
 
 if __name__ == '__main__':

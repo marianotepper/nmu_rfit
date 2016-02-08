@@ -185,9 +185,9 @@ def run_all(oversampling=1):
     reg_list, comp_list = zip(*stats_list)
 
     print('Statistics of regular bi-clustering')
-    test_utils.print_stats(reg_list)
+    test_utils.compute_stats(reg_list)
     print('Statistics of compressed bi-clustering')
-    test_utils.print_stats(comp_list)
+    test_utils.compute_stats(comp_list)
     print('-'*40)
 
     sys.stdout = logger.stdout

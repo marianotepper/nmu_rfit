@@ -43,6 +43,7 @@ def plot_final_models(image, x, mod_inliers, palette):
 
     all_inliers = []
     for ((mod, inliers), color) in zip(mod_inliers, palette):
+        inliers = np.squeeze(inliers.toarray())
         all_inliers.append(inliers)
         segments = x[inliers]
         if mod.point[2] != 0:
@@ -72,15 +73,16 @@ def ground_truth(association, gt_segments, lsd_segments, threshold):
     return gt_groups
 
 
-def run_biclustering(image, x, original_models, pref_matrix, deflator, ac_tester,
-                     output_prefix, gt_groups=None, palette='Set1'):
+def run_biclustering(image, x, original_models, pref_matrix, comp_level,
+                     ac_tester, output_prefix, gt_groups=None, palette='Set1'):
     t = timeit.default_timer()
-    bic_list = bc.bicluster(deflator)
+    bic_list = bc.bicluster(pref_matrix, comp_level=comp_level)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
     models, bic_list = test_utils.clean(vp.VanishingPoint, x, ac_tester,
                                         bic_list)
+    bic_groups = [bic[0] for bic in bic_list]
 
     palette = sns.color_palette(palette, len(bic_list))
 
@@ -88,13 +90,12 @@ def run_biclustering(image, x, original_models, pref_matrix, deflator, ac_tester
     pref.plot(pref_matrix, bic_list=bic_list, palette=palette)
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
-    mod_inliers_list = [(mod, ac_tester.inliers(mod)) for mod in models]
+    mod_inliers_list = zip(models, bic_groups)
     plot_final_models(image, x, mod_inliers_list, palette)
     plt.savefig(output_prefix + '_final_models.pdf', dpi=600)
 
     if gt_groups is not None:
-        bc_groups = [bic[0] for bic in bic_list]
-        gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
+        gnmi, prec, rec = test_utils.compute_measures(gt_groups, bic_groups)
         return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
     else:
         return dict(time=t1)
@@ -148,7 +149,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
     sys.stdout = logger
 
     dir_name = '/Users/mariano/Documents/datasets/YorkUrbanDB/'
-    sampling_factor = 10
+    sampling_factor = 20
     inliers_threshold = np.pi * 1e-2
     epsilon = 0
 
@@ -192,6 +193,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
         stats_list.append(res)
 
         plt.close('all')
+        break
 
     reg_list, comp_list = zip(*stats_list)
 

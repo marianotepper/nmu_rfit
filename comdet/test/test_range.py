@@ -152,23 +152,47 @@ def run(compression_level, subsampling):
         plt.close('all')
 
     print('Statistics of compressed bi-clustering')
-    test_utils.print_stats(stats_list)
+    stats_summary = test_utils.compute_stats(stats_list)
     print('-'*40)
 
     sys.stdout = logger.stdout
     logger.close()
 
+    return stats_summary
+
 
 def run_exp1():
     compresion_levels = [8, 16, 32, 64, 128]
     subsamplings = [20]
+
+    summary = []
     for s, cl in itertools.product(subsamplings, compresion_levels):
-        run(cl, s)
+        summary.append(run(cl, s))
+
+    measures = ['Time', 'GNMI', 'Precision', 'Recall']
+    for m in measures:
+        measure_summary = [s[m] for s in summary]
+        vals_mean = [ms['mean'] for ms in measure_summary]
+        vals_std = [ms['std'] for ms in measure_summary]
+        vals_median = [ms['median'] for ms in measure_summary]
+
+        plt.figure()
+        plt.bar(range(len(compresion_levels)), vals_mean, yerr=vals_std,
+                align='center', ecolor='k')
+        for i in range(len(compresion_levels)):
+            plt.plot([i - .4, i + .4], [vals_median[i]] * 2, '#e41a1c')
+        plt.xticks(range(len(compresion_levels)), compresion_levels)
+        plt.xlabel('Compression level')
+        if m == 'Time':
+            plt.ylabel('Seconds')
+        plt.title(m.upper())
+        plt.savefig('range_compression_' + m.lower() + '.pdf', dpi=600)
 
 
 def run_exp2():
     compresion_levels = [32]
     subsamplings = [20, 10, 5, 2, 1]
+
     for s, cl in itertools.product(subsamplings, compresion_levels):
         run(cl, s)
 

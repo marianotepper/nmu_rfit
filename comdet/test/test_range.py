@@ -142,7 +142,7 @@ def run(compression_level, subsampling):
         output_prefix = filename + '_cl{0}_s{1}'.format(compression_level,
                                                         subsampling)
         res = test_3d.test(plane.Plane, data, output_prefix, ransac_gen,
-                           ac_tester, plotter=plotter, run_regular=True,
+                           ac_tester, plotter=plotter, run_regular=False,
                            compression_level=compression_level,
                            gt_groups=gt_groups, save_animation=False,
                            share_elements=True)

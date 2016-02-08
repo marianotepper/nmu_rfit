@@ -43,8 +43,8 @@ def clean(model_class, x, ac_tester, bic_list):
     for lf, rf in bic_list:
         inliers = np.squeeze(lf.toarray())
         mod = model_class(x[inliers])
-        inliers = np.atleast_2d(ac_tester.inliers(mod)).T
         models.append(mod)
+        inliers = np.atleast_2d(ac_tester.inliers(mod)).T
         bic_list_new.append((bic_utils.sparse(inliers), rf))
 
     if models:

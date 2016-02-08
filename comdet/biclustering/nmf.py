@@ -37,6 +37,11 @@ def nmf_robust_multiplicative(array, r, u_init=None, v_init=None, min_iter=20,
                 break
             if abs(error[-2] - error[-1]) < relative_tol * error[-2]:
                 break
+
+    if update == 'left':
+        return u
+    if update == 'right':
+        return v
     return u, v
 
 
@@ -84,16 +89,25 @@ def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
         y = v_init.copy()
 
     if update == 'both' or update == 'left':
-        x = utils.sparse(x)
+        if utils.issparse(array):
+            x = utils.sparse(x)
+            gamma_u = utils.sparse(x.shape)
+        else:
+            gamma_u = np.zeros(x.shape)
         u = x
-        gamma_u = utils.sparse(u.shape)
     if update == 'both' or update == 'right':
-        y = utils.sparse(y)
+        if utils.issparse(array):
+            y = utils.sparse(y)
+            gamma_v = utils.sparse(y.shape)
+        else:
+            gamma_v = np.zeros(y.shape)
         v = y
-        gamma_v = utils.sparse(v.shape)
 
-    e = utils.sparse(array - x.dot(y))
-    gamma_e = utils.sparse(e.shape)
+    e = array - x.dot(y)
+    if utils.issparse(array):
+        gamma_e = utils.sparse(e.shape)
+    else:
+        gamma_e = np.zeros(e.shape)
 
     error = []
     for _ in range(int(max_iter)):
@@ -123,7 +137,7 @@ def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
 
 def _admm_left_update(mat, u, y, lambda_u, gamma_u, lambda_e, gamma_e):
     x = lambda_e * mat.dot(y.T) + lambda_u * u - gamma_u + gamma_e.dot(y.T)
-    x /= y.dot(y.T).toarray()[0, 0] + lambda_u
+    x /= (y.dot(y.T))[0, 0] + lambda_u
     u = projection_positive(x + gamma_u / lambda_u)
     gamma_u += lambda_u * (x - u)
     return x, u, gamma_u
@@ -131,19 +145,23 @@ def _admm_left_update(mat, u, y, lambda_u, gamma_u, lambda_e, gamma_e):
 
 def _admm_right_update(mat, x, v, lambda_v, gamma_v, lambda_e, gamma_e):
     y = lambda_e * x.T.dot(mat) + lambda_v * v - gamma_v + x.T.dot(gamma_e)
-    y /= x.T.dot(x).toarray()[0, 0] + lambda_v
+    y /= (x.T.dot(x))[0, 0] + lambda_v
     v = projection_positive(y + gamma_v / lambda_v)
     gamma_v += lambda_v * (y - v)
     return y, v, gamma_v
 
 
 def projection_positive(x):
-    (i, j, data) = utils.find(x)
-    mask = data > 0
-    i = i[mask]
-    j = j[mask]
-    data = data[mask]
-    return utils.sparse((data, (i, j)), shape=x.shape)
+    if utils.issparse(x):
+        (i, j, data) = utils.find(x)
+        mask = data > 0
+        i = i[mask]
+        j = j[mask]
+        data = data[mask]
+        return utils.sparse((data, (i, j)), shape=x.shape)
+    else:
+        x[x < 0] = 0
+        return x
 
 
 def shrinkage(t, alpha):
@@ -156,5 +174,5 @@ def shrinkage(t, alpha):
         s = np.sign(x) * (np.abs(x) - alpha)
         f = utils.sparse((s, (i, j)), shape=t.shape)
     else:
-        f = t.sign() * (t.abs() - alpha).maximum(0)
+        f = np.maximum(np.sign(t) * (np.abs(t) - alpha), 0)
     return f

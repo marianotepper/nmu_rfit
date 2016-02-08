@@ -198,9 +198,9 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
     reg_list, comp_list = zip(*stats_list)
 
     print('Statistics of regular bi-clustering')
-    test_utils.print_stats(reg_list)
+    test_utils.compute_stats(reg_list)
     print('Statistics of compressed bi-clustering')
-    test_utils.print_stats(comp_list)
+    test_utils.compute_stats(comp_list)
 
     sys.stdout = logger.stdout
     logger.close()

@@ -56,11 +56,13 @@ class GaussianLocalSampler(object):
             else:
                 probas = np.ones((n_elements,))
             probas /= probas.sum()
-            j = np.random.choice(all_elems, p=probas)
-
-            dists = distance.cdist(x, np.atleast_2d(x[j]), 'euclidean')
-            bins = np.squeeze(np.exp(-(dists ** 2) / self.var))
-            bins /= bins.sum()
+            while True:
+                j = np.random.choice(all_elems, p=probas)
+                dists = distance.cdist(x, np.atleast_2d(x[j]), 'euclidean')
+                bins = np.squeeze(np.exp(-(dists ** 2) / self.var))
+                bins /= bins.sum()
+                if np.count_nonzero(bins) >= min_sample_size:
+                    break
             sample = np.random.choice(all_elems, size=min_sample_size,
                                       replace=False, p=bins)
             yield sample

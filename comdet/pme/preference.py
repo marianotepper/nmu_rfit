@@ -10,7 +10,6 @@ import comdet.pme.acontrario as ac
 class PreferenceMatrix(object):
     def __init__(self, n_rows):
         self.mat = sp.csc_matrix((n_rows, 0))
-        self._count = np.array([])
         self.distribution = np.zeros((n_rows,))
 
     def add_col(self, in_column, value=1):
@@ -22,20 +21,10 @@ class PreferenceMatrix(object):
         column = sp.csc_matrix((value * np.ones(data_shape),
                                (col_idx, np.zeros(data_shape))),
                                col_shape)
-
-        p = column.T.dot(self.mat).astype(float)
-        p /= column.sum()
-        idx = sp.find(p == 1)[1]
-
-        if idx.size > 0:
-            self._count[idx] += 1
-            self.mat[:, idx] = self._count[idx]
+        if self.mat.shape[1] > 0:
+            self.mat = sp.hstack([self.mat, column])
         else:
-            if self.mat.shape[1] > 0:
-                self.mat = sp.hstack([self.mat, column])
-            else:
-                self.mat = column
-            self._count = np.append(self._count, 1)
+            self.mat = column
 
 
 def build_preference_matrix(n_elements, ransac_gen, ac_tester, verbose=True):

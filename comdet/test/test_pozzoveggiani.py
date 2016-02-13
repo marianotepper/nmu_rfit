@@ -82,7 +82,7 @@ def run(subsampling=1, inliers_threshold=0.2):
     epsilon = 0
 
     name = 'PozzoVeggiani'
-    dirname = '../data/PozzoVeggiani/'
+    dirname = '../data/' + name + '/'
 
     mat = scipy.io.loadmat(dirname + 'Results.mat')
     data = mat['Points'].T

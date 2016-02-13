@@ -7,22 +7,49 @@ import scipy.sparse as sp
 import comdet.pme.acontrario as ac
 
 
-def create_preference_matrix(n_rows):
-    return sp.csc_matrix((n_rows, 0))
+class PreferenceMatrix(object):
+    def __init__(self, n_rows):
+        self.mat = sp.csc_matrix((n_rows, 0))
+        self._count = np.array([])
+        self.distribution = np.zeros((n_rows,))
+
+    def add_col(self, in_column, value=1):
+        self.distribution += in_column
+
+        col_shape = (self.mat.shape[0], 1)
+        col_idx = np.where(in_column)[0]
+        data_shape = (len(col_idx),)
+        column = sp.csc_matrix((value * np.ones(data_shape),
+                               (col_idx, np.zeros(data_shape))),
+                               col_shape)
+
+        p = column.T.dot(self.mat).astype(float)
+        p /= column.sum()
+        idx = sp.find(p == 1)[1]
+
+        if idx.size > 0:
+            self._count[idx] += 1
+            self.mat[:, idx] = self._count[idx]
+        else:
+            if self.mat.shape[1] > 0:
+                self.mat = sp.hstack([self.mat, column])
+            else:
+                self.mat = column
+            self._count = np.append(self._count, 1)
 
 
-def add_col(preference_matrix, in_column, value=1):
-    col_shape = (preference_matrix.shape[0], 1)
-    col_idx = np.where(in_column)[0]
-    data_shape = (len(col_idx),)
-    column = sp.csc_matrix((value * np.ones(data_shape),
-                           (col_idx, np.zeros(data_shape))),
-                           col_shape)
-    if preference_matrix.shape[1] > 0:
-        preference_matrix = sp.hstack([preference_matrix, column])
-    else:
-        preference_matrix = column
-    return preference_matrix
+def build_preference_matrix(n_elements, ransac_gen, ac_tester, verbose=True):
+    pref_matrix = PreferenceMatrix(n_elements)
+    original_models = []
+    for model in ac.ifilter(ac_tester, ransac_gen):
+        pref_matrix.add_col(ac_tester.inliers(model))
+        original_models.append(model)
+        # If the sampler allows for it, bias sampling towards points
+        # with 'low participation' in the preference matrix. If not,
+        # this has now effect.
+        ransac_gen.sampler.distribution = pref_matrix.distribution
+
+    return pref_matrix.mat, original_models
 
 
 def plot(array, bic_list=[], palette='Set1'):
@@ -58,18 +85,3 @@ def plot(array, bic_list=[], palette='Set1'):
         labelbottom='off',
         labelleft='off')
     plt.axis('image')
-
-
-def build_preference_matrix(n_elements, ransac_gen, ac_tester):
-    pref_matrix = create_preference_matrix(n_elements)
-    original_models = []
-    for model in ac.ifilter(ac_tester, ransac_gen):
-        pref_matrix = add_col(pref_matrix, ac_tester.inliers(model))
-        original_models.append(model)
-        # If the sampler allows for it, bias sampling towards points
-        # with 'low participation' in the preference matrix. If not,
-        # this has now effect.
-        distribution = np.squeeze(np.asarray(pref_matrix.sum(axis=1)))
-        ransac_gen.sampler.distribution = distribution
-
-    return pref_matrix, original_models

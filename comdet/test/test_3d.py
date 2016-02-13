@@ -145,6 +145,9 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=32,
 
     output_prefix = '../results/' + name
 
+    if plotter is None:
+        plotter = BasePlotter(x)
+
     plotter.base_plot()
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 

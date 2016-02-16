@@ -23,7 +23,7 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
 
         u, v = single_bicluster(downdater.array, comp_level=comp_level)
 
-        if u.nnz <= 1 or v.nnz <= 1:
+        if v.nnz <= 1:
             break
 
         bic_list.append((u, v))

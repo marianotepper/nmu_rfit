@@ -7,7 +7,6 @@ import numpy as np
 import scipy.io
 import timeit
 import os
-import collections
 import comdet.biclustering as bc
 import comdet.test.utils as test_utils
 import comdet.pme.preference as pref

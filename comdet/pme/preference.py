@@ -27,7 +27,7 @@ class PreferenceMatrix(object):
             self.mat = column
 
 
-def build_preference_matrix(n_elements, ransac_gen, ac_tester, verbose=True):
+def build_preference_matrix(n_elements, ransac_gen, ac_tester):
     pref_matrix = PreferenceMatrix(n_elements)
     original_models = []
     for model in ac.ifilter(ac_tester, ransac_gen):

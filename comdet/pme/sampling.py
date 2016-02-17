@@ -30,9 +30,9 @@ class AdaptiveSampler(object):
             dist_max = self.distribution.max()
             if dist_max > 0:
                 probas = dist_max - self.distribution
+                probas /= probas.sum()
             else:
-                probas = np.ones((n_elements,))
-            probas /= probas.sum()
+                probas = None
             sample = np.random.choice(all_elems, size=min_sample_size,
                                       replace=False, p=probas)
             yield sample
@@ -58,8 +58,8 @@ class GaussianLocalSampler(object):
             probas /= probas.sum()
             while True:
                 j = np.random.choice(all_elems, p=probas)
-                dists = distance.cdist(x, np.atleast_2d(x[j]), 'euclidean')
-                bins = np.squeeze(np.exp(-(dists ** 2) / self.var))
+                dists = distance.cdist(x, np.atleast_2d(x[j]), 'sqeuclidean')
+                bins = np.squeeze(np.exp(-dists / self.var))
                 bins /= bins.sum()
                 if np.count_nonzero(bins) >= min_sample_size:
                     break

@@ -62,11 +62,14 @@ class BinomialNFA(object):
 
 
 class LocalNFA(BinomialNFA):
-    def __init__(self, data, epsilon, inliers_threshold):
+    def __init__(self, data, epsilon, inliers_threshold, ratio=2.):
         super(LocalNFA, self).__init__(data, epsilon)
         self.inliers_threshold = inliers_threshold
+        self.ratio = ratio
 
-    def _binomial_params(self, model, data, inliers_threshold, ratio=2.):
+    def _binomial_params(self, model, data, inliers_threshold, ratio=None):
+        if ratio is None:
+            ratio = self.ratio
         dist = model.distances(data)
         dist_abs = np.abs(dist)
         inliers = dist_abs <= inliers_threshold

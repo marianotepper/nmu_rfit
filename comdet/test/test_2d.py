@@ -130,7 +130,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     return stats_reg, stats_comp
 
 
-def run_all():
+def run_all(oversampling=1):
     logger = test_utils.Logger("test_2d.txt")
     sys.stdout = logger
 
@@ -195,5 +195,5 @@ def run_all():
 
 
 if __name__ == '__main__':
-    run_all()
+    run_all(oversampling=1)
     plt.show()

@@ -55,12 +55,6 @@ def base_plot(data):
     inner_plot_img(x[:, 0:2], data['img1'])
     plt.subplot(122)
     inner_plot_img(x[:, 3:5], data['img2'])
-    # plt.figure()
-    # plt.hold(True)
-    # plt.imshow(np.hstack([data['img1'], data['img2']]))
-    # width1 = data['img1'].shape[1]
-    # plt.plot([x[:, 0], x[:, 3] + width1], [x[:, 1], x[:, 4]], 'w')
-    # plt.axis('off')
 
 
 def plot_models(data, groups, palette, s=10, marker='o'):
@@ -134,16 +128,16 @@ def test(model_class, data, name, ransac_gen, ac_tester):
     plot_models(data, gt_groups, palette=gt_colors)
     plt.savefig(output_prefix + '_gt10.pdf', dpi=600)
     plot_models(data, gt_groups, palette=gt_colors, s=.1, marker='.')
-    plt.savefig(output_prefix + '_gt5.pdf', dpi=600)
+    plt.savefig(output_prefix + '_gt1.pdf', dpi=600)
 
-    # pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
-    #                                                         ransac_gen,
-    #                                                         ac_tester)
-    #
-    # scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
-    # with open(output_prefix + '.pickle', 'wb') as handle:
-    #     pickle.dump(pref_matrix, handle)
-    #     pickle.dump(orig_models, handle)
+    pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
+                                                            ransac_gen,
+                                                            ac_tester)
+
+    scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
+    with open(output_prefix + '.pickle', 'wb') as handle:
+        pickle.dump(pref_matrix, handle)
+        pickle.dump(orig_models, handle)
     with open(output_prefix + '.pickle', 'rb') as handle:
         pref_matrix = pickle.load(handle)
         orig_models = pickle.load(handle)

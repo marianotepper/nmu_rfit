@@ -1,5 +1,5 @@
 import numpy as np
-from . import utils
+from . import nfa
 
 
 class VanishingThresholder(object):
@@ -27,7 +27,7 @@ class VanishingThresholder(object):
             return (self.threshold_in_image / self.img_radius) * 2 * np.pi
 
 
-class GlobalNFA(utils.BinomialNFA, VanishingThresholder):
+class GlobalNFA(nfa.BinomialNFA, VanishingThresholder):
     def __init__(self, data, epsilon, threshold_in_image, img_radius,
                  img_center):
         utils.BinomialNFA.__init__(self, data, epsilon)

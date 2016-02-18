@@ -1,8 +1,8 @@
 import numpy as np
-from . import utils
+from . import nfa
 
 
-class GlobalNFA(utils.BinomialNFA):
+class GlobalNFA(nfa.BinomialNFA):
     def __init__(self, data, epsilon, inliers_threshold):
         super(GlobalNFA, self).__init__(data, epsilon)
         self.inliers_threshold = inliers_threshold

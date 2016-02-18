@@ -80,7 +80,7 @@ class LocalNFA(BinomialNFA):
             p = 1. / self.ratio
         else:
             n = n1 + n2 + k
-            p = 1. / (ratio + 1)
+            p = 1. / (self.ratio + 1)
         k -= model.min_sample_size
         return n, k, p
 

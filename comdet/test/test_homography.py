@@ -198,16 +198,15 @@ def run_all():
         stats_list.append(res)
 
         print('-'*40)
-        # plt.close('all')
-        break
+        plt.close('all')
 
-    # reg_list, comp_list = zip(*stats_list)
+    reg_list, comp_list = zip(*stats_list)
 
-    # print('Statistics of regular bi-clustering')
-    # test_utils.compute_stats(reg_list)
-    # print('Statistics of compressed bi-clustering')
-    # test_utils.compute_stats(comp_list)
-    # print('-'*40)
+    print('Statistics of regular bi-clustering')
+    test_utils.compute_stats(reg_list)
+    print('Statistics of compressed bi-clustering')
+    test_utils.compute_stats(comp_list)
+    print('-'*40)
 
     sys.stdout = logger.stdout
     logger.close()

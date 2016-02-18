@@ -1,6 +1,5 @@
 import numpy as np
 import operator
-from . import utils
 
 
 def exclusion_principle(ac_tester, models):

@@ -46,7 +46,7 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
 
 
 def single_bicluster(array, comp_level=None):
-    if comp_level is not None:
+    if comp_level is not None and comp_level < array.shape[1]:
         array_nmf = compression.compress_columns(array, comp_level)
     else:
         array_nmf = array

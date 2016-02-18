@@ -10,12 +10,12 @@ import numpy as np
 import scipy.io
 import pickle
 import timeit
-import comdet.biclustering as bc
-import comdet.test.utils as test_utils
-import comdet.pme.preference as pref
-import comdet.pme.sampling as sampling
-import comdet.pme.homography as homography
-import comdet.pme.acontrario as ac
+import arse.biclustering as bc
+import arse.test.utils as test_utils
+import arse.pme.preference as pref
+import arse.pme.sampling as sampling
+import arse.pme.homography as homography
+import arse.pme.acontrario as ac
 
 
 def load(path, tol=1e-5):

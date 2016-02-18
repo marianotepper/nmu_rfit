@@ -6,9 +6,9 @@ import numpy as np
 import scipy.sparse as sp
 import timeit
 import scipy.io
-import comdet.pme.preference as pref
-import comdet.biclustering as bc
-import comdet.test.utils as test_utils
+import arse.pme.preference as pref
+import arse.biclustering as bc
+import arse.test.utils as test_utils
 
 
 class BasePlotter(object):

@@ -7,14 +7,14 @@ import numpy as np
 import scipy.io
 import timeit
 import os
-import comdet.biclustering as bc
-import comdet.test.utils as test_utils
-import comdet.pme.preference as pref
-import comdet.pme.line as line
-import comdet.pme.sampling as sampling
-import comdet.pme.lsd as lsd
-import comdet.pme.vanishing as vp
-import comdet.pme.acontrario as ac
+import arse.biclustering as bc
+import arse.test.utils as test_utils
+import arse.pme.preference as pref
+import arse.pme.line as line
+import arse.pme.sampling as sampling
+import arse.pme.lsd as lsd
+import arse.pme.vanishing as vp
+import arse.pme.acontrario as ac
 
 
 def base_plot(image, segments=[]):

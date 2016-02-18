@@ -7,13 +7,13 @@ import numpy as np
 import scipy.io
 import re
 import timeit
-import comdet.biclustering as bc
-import comdet.test.utils as test_utils
-import comdet.pme.preference as pref
-import comdet.pme.sampling as sampling
-import comdet.pme.line as line
-import comdet.pme.circle as circle
-import comdet.pme.acontrario as ac
+import arse.biclustering as bc
+import arse.test.utils as test_utils
+import arse.pme.preference as pref
+import arse.pme.sampling as sampling
+import arse.pme.line as line
+import arse.pme.circle as circle
+import arse.pme.acontrario as ac
 
 
 def base_plot(x):

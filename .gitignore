@@ -1,7 +1,7 @@
 *.txt
-/comdet/results/*
-/comdet/pme/lsd/lsd
-/comdet/pme/lsd/lsd_call_example
-/comdet/pme/lsd/doc
-/comdet/data/*
-!/comdet/data/sources.txt
+/arse/results/*
+/arse/pme/lsd/lsd
+/arse/pme/lsd/lsd_call_example
+/arse/pme/lsd/doc
+/arse/data/*
+!/arse/data/sources.txt

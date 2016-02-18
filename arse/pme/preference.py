@@ -4,7 +4,7 @@ import matplotlib.colors as mpl_colors
 import seaborn.apionly as sns
 import numpy as np
 import scipy.sparse as sp
-import comdet.pme.acontrario as ac
+import arse.pme.acontrario as ac
 
 
 class PreferenceMatrix(object):

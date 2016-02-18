@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 import sys
 import numpy as np
-import comdet.biclustering.utils as bic_utils
-import comdet.pme.acontrario as ac
-import comdet.test.measures as mes
+import arse.biclustering.utils as bic_utils
+import arse.pme.acontrario as ac
+import arse.test.measures as mes
 
 
 def compute_measures(gt_groups, left_factors, verbose=True):

@@ -13,7 +13,7 @@ import timeit
 import arse.biclustering as bc
 import arse.test.utils as test_utils
 import arse.pme.preference as pref
-import arse.pme.sampling as sampling
+import arse.pme.multigs as multigs
 import arse.pme.homography as homography
 import arse.pme.acontrario as ac
 
@@ -118,13 +118,17 @@ def test(model_class, data, name, ransac_gen, ac_tester):
     x = data['data']
     print(name, x.shape)
 
-    output_prefix = '../results/' + name
+    output_dir = '../results/homography/'
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    output_prefix = output_dir + name
 
     base_plot(data)
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 
     gt_groups = ground_truth(data['label'])
-    gt_colors = sns.color_palette('Set1', len(gt_groups))
+    gt_colors = sns.color_palette('Set1', len(gt_groups) - 1)
+    gt_colors.insert(0, [1., 1., 1.])
     plot_models(data, gt_groups, palette=gt_colors)
     plt.savefig(output_prefix + '_gt10.pdf', dpi=600)
     plot_models(data, gt_groups, palette=gt_colors, s=.1, marker='.')
@@ -168,10 +172,9 @@ def run_all():
     sys.stdout = logger
 
     inliers_threshold = 3.
-    sampling_factor = int(2e4)
     epsilon = 0
 
-    path = '../data/adelaidermf/'
+    path = '../data/adelaidermf/homography/'
 
     filenames = []
     for (_, _, fn) in os.walk(path):
@@ -183,9 +186,8 @@ def run_all():
         data = load(path + example)
         x = data['data']
 
-        n_samples = x.shape[0] * sampling_factor
-        sampler = sampling.AdaptiveSampler(n_samples)
-        ransac_gen = sampling.ModelGenerator(homography.Homography, x, sampler)
+        n_samples = 2000
+        generator = multigs.ModelGenerator(homography.Homography, x, n_samples)
         ac_tester = ac.LocalNFA(x, epsilon, inliers_threshold, ratio=30)
 
         seed = 0
@@ -194,11 +196,12 @@ def run_all():
         np.random.seed(seed)
 
         prefix = example[:-4]
-        res = test(homography.Homography, data, prefix, ransac_gen, ac_tester)
+        res = test(homography.Homography, data, prefix, generator, ac_tester)
         stats_list.append(res)
 
         print('-'*40)
-        plt.close('all')
+        # plt.close('all')
+        # break
 
     reg_list, comp_list = zip(*stats_list)
 

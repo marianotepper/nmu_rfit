@@ -31,7 +31,6 @@ def run(subsampling=1, inliers_threshold=0.2):
 
     n_samples = data.shape[0] * 5
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
-    # sampler = sampling.AdaptiveSampler(n_samples)
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
     ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
 

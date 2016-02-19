@@ -61,13 +61,16 @@ class LocalNFA(BinomialNFA):
         dist_abs = np.abs(dist)
         inliers = dist_abs <= inliers_threshold
         k = inliers.sum()
-        outliers = dist_abs > inliers_threshold
-        if outliers.sum() == 0:
+        if dist.size == k:
             k -= model.min_sample_size
             return k, k, 1
 
-        upper_threshold = np.maximum(inliers_threshold * (self.ratio + 1),
+        outliers = np.logical_not(inliers)
+        upper_threshold = inliers_threshold * (self.ratio + 1)
+        upper_threshold = np.maximum(upper_threshold,
                                      np.min(dist_abs[outliers]))
+        upper_threshold = np.minimum(upper_threshold,
+                                     np.max(dist_abs[outliers]))
         region1 = np.logical_and(dist >= -upper_threshold,
                                  dist < -inliers_threshold)
         region2 = np.logical_and(dist <= upper_threshold,
@@ -76,12 +79,13 @@ class LocalNFA(BinomialNFA):
         n2 = region2.sum()
 
         if n1 == 0 or n2 == 0:
-            n = np.maximum(n1, n2) + k
-            p = 1. / self.ratio
+            n = np.maximum(n1, n2)
+            p = (2 * inliers_threshold) / (upper_threshold + inliers_threshold)
         else:
-            n = n1 + n2 + k
-            p = 1. / (self.ratio + 1)
+            n = n1 + n2
+            p = inliers_threshold / upper_threshold
         k -= model.min_sample_size
+        n += k
         return n, k, p
 
     def threshold(self, model):

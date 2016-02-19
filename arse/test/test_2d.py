@@ -103,6 +103,7 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
                                                             ransac_gen,
                                                             ac_tester)
+
     print('Preference matrix size:', pref_matrix.shape)
 
     scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
@@ -130,19 +131,17 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     return stats_reg, stats_comp
 
 
-def run_all(oversampling=1):
+def run_all():
     logger = test_utils.Logger("test_2d.txt")
     sys.stdout = logger
 
     inliers_threshold = 0.015
     epsilon = 0
+    sampling_factor = 20
 
-    config = {'Star': (line.Line, sampling.AdaptiveSampler(),
-                       ac.LocalNFA, oversampling * 20),
-              'Stairs': (line.Line, sampling.AdaptiveSampler(),
-                         ac.LocalNFA, oversampling * 20),
-              'Circles': (circle.Circle, sampling.AdaptiveSampler(),
-                          ac.circle.LocalNFA, oversampling * 40),
+    config = {'Star': (line.Line, ac.LocalNFA),
+              'Stairs': (line.Line, ac.LocalNFA),
+              'Circles': (circle.Circle, ac.circle.LocalNFA),
               }
 
     stats_list = []
@@ -155,12 +154,12 @@ def run_all(oversampling=1):
         else:
             continue
 
-        model_class, sampler, tester_class, sampling_factor = config[ex_type]
+        model_class, tester_class = config[ex_type]
         data = mat[example].T
 
-        sampler.n_samples = data.shape[0] * sampling_factor
-        sampler.n_samples *= model_class().min_sample_size
-        ransac_gen = sampling.ModelGenerator(model_class, data, sampler)
+        n_samples = data.shape[0] * sampling_factor
+        sampler = sampling.UniformSampler(n_samples)
+        generator = sampling.ModelGenerator(model_class, data, sampler)
         ac_tester = tester_class(data, epsilon, inliers_threshold)
 
         match = re.match(ex_type + '[0-9]*_', example)
@@ -176,7 +175,7 @@ def run_all(oversampling=1):
         print('seed:', seed)
         np.random.seed(seed)
 
-        res = test(model_class, data, example, ransac_gen, ac_tester, gt_groups)
+        res = test(model_class, data, example, generator, ac_tester, gt_groups)
         stats_list.append(res)
 
         print('-'*40)
@@ -195,5 +194,5 @@ def run_all(oversampling=1):
 
 
 if __name__ == '__main__':
-    run_all(oversampling=1)
+    run_all()
     plt.show()

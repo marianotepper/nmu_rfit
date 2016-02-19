@@ -177,7 +177,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
             gt_groups = [gt_association == v for v in np.unique(gt_association)]
 
         ac_tester = ac.LocalNFA(segments, epsilon, inliers_threshold)
-        sampler = sampling.AdaptiveSampler(int(len(segments) * sampling_factor))
+        sampler = sampling.UniformSampler(len(segments) * sampling_factor)
         ransac_gen = sampling.ModelGenerator(vp.VanishingPoint, segments,
                                              sampler)
 

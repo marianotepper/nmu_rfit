@@ -30,7 +30,7 @@ class VanishingThresholder(object):
 class GlobalNFA(nfa.BinomialNFA, VanishingThresholder):
     def __init__(self, data, epsilon, threshold_in_image, img_radius,
                  img_center):
-        utils.BinomialNFA.__init__(self, data, epsilon)
+        nfa.BinomialNFA.__init__(self, data, epsilon)
         VanishingThresholder.__init__(self, threshold_in_image, img_radius,
                                       img_center)
 

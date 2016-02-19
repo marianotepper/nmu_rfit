@@ -17,47 +17,18 @@ class UniformSampler(object):
             yield sample
 
 
-class AdaptiveSampler(object):
-    def __init__(self, n_samples=None):
-        self.n_samples = n_samples
-        self.distribution = None
-
-    def generate(self, x, min_sample_size):
-        n_elements = len(x)
-        all_elems = np.arange(n_elements)
-        self.distribution = np.zeros((n_elements,))
-        for _ in range(self.n_samples):
-            dist_max = self.distribution.max()
-            if dist_max > 0:
-                probas = dist_max - self.distribution
-                probas /= probas.sum()
-            else:
-                probas = None
-            sample = np.random.choice(all_elems, size=min_sample_size,
-                                      replace=False, p=probas)
-            yield sample
-
-
 class GaussianLocalSampler(object):
     def __init__(self, sigma, n_samples=None):
         self.n_samples = n_samples
         # p(x[i] | x[j]) = exp(-(dist(x[i], x[j])) / sigma)
         self.var = sigma ** 2
-        self.distribution = None
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
         all_elems = np.arange(n_elements)
-        self.distribution = np.zeros((n_elements,))
         for _ in range(self.n_samples):
-            dist_max = self.distribution.max()
-            if dist_max > 0:
-                probas = dist_max - self.distribution
-            else:
-                probas = np.ones((n_elements,))
-            probas /= probas.sum()
             while True:
-                j = np.random.choice(all_elems, p=probas)
+                j = np.random.choice(all_elems)
                 dists = distance.cdist(x, np.atleast_2d(x[j]), 'sqeuclidean')
                 bins = np.squeeze(np.exp(-dists / self.var))
                 bins /= bins.sum()
@@ -82,3 +53,8 @@ class ModelGenerator(object):
                                         self.model_class().min_sample_size)
         return itertools.imap(generate, samples)
 
+    def apply_distribution(self, distribution):
+        try:
+            self.sampler.distribution = distribution
+        except AttributeError:
+            pass

@@ -26,7 +26,7 @@ class LocalNFA(nfa.BinomialNFA):
 
     def _binomial_params(self, model, data, inliers_threshold, ratio=2):
         if model.radius <= inliers_threshold:
-            raise ValueError('Inliers threshold too big for this circle')
+            return 0, 0, 0
 
         dist = model.distances(data)
         dist_abs = np.abs(dist)

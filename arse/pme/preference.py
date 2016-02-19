@@ -30,13 +30,9 @@ class PreferenceMatrix(object):
 def build_preference_matrix(n_elements, ransac_gen, ac_tester):
     pref_matrix = PreferenceMatrix(n_elements)
     original_models = []
-    for model in ac.ifilter(ac_tester, ransac_gen):
+    for i, model in enumerate(ac.ifilter(ac_tester, ransac_gen)):
         pref_matrix.add_col(ac_tester.inliers(model))
         original_models.append(model)
-        # If the sampler allows for it, bias sampling towards points
-        # with 'low participation' in the preference matrix. If not,
-        # this has now effect.
-        ransac_gen.sampler.distribution = pref_matrix.distribution
 
     return pref_matrix.mat, original_models
 

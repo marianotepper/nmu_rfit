@@ -102,7 +102,7 @@ def gnmi(groups1, groups2):
     if not groups1 or not groups2:
         return 0
 
-    n = groups1[0].shape[0]
+    n = float(groups1[0].shape[0])
     h1 = entropy_per_group(groups1)
     h2 = entropy_per_group(groups2)
 
@@ -121,7 +121,7 @@ def gnmi(groups1, groups2):
                              -plogp((lc1 - l12) / n)],
                             [-plogp((lc2 - l12) / n), -plogp(l12 / n)]])
 
-            if ent[1, 1] + ent[0, 0] > ent[0, 1] + ent[1, 0]:
+            if np.trace(ent) > np.trace(np.fliplr(ent)):
                 h12 = np.sum(ent) - h2[i2]
                 h21 = np.sum(ent) - h1[i1]
 
@@ -149,11 +149,11 @@ def intersect_size(c1, c2):
         c1 = c1.toarray()
     if sp.issparse(c2):
         c2 = c2.toarray()
-    return np.logical_and(np.squeeze(c1), np.squeeze(c2)).sum()
+    return float(np.logical_and(c1, c2).sum())
 
 
 def size(c):
-    return c.astype(float).sum()
+    return float(c.sum())
 
 
 def mean_precision_recall(gt_groups, groups):

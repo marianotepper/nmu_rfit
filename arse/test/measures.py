@@ -149,7 +149,7 @@ def intersect_size(c1, c2):
         c1 = c1.toarray()
     if sp.issparse(c2):
         c2 = c2.toarray()
-    return float(np.logical_and(c1, c2).sum())
+    return float(np.logical_and(np.squeeze(c1), np.squeeze(c2)).sum())
 
 
 def size(c):

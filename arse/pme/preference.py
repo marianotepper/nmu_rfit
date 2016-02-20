@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import matplotlib.colors as mpl_colors
 import seaborn.apionly as sns
 import numpy as np
@@ -10,17 +11,9 @@ import arse.pme.acontrario as ac
 class PreferenceMatrix(object):
     def __init__(self, n_rows):
         self.mat = sp.csc_matrix((n_rows, 0))
-        self.distribution = np.zeros((n_rows,))
 
-    def add_col(self, in_column, value=1):
-        self.distribution += in_column
-
-        col_shape = (self.mat.shape[0], 1)
-        col_idx = np.where(in_column)[0]
-        data_shape = (len(col_idx),)
-        column = sp.csc_matrix((value * np.ones(data_shape),
-                               (col_idx, np.zeros(data_shape))),
-                               col_shape)
+    def add_col(self, in_column):
+        column = sp.csc_matrix(in_column[:, np.newaxis])
         if self.mat.shape[1] > 0:
             self.mat = sp.hstack([self.mat, column])
         else:
@@ -31,22 +24,21 @@ def build_preference_matrix(n_elements, ransac_gen, ac_tester):
     pref_matrix = PreferenceMatrix(n_elements)
     original_models = []
     for i, model in enumerate(ac.ifilter(ac_tester, ransac_gen)):
-        pref_matrix.add_col(ac_tester.inliers(model))
+        dist_abs = np.abs(model.distances(ransac_gen.elements))
+        v = np.exp(-dist_abs / ac_tester.inliers_threshold)
+        v[dist_abs > 5 * ac_tester.inliers_threshold] = 0
+        pref_matrix.add_col(v)
         original_models.append(model)
 
     return pref_matrix.mat, original_models
 
 
 def plot(array, bic_list=[], palette='Set1'):
-    white = mpl_colors.colorConverter.to_rgba('w', alpha=1)
-    black = mpl_colors.colorConverter.to_rgba('k', alpha=1)
-
-    cmap = mpl_colors.ListedColormap([white, black])
     plt.hold(True)
     try:
-        plt.imshow(array, interpolation='none', cmap=cmap)
+        plt.imshow(array, interpolation='none', cmap=cm.gray_r)
     except TypeError:
-        plt.imshow(array.toarray(), interpolation='none', cmap=cmap)
+        plt.imshow(array.toarray(), interpolation='none', cmap=cm.gray_r)
 
     if bic_list:
         palette = sns.color_palette(palette, len(bic_list))

@@ -23,22 +23,16 @@ class Fundamental(object):
 
         pts1_norm = data[:, :3]
         pts2_norm = data[:, 3:]
-        # pts1_norm, self._trans1 = utils.normalize_2d(data[:, :3])
-        # pts2_norm, self._trans2 = utils.normalize_2d(data[:, 3:])
         self.F, _ = cv2.findFundamentalMat(pts1_norm[:, 0:2].astype(np.float32),
                                            pts2_norm[:, 0:2].astype(np.float32),
                                            method=cv2.FM_8POINT)
-        self.distances(data)
-
 
     def distances(self, data):
-        pts1_norm = data[:, :3]#.dot(self._trans1)
-        pts2_norm = data[:, 3:]#.dot(self._trans2)
+        pts1_norm = data[:, :3]
+        pts2_norm = data[:, 3:]
         epipolar_lines1 = np.dot(pts1_norm, self.F.T)
         epipolar_lines1 /= np.atleast_2d(epipolar_lines1[:, 2]).T
         epipolar_lines2 = np.dot(pts2_norm, self.F)
         epipolar_lines2 /= np.atleast_2d(epipolar_lines2[:, 2]).T
-        return np.maximum(np.sum(pts2_norm * epipolar_lines1, axis=1),
-                          np.sum(pts1_norm * epipolar_lines2, axis=1))
-        # return (np.sum(pts2_norm * epipolar_lines1, axis=1) +
-        #         np.sum(pts1_norm * epipolar_lines2, axis=1)) / 2
+        return np.abs(np.maximum(np.sum(pts2_norm * epipolar_lines1, axis=1),
+                                 np.sum(pts1_norm * epipolar_lines2, axis=1)))

@@ -16,16 +16,17 @@ def issparse(mat):
     return sp.issparse(mat)
 
 
-def binarize(x, tol=1e-4):
+def sparsify(x, tol=1e-4, dtype=None):
     i, j, v = find(x)
     if v.size == 0:
-        return sparse(x.shape, dtype=bool)
+        return sparse(x.shape)
     if tol is None:
         thresh = 0
     else:
         thresh = tol * v.max()
     mask = v > thresh
-    return sparse((v[mask], (i[mask], j[mask])), shape=x.shape, dtype=bool)
+    return sparse((v[mask], (i[mask], j[mask])), shape=x.shape, dtype=dtype)
+
 
 
 @multipledispatch.dispatch(sp.spmatrix, sp.spmatrix)

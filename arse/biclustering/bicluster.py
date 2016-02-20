@@ -47,12 +47,14 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
 
 def single_bicluster(array, comp_level=None):
     if comp_level is not None and comp_level < array.shape[1]:
-        array_nmf = compression.compress_columns(array, comp_level)
+        selection = compression.compress_columns(array, comp_level)
+        if selection is not None:
+            array_nmf = array[:, selection]
     else:
         array_nmf = array
 
     u, _ = nmf.nmf_robust_multiplicative(array_nmf, 1)
-    u = utils.binarize(u)
+    u = utils.sparsify(u)
 
     if u.nnz == 0:
         return u, utils.sparse((1, array.shape[1]))
@@ -64,38 +66,44 @@ def single_bicluster(array, comp_level=None):
 
     u = update_left(array, v, comp_level=comp_level)
 
-    return u, v
+    return utils.sparsify(u, dtype=bool), utils.sparsify(v, dtype=bool)
 
 
 def update_right(array, u, comp_level=None):
-    idx_u = utils.find(u)[0]
+    idx_u, _, vals_u = utils.find(u)
     array_crop = utils.sparse(array[idx_u, :])
 
     if comp_level is not None and comp_level < array_crop.shape[0]:
-        array_crop = compression.compress_rows(array_crop, comp_level)
+        selection = compression.compress_rows(array_crop, comp_level)
+        if selection is not None:
+            array_crop = array_crop[selection, :]
+            vals_u = vals_u[selection]
 
-    u_crop = utils.sparse(np.ones((array_crop.shape[0], 1)))
+    u_crop = utils.sparse(vals_u[:, np.newaxis])
     v_init = u_crop.T.dot(array_crop)
     v_init = (v_init / array_crop.shape[0]).rint()
-    v_init = utils.binarize(v_init)
+    v_init = utils.sparsify(v_init)
 
     v = nmf.nmf_robust_admm(array_crop, u_init=u_crop, v_init=v_init,
                             update='right')
-    return utils.binarize(v)
+    return utils.sparsify(v)
 
 
 def update_left(array, v, comp_level=None):
-    idx_v = utils.find(v)[1]
+    _, idx_v, vals_v = utils.find(v)
     array_crop = utils.sparse(array[:, idx_v])
 
     if comp_level is not None and comp_level < array_crop.shape[1]:
-        array_crop = compression.compress_columns(array_crop, comp_level)
+        selection = compression.compress_columns(array_crop, comp_level)
+        if selection is not None:
+            array_crop = array_crop[:, selection]
+            vals_v = vals_v[selection]
 
-    v_crop = utils.sparse(np.ones((1, array_crop.shape[1])))
+    v_crop = utils.sparse(vals_v[np.newaxis, :])
     u_init = array_crop.dot(v_crop.T)
     u_init = (u_init / array_crop.shape[1]).rint()
-    u_init = utils.binarize(u_init)
+    u_init = utils.sparsify(u_init)
 
     u = nmf.nmf_robust_admm(array_crop, u_init=u_init, v_init=v_crop,
                             update='left')
-    return utils.binarize(u)
+    return utils.sparsify(u)

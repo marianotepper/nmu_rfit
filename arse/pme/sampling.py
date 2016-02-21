@@ -52,9 +52,3 @@ class ModelGenerator(object):
         samples = self.sampler.generate(self.elements,
                                         self.model_class().min_sample_size)
         return itertools.imap(generate, samples)
-
-    def apply_distribution(self, distribution):
-        try:
-            self.sampler.distribution = distribution
-        except AttributeError:
-            pass

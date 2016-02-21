@@ -14,8 +14,6 @@ class PreferenceMatrix(object):
 
     def add_col(self, in_column):
         in_column = np.nan_to_num(in_column)
-        if np.can_cast(in_column, np.bool):
-            in_column = in_column.astype(np.bool)
         column = sp.csc_matrix(in_column[:, np.newaxis])
         if self.mat.shape[1] > 0:
             self.mat = sp.hstack([self.mat, column])

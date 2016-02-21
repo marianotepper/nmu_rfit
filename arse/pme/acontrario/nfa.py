@@ -4,92 +4,27 @@ import abc
 
 
 class BinomialNFA(object):
-    __metaclass__ = abc.ABCMeta
-
-    def __init__(self, data, epsilon):
-        self.data = data
+    def __init__(self, epsilon, proba):
         self.epsilon = epsilon
+        self.proba = proba
 
-    def nfa(self, model, considered=None, inliers_threshold=None):
-        if considered is None:
-            data = self.data
-        else:
-            data = self.data[considered]
-        if inliers_threshold is None:
-            inliers_threshold = self.threshold(model)
-        pfa = self._pfa(model, data, inliers_threshold)
-        n_tests = log_nchoosek(len(data), model.min_sample_size)
+    def nfa(self, membership, min_sample_size):
+        pfa = self._pfa(membership, min_sample_size)
+        n_tests = log_nchoosek(membership.size, min_sample_size)
         return (pfa + n_tests) / np.log(10)
 
-    def _pfa(self, model, data, inliers_threshold):
-        n, k, p = self._binomial_params(model, data, inliers_threshold)
+    def _pfa(self, membership, min_sample_size):
+        n = membership.size - np.isnan(membership).sum() - min_sample_size
+        k = (membership > 0).sum() - min_sample_size
         if k <= 0:
             return np.inf
         if n == k:
             return -np.inf
-        return log_binomial(n, k, p)
+        return log_binomial(n, k, self.proba)
 
-    def meaningful(self, model, considered=None, inliers_threshold=None):
-        nfa = self.nfa(model, considered=considered,
-                       inliers_threshold=inliers_threshold)
+    def meaningful(self, membership, min_sample_size):
+        nfa = self.nfa(membership, min_sample_size)
         return nfa < self.epsilon
-
-    @abc.abstractmethod
-    def threshold(self, model):
-        pass
-
-    @abc.abstractmethod
-    def _binomial_params(self, model, data, inliers_threshold):
-        pass
-
-    def inliers(self, model, data=None, inliers_threshold=None):
-        if data is None:
-            data = self.data
-        if inliers_threshold is None:
-            inliers_threshold = self.threshold(model)
-        return np.abs(model.distances(data)) <= inliers_threshold
-
-
-class LocalNFA(BinomialNFA):
-    def __init__(self, data, epsilon, inliers_threshold, ratio=2.):
-        super(LocalNFA, self).__init__(data, epsilon)
-        self.inliers_threshold = inliers_threshold
-        self.ratio = ratio
-
-    def _binomial_params(self, model, data, inliers_threshold):
-        dist = model.distances(data)
-        dist_abs = np.abs(dist)
-        inliers = dist_abs <= inliers_threshold
-        k = inliers.sum()
-        if dist.size == k:
-            k -= model.min_sample_size
-            return k, k, 1
-
-        outliers = np.logical_not(inliers)
-        upper_threshold = inliers_threshold * (self.ratio + 1)
-        upper_threshold = np.maximum(upper_threshold,
-                                     np.min(dist_abs[outliers]))
-        upper_threshold = np.minimum(upper_threshold,
-                                     np.max(dist_abs[outliers]))
-        region1 = np.logical_and(dist >= -upper_threshold,
-                                 dist < -inliers_threshold)
-        region2 = np.logical_and(dist <= upper_threshold,
-                                 dist > inliers_threshold)
-        n1 = region1.sum()
-        n2 = region2.sum()
-
-        if n1 == 0 or n2 == 0:
-            n = np.maximum(n1, n2)
-            p = (2 * inliers_threshold) / (upper_threshold + inliers_threshold)
-        else:
-            n = n1 + n2
-            p = inliers_threshold / upper_threshold
-        k -= model.min_sample_size
-        n += k
-        return n, k, p
-
-    def threshold(self, model):
-        return self.inliers_threshold
 
 
 def log_binomial(n, k, instance_proba):

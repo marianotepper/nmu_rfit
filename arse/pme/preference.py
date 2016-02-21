@@ -20,14 +20,12 @@ class PreferenceMatrix(object):
             self.mat = column
 
 
-def build_preference_matrix(n_elements, ransac_gen, ac_tester):
-    pref_matrix = PreferenceMatrix(n_elements)
+def build_preference_matrix(ransac_gen, thresholder, ac_tester):
+    pref_matrix = PreferenceMatrix(ransac_gen.elements.shape[0])
     original_models = []
-    for i, model in enumerate(ac.ifilter(ac_tester, ransac_gen)):
-        dist_abs = np.abs(model.distances(ransac_gen.elements))
-        v = np.exp(-dist_abs / ac_tester.inliers_threshold)
-        v[dist_abs > 5 * ac_tester.inliers_threshold] = 0
-        pref_matrix.add_col(v)
+    for i, model in enumerate(ac.ifilter(ransac_gen, thresholder, ac_tester)):
+        membership = thresholder.membership(model, ransac_gen.elements)
+        pref_matrix.add_col(np.nan_to_num(membership))
         original_models.append(model)
 
     return pref_matrix.mat, original_models

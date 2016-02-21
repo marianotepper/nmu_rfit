@@ -16,4 +16,6 @@ class GlobalNFA(nfa.BinomialNFA):
         _, s = model.project(data)
         area = np.prod(s.max(axis=0) - s.min(axis=0))
         p = area * 2 * inliers_threshold / volume
-        return len(data), inliers_mask.sum(), p
+        k = inliers_mask.sum() - model.min_sample_size
+        n = len(data) - model.min_sample_size
+        return n, k, p

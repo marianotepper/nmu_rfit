@@ -54,7 +54,9 @@ class GlobalNFA(nfa.BinomialNFA, VanishingThresholder):
                 p = inliers_threshold / self.img_radius
         else:
             p = inliers_threshold / (2 * np.pi)
-        return len(data), inliers_mask.sum(), p
+        k = inliers_mask.sum() - model.min_sample_size
+        n = len(data) - model.min_sample_size
+        return n, k, p
 
     def threshold(self, model):
         return VanishingThresholder.threshold(self, model)

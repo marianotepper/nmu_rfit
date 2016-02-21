@@ -30,7 +30,7 @@ class Line(object):
     def distances(self, data):
         if data.shape[1] == 2:
             data = np.hstack((data, np.ones((data.shape[0], 1))))
-        return np.dot(data, self.eq)
+        return np.abs(np.dot(data, self.eq))
 
     def plot(self, limits=None, **kwargs):
         if limits is None:

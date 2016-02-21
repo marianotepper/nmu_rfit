@@ -47,7 +47,7 @@ class Plane(object):
     def distances(self, data):
         if data.shape[1] == 3:
             data = np.hstack((data, np.ones((data.shape[0], 1))))
-        return np.dot(data, self.eq) / np.linalg.norm(self.eq[:3])
+        return np.abs(np.dot(data, self.eq) / np.linalg.norm(self.eq[:3]))
 
     def _intersect(self, eq2):
         n1 = self.eq[:3] / np.linalg.norm(self.eq[:3])

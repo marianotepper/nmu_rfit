@@ -66,8 +66,7 @@ def distances(point, data):
         v2 = closer_points - midpoints
         diff = np.sum(v1 * v2, axis=1)  # dot product
         diff /= (np.linalg.norm(v1, axis=1) * np.linalg.norm(v2, axis=1))
-        ang_diff = np.arccos(diff) * np.sign(np.cross(v1, v2)[:, 2])
-        return ang_diff
+        angle_diff = np.arccos(diff) * np.sign(np.cross(v1, v2)[:, 2])
     else:
         angle_vp = _normalize(np.arctan2(point[1], point[0]))
         angle_lines = _normalize(np.arctan2(lines[:, 0], lines[:, 1]))
@@ -76,4 +75,4 @@ def distances(point, data):
         angle_diff[mask] = np.pi - angle_diff[mask]
         mask = angle_diff < -np.pi / 2
         angle_diff[mask] = np.pi + angle_diff[mask]
-        return angle_diff
+    return np.abs(angle_diff)

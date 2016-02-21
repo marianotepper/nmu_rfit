@@ -26,7 +26,7 @@ class Circle(object):
         self.radius = np.sqrt(np.sum(self.center ** 2) - y[2])
 
     def distances(self, data):
-        return np.linalg.norm(data - self.center, axis=1) - self.radius
+        return np.abs(np.linalg.norm(data - self.center, axis=1) - self.radius)
 
     def plot(self, **kwargs):
         t = np.arange(0, 2*np.pi + 0.1, 0.1)

@@ -13,6 +13,9 @@ class PreferenceMatrix(object):
         self.mat = sp.csc_matrix((n_rows, 0))
 
     def add_col(self, in_column):
+        in_column = np.nan_to_num(in_column)
+        if np.can_cast(in_column, np.bool):
+            in_column = in_column.astype(np.bool)
         column = sp.csc_matrix(in_column[:, np.newaxis])
         if self.mat.shape[1] > 0:
             self.mat = sp.hstack([self.mat, column])
@@ -25,7 +28,7 @@ def build_preference_matrix(ransac_gen, thresholder, ac_tester):
     original_models = []
     for i, model in enumerate(ac.ifilter(ransac_gen, thresholder, ac_tester)):
         membership = thresholder.membership(model, ransac_gen.elements)
-        pref_matrix.add_col(np.nan_to_num(membership))
+        pref_matrix.add_col(membership)
         original_models.append(model)
 
     return pref_matrix.mat, original_models

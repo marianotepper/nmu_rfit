@@ -23,7 +23,7 @@ class LocalHardThresholder(object):
         upper_threshold = np.maximum(upper_threshold, np.min(dist[outliers]))
         upper_threshold = np.minimum(upper_threshold, np.max(dist[outliers]))
 
-        membership = membership.astype(np.float32)
+        membership = membership.astype(np.float)
         membership[dist > upper_threshold] = np.nan
         return membership
 

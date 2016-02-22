@@ -4,7 +4,6 @@ from . import utils
 from . import nmf
 from . import mdl
 from . import compression
-import timeit
 
 
 def bicluster(array, n=None, share_elements=True, comp_level=None):
@@ -16,16 +15,13 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
 
     downdater = utils.Downdater(array)
 
-    total_time = 0
     bic_list = []
     total_codelength = []
     for _ in range(n_iters):
         if downdater.array.nnz == 0:
             break
 
-        t = timeit.default_timer()
         u, v = single_bicluster(downdater.array, comp_level=comp_level)
-        total_time += timeit.default_timer() - t
 
         if v.nnz <= 1:
             break
@@ -41,8 +37,6 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
         if n is None:
             cl = online_mdl.add_rank1_approximation(downdater.array, u, v)
             total_codelength.append(cl)
-
-    print total_time
 
     if n is None and bic_list:
         cut_point = np.argmin(np.array(total_codelength))

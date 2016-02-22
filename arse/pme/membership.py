@@ -18,6 +18,9 @@ class LocalHardThresholder(object):
         dist = model.distances(data)
         membership = dist <= self.inliers_threshold
 
+        if np.all(membership):
+            return membership
+
         outliers = np.logical_not(membership)
         upper_threshold = self.inliers_threshold * self.ratio
         upper_threshold = np.maximum(upper_threshold, np.min(dist[outliers]))

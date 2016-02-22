@@ -38,26 +38,48 @@ def compute_stats(stats, verbose=True):
     return global_summary
 
 
-def clean(model_class, x, ac_tester, bic_list):
+def clean(model_class, x, thresholder, ac_tester, bic_list, share_elements=True):
+    min_sample_size = model_class().min_sample_size
     bic_list = [bic for bic in bic_list
-                if bic[1].nnz > 1 and
-                bic[0].nnz > model_class().min_sample_size]
+                if bic[1].nnz > 1 and bic[0].nnz >= min_sample_size]
 
-    bic_list_new = []
-    models = []
-    for lf, rf in bic_list:
+    inliers_list = []
+    model_list = []
+    for lf, _ in bic_list:
         inliers = np.squeeze(lf.toarray())
         mod = model_class(x[inliers])
-        models.append(mod)
-        inliers = np.atleast_2d(ac_tester.inliers(mod)).T
-        bic_list_new.append((bic_utils.sparse(inliers), rf))
+        model_list.append(mod)
+        inliers = thresholder.membership(mod, x)
+        inliers_list.append(inliers)
 
-    if models:
-        survivors = ac.exclusion_principle(ac_tester, models)
-        models = [models[s] for s in survivors]
-        bic_list_new = [bic_list_new[s] for s in survivors]
+    if not share_elements:
+        solve_intersections(x, model_list, inliers_list)
+        survivors = [i for i, inliers in enumerate(inliers_list)
+                     if inliers.sum() > min_sample_size]
+        inliers_list = [inliers_list[s] for s in survivors]
+        model_list = [model_list[s] for s in survivors]
+        bic_list = [bic_list[s] for s in survivors]
 
-    return models, bic_list_new
+    left_factors = [bic_utils.sparse(np.nan_to_num(inliers)[:, np.newaxis],
+                                     dtype=np.bool)
+                    for inliers in inliers_list]
+    bic_list = [(lf, rf) for lf, (_, rf) in zip(left_factors, bic_list)]
+
+    if model_list:
+        survivors = ac.exclusion_principle(x, thresholder, ac_tester,
+                                           inliers_list, model_list)
+        model_list = [model_list[s] for s in survivors]
+        bic_list = [bic_list[s] for s in survivors]
+
+    return model_list, bic_list
+
+
+def solve_intersections(x, model_list, inliers_list):
+    intersection = np.nansum(np.vstack(inliers_list), axis=0) > 1
+    dists = [np.abs(mod.distances(x[intersection, :])) for mod in model_list]
+    idx = np.argmin(np.vstack(dists), axis=0)
+    for i, inliers in enumerate(inliers_list):
+        inliers[intersection] = idx == i
 
 
 class Logger(object):

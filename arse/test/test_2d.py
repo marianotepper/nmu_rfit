@@ -1,5 +1,7 @@
 from __future__ import absolute_import, print_function
+import os
 import sys
+import pickle
 import matplotlib.pyplot as plt
 import seaborn.apionly as sns
 import scipy.sparse as sp
@@ -9,6 +11,7 @@ import re
 import timeit
 import arse.biclustering as bc
 import arse.test.utils as test_utils
+import arse.pme.membership as membership
 import arse.pme.preference as pref
 import arse.pme.sampling as sampling
 import arse.pme.line as line
@@ -65,13 +68,15 @@ def ground_truth(model_class, data, threshold, n_groups, group_size=50):
 
 
 def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
-                     ac_tester, gt_groups, output_prefix, palette='Set1'):
+                     thresholder, ac_tester, gt_groups, output_prefix,
+                     palette='Set1'):
     t = timeit.default_timer()
     bic_list = bc.bicluster(pref_matrix, comp_level=comp_level)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
-    models, bic_list = test_utils.clean(model_class, x, ac_tester, bic_list)
+    models, bic_list = test_utils.clean(model_class, x, thresholder, ac_tester,
+                                        bic_list)
 
     palette = sns.color_palette(palette, len(bic_list))
 
@@ -92,21 +97,31 @@ def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
+def test(model_class, x, name, ransac_gen, thresholder, ac_tester, gt_groups):
     print(name, x.shape)
 
-    output_prefix = '../results/' + name
+    output_dir = '../results/'
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    output_prefix = output_dir + name
 
     base_plot(x)
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 
-    pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
-                                                            ransac_gen,
+    pref_matrix, orig_models = pref.build_preference_matrix(ransac_gen,
+                                                            thresholder,
                                                             ac_tester)
 
-    print('Preference matrix size:', pref_matrix.shape)
+    scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix,
+                                              'orig_models': orig_models})
+    with open(output_prefix + '.pickle', 'wb') as handle:
+        pickle.dump(pref_matrix, handle)
+        pickle.dump(orig_models, handle)
+    with open(output_prefix + '.pickle', 'rb') as handle:
+        pref_matrix = pickle.load(handle)
+        orig_models = pickle.load(handle)
 
-    scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
+    print('Preference matrix size:', pref_matrix.shape)
 
     base_plot(x)
     plot_models(orig_models, alpha=0.2)
@@ -119,14 +134,14 @@ def test(model_class, x, name, ransac_gen, ac_tester, gt_groups):
     print('Running regular bi-clustering')
     compression_level = None
     stats_reg = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                 compression_level, ac_tester, gt_groups,
-                                 output_prefix + '_bic_reg')
+                                 compression_level, thresholder, ac_tester,
+                                 gt_groups, output_prefix + '_bic_reg')
 
     print('Running compressed bi-clustering')
     compression_level = 32
     stats_comp = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                  compression_level, ac_tester, gt_groups,
-                                  output_prefix + '_bic_comp')
+                                  compression_level, thresholder, ac_tester,
+                                  gt_groups, output_prefix + '_bic_comp')
 
     return stats_reg, stats_comp
 
@@ -135,13 +150,16 @@ def run_all():
     logger = test_utils.Logger("test_2d.txt")
     sys.stdout = logger
 
+    # RANSAC parameters
     inliers_threshold = 0.015
-    epsilon = 0
-    sampling_factor = 20
+    sampling_factor = 10
+    # a contrario test parameters
+    epsilon = 0.
+    local_ratio = 3.
 
-    config = {'Star': (line.Line, ac.LocalNFA),
-              'Stairs': (line.Line, ac.LocalNFA),
-              'Circles': (circle.Circle, ac.circle.LocalNFA),
+    config = {'Star': line.Line,
+              'Stairs': line.Line,
+              'Circles': circle.Circle,
               }
 
     stats_list = []
@@ -154,13 +172,16 @@ def run_all():
         else:
             continue
 
-        model_class, tester_class = config[ex_type]
+        model_class = config[ex_type]
         data = mat[example].T
 
-        n_samples = data.shape[0] * sampling_factor
+        n_samples = (data.shape[0] * sampling_factor *
+                     model_class().min_sample_size)
         sampler = sampling.UniformSampler(n_samples)
         generator = sampling.ModelGenerator(model_class, data, sampler)
-        ac_tester = tester_class(data, epsilon, inliers_threshold)
+        thresholder = membership.LocalHardThresholder(inliers_threshold,
+                                                      ratio=local_ratio)
+        ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio)
 
         match = re.match(ex_type + '[0-9]*_', example)
         try:
@@ -175,7 +196,8 @@ def run_all():
         print('seed:', seed)
         np.random.seed(seed)
 
-        res = test(model_class, data, example, generator, ac_tester, gt_groups)
+        res = test(model_class, data, example, generator, thresholder,
+                   ac_tester, gt_groups)
         stats_list.append(res)
 
         print('-'*40)

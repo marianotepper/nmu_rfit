@@ -12,6 +12,7 @@ import arse.test.utils as test_utils
 import arse.pme.preference as pref
 import arse.pme.line as line
 import arse.pme.sampling as sampling
+import arse.pme.membership as membership
 import arse.pme.lsd as lsd
 import arse.pme.vanishing as vp
 import arse.pme.acontrario as ac
@@ -72,15 +73,15 @@ def ground_truth(association, gt_segments, lsd_segments, threshold):
     return gt_groups
 
 
-def run_biclustering(image, x, original_models, pref_matrix, comp_level,
+def run_biclustering(image, x, pref_matrix, comp_level, thresholder,
                      ac_tester, output_prefix, gt_groups=None, palette='Set1'):
     t = timeit.default_timer()
     bic_list = bc.bicluster(pref_matrix, comp_level=comp_level)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
-    models, bic_list = test_utils.clean(vp.VanishingPoint, x, ac_tester,
-                                        bic_list)
+    models, bic_list = test_utils.clean(vp.VanishingPoint, x, thresholder,
+                                        ac_tester, bic_list)
     bic_groups = [bic[0] for bic in bic_list]
 
     palette = sns.color_palette(palette, len(bic_list))
@@ -100,7 +101,8 @@ def run_biclustering(image, x, original_models, pref_matrix, comp_level,
         return dict(time=t1)
 
 
-def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
+def test(image, x, res_dir_name, name, ransac_gen, thresholder, ac_tester,
+         gt_groups=None):
     print(name, len(x))
 
     output_prefix = '../results/' + res_dir_name + '/'
@@ -114,7 +116,8 @@ def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
     base_plot(image, x)
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 
-    pref_matrix, orig_models = pref.build_preference_matrix(len(x), ransac_gen,
+    pref_matrix, orig_models = pref.build_preference_matrix(ransac_gen,
+                                                            thresholder,
                                                             ac_tester)
     print('Preference matrix size:', pref_matrix.shape)
 
@@ -128,15 +131,15 @@ def test(image, x, res_dir_name, name, ransac_gen, ac_tester, gt_groups=None):
 
     print('Running regular bi-clustering')
     compression_level = None
-    stats_reg = run_biclustering(image, x, orig_models, pref_matrix,
-                                 compression_level, ac_tester,
+    stats_reg = run_biclustering(image, x, pref_matrix, compression_level,
+                                 thresholder, ac_tester,
                                  output_prefix + '_bic_reg',
                                  gt_groups=gt_groups)
 
     print('Running compressed bi-clustering')
     compression_level = 32
-    stats_comp = run_biclustering(image, x, orig_models, pref_matrix,
-                                  compression_level, ac_tester,
+    stats_comp = run_biclustering(image, x, pref_matrix, compression_level,
+                                  thresholder, ac_tester,
                                   output_prefix + '_bic_comp',
                                   gt_groups=gt_groups)
 
@@ -148,9 +151,10 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
     sys.stdout = logger
 
     dir_name = '/Users/mariano/Documents/datasets/YorkUrbanDB/'
-    sampling_factor = 20
+    sampling_factor = 4
     inliers_threshold = np.pi * 1e-2
     epsilon = 0
+    local_ratio = 3.
 
     stats_list = []
     for i, example in enumerate(os.listdir(dir_name)):
@@ -176,10 +180,12 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
             segments = gt_segments
             gt_groups = [gt_association == v for v in np.unique(gt_association)]
 
-        ac_tester = ac.LocalNFA(segments, epsilon, inliers_threshold)
         sampler = sampling.UniformSampler(len(segments) * sampling_factor)
         ransac_gen = sampling.ModelGenerator(vp.VanishingPoint, segments,
                                              sampler)
+        thresholder = membership.LocalHardThresholder(inliers_threshold,
+                                                      ratio=local_ratio)
+        ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio)
 
         print('-'*40)
         seed = 0
@@ -188,7 +194,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
         np.random.seed(seed)
 
         res = test(gray_image, segments, res_dir_name, example, ransac_gen,
-                   ac_tester, gt_groups=gt_groups)
+                   thresholder, ac_tester, gt_groups=gt_groups)
         stats_list.append(res)
 
         plt.close('all')

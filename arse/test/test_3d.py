@@ -1,4 +1,5 @@
 from __future__ import absolute_import, print_function
+import os
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import seaborn.apionly as sns
@@ -96,7 +97,7 @@ class BasePlotter(object):
                   extra_args=['-vcodec', 'libx264'])
 
 
-def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
+def run_biclustering(model_class, x, pref_matrix, comp_level, thresholder,
                      ac_tester, output_prefix, plotter=None, gt_groups=None,
                      palette='Set1', save_animation=True, share_elements=True):
     t = timeit.default_timer()
@@ -105,7 +106,8 @@ def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
-    models, bic_list = test_utils.clean(model_class, x, ac_tester, bic_list)
+    models, bic_list = test_utils.clean(model_class, x, thresholder, ac_tester,
+                                        bic_list)
     bic_groups = [bic[0] for bic in bic_list]
 
     palette = sns.color_palette(palette, len(bic_list), desat=.5)
@@ -138,12 +140,15 @@ def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
         return dict(time=t1)
 
 
-def test(model_class, x, name, ransac_gen, ac_tester, compression_level=32,
-         plotter=None, run_regular=True, gt_groups=None, save_animation=True,
-         share_elements=True):
+def test(model_class, x, name, ransac_gen, thresholder, ac_tester,
+         compression_level=32, plotter=None, run_regular=True, gt_groups=None,
+         save_animation=True, share_elements=True):
     print(name, x.shape)
 
-    output_prefix = '../results/' + name
+    output_dir = '../results/'
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    output_prefix = output_dir + name
 
     if plotter is None:
         plotter = BasePlotter(x)
@@ -151,8 +156,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=32,
     plotter.base_plot()
     plt.savefig(output_prefix + '_data.pdf', dpi=600)
 
-    pref_matrix, orig_models = pref.build_preference_matrix(x.shape[0],
-                                                            ransac_gen,
+    pref_matrix, orig_models = pref.build_preference_matrix(ransac_gen,
+                                                            thresholder,
                                                             ac_tester)
     print('Preference matrix size:', pref_matrix.shape)
 
@@ -163,8 +168,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=32,
     plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print('Running compressed bi-clustering')
-    stats_comp = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                  compression_level, ac_tester,
+    stats_comp = run_biclustering(model_class, x, pref_matrix,
+                                  compression_level, thresholder, ac_tester,
                                   output_prefix + '_bic_comp', plotter=plotter,
                                   gt_groups=gt_groups,
                                   save_animation=save_animation)
@@ -172,8 +177,8 @@ def test(model_class, x, name, ransac_gen, ac_tester, compression_level=32,
     if run_regular:
         print('Running regular bi-clustering')
         compression_level = None
-        stats_reg = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                     compression_level, ac_tester,
+        stats_reg = run_biclustering(model_class, x, pref_matrix,
+                                     compression_level, thresholder, ac_tester,
                                      output_prefix + '_bic_reg',
                                      plotter=plotter, gt_groups=gt_groups,
                                      save_animation=save_animation,

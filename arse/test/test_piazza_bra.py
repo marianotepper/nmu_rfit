@@ -1,12 +1,11 @@
 from __future__ import absolute_import, print_function
-import os
 import sys
 import matplotlib.pyplot as plt
-import PIL.Image
 import numpy as np
 import scipy.io
 import arse.pme.plane as plane
 import arse.pme.sampling as sampling
+import arse.pme.membership as membership
 import arse.pme.acontrario as ac
 import arse.test.utils as utils
 import arse.test.test_3d as test_3d
@@ -18,6 +17,7 @@ def run(subsampling=1, inliers_threshold=0.2):
 
     sigma = 1
     epsilon = 0
+    local_ratio = 3.
 
     name = 'Piazza_Bra'
     dirname = '../data/' + name + '/'
@@ -33,6 +33,10 @@ def run(subsampling=1, inliers_threshold=0.2):
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
     ac_tester = ac.LocalNFA(data, epsilon, inliers_threshold)
+    thresholder = membership.LocalHardThresholder(inliers_threshold,
+                                                  ratio=local_ratio)
+    ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio)
+
 
     seed = 0
     # seed = np.random.randint(0, np.iinfo(np.uint32).max)
@@ -40,8 +44,8 @@ def run(subsampling=1, inliers_threshold=0.2):
     np.random.seed(seed)
 
     output_prefix = name + '_n{0}'.format(data.shape[0])
-    test_3d.test(plane.Plane, data, output_prefix, ransac_gen, ac_tester,
-                 run_regular=True)
+    test_3d.test(plane.Plane, data, output_prefix, ransac_gen, thresholder,
+                 ac_tester, run_regular=True)
 
     plt.close('all')
 

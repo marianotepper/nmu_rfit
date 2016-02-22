@@ -68,7 +68,7 @@ def _nmf_initialize(array, r):
 
 
 def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
-                    u_init=None, v_init=None, max_iter=5e2, tol=1e-4):
+                    u_init=None, v_init=None, max_iter=5e2, tol=1e-3):
     """
     Restricted to the rank 1 case.
     :param array:
@@ -85,8 +85,17 @@ def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
     if u_init is None and v_init is None:
         x, y = _nmf_initialize(array, 1)
     else:
-        x = u_init.copy()
-        y = v_init.copy()
+        if update == 'both':
+            x = u_init.copy()
+            y = v_init.copy()
+        if update == 'left':
+            x = utils.solve(array.T, v_init)
+            x = utils.sparse(x[:, np.newaxis])
+            y = utils.sparse(v_init[np.newaxis, :])
+        if update == 'right':
+            y = utils.solve(array, u_init)
+            x = utils.sparse(u_init[:, np.newaxis])
+            y = utils.sparse(y[np.newaxis, :])
 
     if update == 'both' or update == 'left':
         if utils.issparse(array):
@@ -110,7 +119,7 @@ def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
         gamma_e = np.zeros(e.shape)
 
     error = []
-    for _ in range(int(max_iter)):
+    for kk in range(int(max_iter)):
         temp = array - e
         if update == 'both' or update == 'left':
             x, u, gamma_u = _admm_left_update(temp, u, y, lambda_u, gamma_u,

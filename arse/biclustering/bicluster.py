@@ -4,6 +4,7 @@ from . import utils
 from . import nmf
 from . import mdl
 from . import compression
+import timeit
 
 
 def bicluster(array, n=None, share_elements=True, comp_level=None):
@@ -15,13 +16,17 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
 
     downdater = utils.Downdater(array)
 
+    total_time = 0
     bic_list = []
     total_codelength = []
-    for _ in range(n_iters):
+    for i in range(n_iters):
         if downdater.array.nnz == 0:
             break
 
+        t = timeit.default_timer()
         u, v = single_bicluster(downdater.array, comp_level=comp_level)
+        total_time += timeit.default_timer() - t
+        print i, u.nnz, v.nnz
 
         if v.nnz <= 1:
             break
@@ -37,6 +42,8 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
         if n is None:
             cl = online_mdl.add_rank1_approximation(downdater.array, u, v)
             total_codelength.append(cl)
+
+    print total_time
 
     if n is None and bic_list:
         cut_point = np.argmin(np.array(total_codelength))
@@ -79,13 +86,7 @@ def update_right(array, u, comp_level=None):
             array_crop = array_crop[selection, :]
             vals_u = vals_u[selection]
 
-    u_crop = utils.sparse(vals_u[:, np.newaxis])
-    v_init = u_crop.T.dot(array_crop)
-    v_init = (v_init / array_crop.shape[0]).rint()
-    v_init = utils.sparsify(v_init)
-
-    v = nmf.nmf_robust_admm(array_crop, u_init=u_crop, v_init=v_init,
-                            update='right')
+    v = nmf.nmf_robust_admm(array_crop, u_init=vals_u, update='right', tol=1e-2)
     return utils.sparsify(v)
 
 
@@ -99,11 +100,5 @@ def update_left(array, v, comp_level=None):
             array_crop = array_crop[:, selection]
             vals_v = vals_v[selection]
 
-    v_crop = utils.sparse(vals_v[np.newaxis, :])
-    u_init = array_crop.dot(v_crop.T)
-    u_init = (u_init / array_crop.shape[1]).rint()
-    u_init = utils.sparsify(u_init)
-
-    u = nmf.nmf_robust_admm(array_crop, u_init=u_init, v_init=v_crop,
-                            update='left')
+    u = nmf.nmf_robust_admm(array_crop, v_init=vals_v, update='left', tol=1e-2)
     return utils.sparsify(u)

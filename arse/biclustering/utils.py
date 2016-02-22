@@ -16,6 +16,13 @@ def issparse(mat):
     return sp.issparse(mat)
 
 
+def solve(mat, b):
+    if mat.shape[0] == mat.shape[1]:
+        return spla.spsolve(mat, b)
+    else:
+        return spla.lsqr(mat, b)[0]
+
+
 def sparsify(x, tol=1e-4, dtype=None):
     i, j, v = find(x)
     if v.size == 0:

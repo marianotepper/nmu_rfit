@@ -12,6 +12,7 @@ class ModelGenerator(object):
         self.batch = batch
         self.h_ratio = h_ratio
         self.bias = None
+        self.sample_map = sampling.SampleMap()
 
     def __iter__(self):
         def generate(s):
@@ -45,9 +46,12 @@ class ModelGenerator(object):
                 else:
                     probas *= pk
                 probas /= probas.sum()
-            m = generate(sample)
-            yield m
-            residuals = self._add_model(residuals, m)
+
+            if not self.sample_map.has_sample(sample):
+                self.sample_map.add_sample(sample)
+                m = generate(sample)
+                yield m
+                residuals = self._add_model(residuals, m)
 
     def _add_model(self, residuals, m):
         dist = np.atleast_2d(m.distances(self.elements)).T

@@ -4,9 +4,31 @@ import scipy.spatial.distance as distance
 import itertools
 
 
+class SampleMap(object):
+    def __init__(self):
+        self.dict = {}
+
+    def has_sample(self, sample):
+        try:
+            return reduce(lambda d, k: d[k], sample, self.dict)
+        except KeyError:
+            return False
+
+    def add_sample(self, sample):
+        dict = self.dict
+        for i, s in enumerate(sample):
+            if i == len(sample) - 1:
+                dict[s] = True
+                continue
+            if s not in dict:
+                dict[s] = {}
+            dict = dict[s]
+
+
 class UniformSampler(object):
     def __init__(self, n_samples=None):
         self.n_samples = n_samples
+        self.sample_map = SampleMap()
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
@@ -14,7 +36,9 @@ class UniformSampler(object):
         for _ in range(self.n_samples):
             sample = np.random.choice(all_elems, size=min_sample_size,
                                       replace=False)
-            yield sample
+            if not self.sample_map.has_sample(sample):
+                self.sample_map.add_sample(sample)
+                yield sample
 
 
 class GaussianLocalSampler(object):
@@ -22,6 +46,7 @@ class GaussianLocalSampler(object):
         self.n_samples = n_samples
         # p(x[i] | x[j]) = exp(-(dist(x[i], x[j])) / sigma)
         self.var = sigma ** 2
+        self.sample_map = SampleMap()
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
@@ -36,7 +61,9 @@ class GaussianLocalSampler(object):
                     break
             sample = np.random.choice(all_elems, size=min_sample_size,
                                       replace=False, p=bins)
-            yield sample
+            if not self.sample_map.has_sample(sample):
+                self.sample_map.add_sample(sample)
+                yield sample
 
 
 class ModelGenerator(object):

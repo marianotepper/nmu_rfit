@@ -42,6 +42,7 @@ def bicluster(array, n=None, share_elements=True, comp_level=None):
         cut_point = np.argmin(np.array(total_codelength))
         bic_list = bic_list[:cut_point+1]
 
+    bic_list = sorted(bic_list, key=lambda e: e[0].nnz * e[1].nnz, reverse=True)
     return bic_list
 
 

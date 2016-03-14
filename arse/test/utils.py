@@ -90,7 +90,7 @@ def solve_intersections(x, inliers_list, model_list):
 
 
 def inliers_to_left_factors(inliers_list, bic_list):
-    left_factors = [bic_utils.sparse(np.nan_to_num(inliers)[:, np.newaxis],
+    left_factors = [bic_utils.sparse(inliers[:, np.newaxis] > 0,
                                      dtype=np.bool)
                     for inliers in inliers_list]
     return [(lf, rf) for lf, (_, rf) in zip(left_factors, bic_list)]

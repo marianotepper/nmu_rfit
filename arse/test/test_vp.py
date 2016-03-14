@@ -68,7 +68,7 @@ def ground_truth(association, gt_segments, lsd_segments, thresholder):
     gt_groups = []
     for v in np.unique(association):
         p = vp.VanishingPoint(data=gt_segments[association == v])
-        inliers = np.nan_to_num(thresholder.membership(p, lsd_segments))
+        inliers = thresholder.membership(p, lsd_segments) > 0
         gt_groups.append(inliers)
     return gt_groups
 

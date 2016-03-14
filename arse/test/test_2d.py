@@ -66,7 +66,7 @@ def ground_truth(data, n_groups, group_size=50, model_class=None,
             gt_groups.append(g)
         else:
             model = model_class(data=data[g])
-            inliers = np.nan_to_num(thresholder.membership(model, data))
+            inliers = thresholder.membership(model, data) > 0
             gt_groups.append(inliers)
 
     return gt_groups
@@ -239,7 +239,7 @@ def run(restimate_gt=False):
 
 
 def run_all():
-    run(restimate_gt=False)
+    # run(restimate_gt=False)
     run(restimate_gt=True)
 
 

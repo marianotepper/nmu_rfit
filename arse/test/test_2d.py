@@ -56,14 +56,19 @@ def plot_original_models(x, original_models, right_factors, palette):
                     color=palette[i], alpha=0.5)
 
 
-def ground_truth(model_class, data, threshold, n_groups, group_size=50):
+def ground_truth(data, n_groups, group_size=50, model_class=None,
+                 thresholder=None):
     gt_groups = []
     for i in range(n_groups):
         g = np.zeros((len(data),), dtype=bool)
         g[i * group_size:(i+1) * group_size] = True
-        model = model_class(data=data[g])
-        inliers = np.abs(model.distances(data)) <= threshold
-        gt_groups.append(inliers)
+        if model_class is None and thresholder is None:
+            gt_groups.append(g)
+        else:
+            model = model_class(data=data[g])
+            inliers = np.nan_to_num(thresholder.membership(model, data))
+            gt_groups.append(inliers)
+
     return gt_groups
 
 
@@ -146,12 +151,19 @@ def test(model_class, x, name, ransac_gen, thresholder, ac_tester, gt_groups):
     return stats_reg, stats_comp
 
 
-def run_all():
-    logger = test_utils.Logger("test_2d.txt")
+def run(restimate_gt=False):
+    log_file = 'test_2d_{0}.txt'
+    if restimate_gt:
+        log_file.format('restimate_gt')
+    else:
+        log_file.format('')
+    # RANSAC parameter
+    inliers_threshold = 0.015
+
+    logger = test_utils.Logger(log_file)
     sys.stdout = logger
 
-    # RANSAC parameters
-    inliers_threshold = 0.015
+    # RANSAC parameter
     sampling_factor = 10
     # a contrario test parameters
     epsilon = 0.
@@ -175,13 +187,16 @@ def run_all():
         model_class = config[ex_type]
         data = mat[example].T
 
-        n_samples = (data.shape[0] * sampling_factor *
-                     model_class().min_sample_size)
+        min_sample_size = model_class().min_sample_size
+        n_samples = data.shape[0] * sampling_factor * min_sample_size
+
         sampler = sampling.UniformSampler(n_samples)
         generator = sampling.ModelGenerator(model_class, data, sampler)
-        thresholder = membership.LocalHardThresholder(inliers_threshold,
-                                                      ratio=local_ratio)
-        ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio)
+
+        proba = 1. / local_ratio
+        ac_tester = ac.BinomialNFA(epsilon, proba, min_sample_size)
+        thresholder = membership.LocalThresholder(inliers_threshold,
+                                                  ratio=local_ratio)
 
         match = re.match(ex_type + '[0-9]*_', example)
         try:
@@ -189,14 +204,22 @@ def run_all():
             n_groups = int(match.group())
         except AttributeError:
             n_groups = 4
-        gt_groups = ground_truth(model_class, data, inliers_threshold, n_groups)
+        if restimate_gt:
+            gt_groups = ground_truth(data, n_groups, model_class=model_class,
+                                     thresholder=thresholder)
+        else:
+            gt_groups = ground_truth(data, n_groups)
 
         seed = 0
         # seed = np.random.randint(0, np.iinfo(np.uint32).max)
         print('seed:', seed)
         np.random.seed(seed)
 
-        res = test(model_class, data, example, generator, thresholder,
+        output_prefix = example
+        if restimate_gt:
+            output_prefix += '_restimate_gt'
+
+        res = test(model_class, data, output_prefix, generator, thresholder,
                    ac_tester, gt_groups)
         stats_list.append(res)
 
@@ -213,6 +236,11 @@ def run_all():
 
     sys.stdout = logger.stdout
     logger.close()
+
+
+def run_all():
+    run(restimate_gt=False)
+    run(restimate_gt=True)
 
 
 if __name__ == '__main__':

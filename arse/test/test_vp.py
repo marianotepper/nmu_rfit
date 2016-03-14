@@ -64,11 +64,11 @@ def plot_final_models(image, x, mod_inliers, palette):
         seg.plot(c='k', linewidth=1)
 
 
-def ground_truth(association, gt_segments, lsd_segments, threshold):
+def ground_truth(association, gt_segments, lsd_segments, thresholder):
     gt_groups = []
     for v in np.unique(association):
         p = vp.VanishingPoint(data=gt_segments[association == v])
-        inliers = np.abs(p.distances(lsd_segments)) <= threshold
+        inliers = np.nan_to_num(thresholder.membership(p, lsd_segments))
         gt_groups.append(inliers)
     return gt_groups
 
@@ -147,14 +147,21 @@ def test(image, x, res_dir_name, name, ransac_gen, thresholder, ac_tester,
 
 
 def evaluate_york(res_dir_name, run_with_lsd=False):
+    # RANSAC parameter
+    inliers_threshold = np.pi * 1e-2
+
     logger = test_utils.Logger(res_dir_name + '.txt')
     sys.stdout = logger
 
     dir_name = '/Users/mariano/Documents/datasets/YorkUrbanDB/'
     sampling_factor = 4
-    inliers_threshold = np.pi * 1e-2
     epsilon = 0
     local_ratio = 3.
+
+    ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio,
+                               vp.VanishingPoint().min_sample_size)
+    thresholder = membership.LocalThresholder(inliers_threshold,
+                                              ratio=local_ratio)
 
     stats_list = []
     for i, example in enumerate(os.listdir(dir_name)):
@@ -167,7 +174,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
         mat = scipy.io.loadmat(gt_name)
         gt_lines = mat['lines']
         gt_segments = [lsd.Segment(gt_lines[k, :], gt_lines[k + 1, :])
-                    for k in range(0, len(gt_lines), 2)]
+                       for k in range(0, len(gt_lines), 2)]
         gt_segments = np.array(gt_segments)
         gt_association = np.squeeze(mat['vp_association'])
 
@@ -175,7 +182,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
             segments = lsd.compute(gray_image)
             segments = np.array(segments)
             gt_groups = ground_truth(gt_association, gt_segments, segments,
-                                     inliers_threshold)
+                                     thresholder=thresholder)
         else:
             segments = gt_segments
             gt_groups = [gt_association == v for v in np.unique(gt_association)]
@@ -183,11 +190,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
         sampler = sampling.UniformSampler(len(segments) * sampling_factor)
         ransac_gen = sampling.ModelGenerator(vp.VanishingPoint, segments,
                                              sampler)
-        thresholder = membership.LocalHardThresholder(inliers_threshold,
-                                                      ratio=local_ratio)
-        ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio)
 
-        print('-'*40)
         seed = 0
         # seed = np.random.randint(0, np.iinfo(np.uint32).max)
         print('seed:', seed)
@@ -197,6 +200,7 @@ def evaluate_york(res_dir_name, run_with_lsd=False):
                    thresholder, ac_tester, gt_groups=gt_groups)
         stats_list.append(res)
 
+        print('-'*40)
         plt.close('all')
 
     reg_list, comp_list = zip(*stats_list)

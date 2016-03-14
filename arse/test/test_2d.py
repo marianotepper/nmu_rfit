@@ -157,9 +157,9 @@ def test(model_class, x, name, ransac_gen, thresholder, ac_tester, gt_groups,
 def run(restimate_gt=False):
     log_file = 'test_2d_{0}.txt'
     if restimate_gt:
-        log_file.format('restimate_gt')
+        log_file = log_file.format('restimate_gt')
     else:
-        log_file.format('')
+        log_file = log_file.format('given_gt')
     # RANSAC parameter
     inliers_threshold = 0.015
 

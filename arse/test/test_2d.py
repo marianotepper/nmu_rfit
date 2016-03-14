@@ -244,7 +244,7 @@ def run(restimate_gt=False):
 
 
 def run_all():
-    # run(restimate_gt=False)
+    run(restimate_gt=False)
     run(restimate_gt=True)
 
 

@@ -145,7 +145,7 @@ def nmf_robust_admm(array, update='both', lambda_u=1, lambda_v=1, lambda_e=1,
 
 
 def _admm_left_update(mat, u, y, lambda_u, gamma_u, lambda_e, gamma_e):
-    x = lambda_e * mat.dot(y.T) + lambda_u * u - gamma_u + gamma_e.dot(y.T)
+    x = (lambda_e * mat + gamma_e).dot(y.T) + lambda_u * u - gamma_u
     x /= (y.dot(y.T))[0, 0] + lambda_u
     u = projection_positive(x + gamma_u / lambda_u)
     gamma_u += lambda_u * (x - u)
@@ -153,7 +153,7 @@ def _admm_left_update(mat, u, y, lambda_u, gamma_u, lambda_e, gamma_e):
 
 
 def _admm_right_update(mat, x, v, lambda_v, gamma_v, lambda_e, gamma_e):
-    y = lambda_e * x.T.dot(mat) + lambda_v * v - gamma_v + x.T.dot(gamma_e)
+    y = x.T.dot(lambda_e * mat + gamma_e) + lambda_v * v - gamma_v
     y /= (x.T.dot(x))[0, 0] + lambda_v
     v = projection_positive(y + gamma_v / lambda_v)
     gamma_v += lambda_v * (y - v)

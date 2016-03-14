@@ -110,7 +110,7 @@ def run(subsampling=1, inliers_threshold=0.2):
     n_samples = data.shape[0]
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
-    thresholder = membership.LocalHardThresholder(inliers_threshold,
+    thresholder = membership.LocalThresholder(inliers_threshold,
                                                   ratio=local_ratio)
     ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio)
 

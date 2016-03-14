@@ -6,7 +6,8 @@ import utils
 class Homography(object):
     def __init__(self, data=None):
         self.H = None
-        self.status = None
+        self._trans1 = None
+        self._trans2 = None
         if data is not None:
             self.fit(data)
 
@@ -31,4 +32,4 @@ class Homography(object):
         pts2_norm = data[:, 3:].dot(self._trans2)
         trans = np.dot(pts1_norm, self.H.T)
         trans /= np.atleast_2d(trans[:, 2]).T
-        return np.linalg.norm(pts2_norm - trans, axis=1)
+        return np.sum(np.power(pts2_norm - trans, 2), axis=1)

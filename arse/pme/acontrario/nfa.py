@@ -4,6 +4,8 @@ from abc import ABCMeta, abstractmethod
 
 
 class NFA(object):
+    __metaclass__ = ABCMeta
+
     def __init__(self, epsilon, proba, min_sample_size):
         self.epsilon = epsilon
         self.proba = proba
@@ -25,13 +27,11 @@ class NFA(object):
 
 
 class BinomialNFA(NFA):
-    def __init__(self, epsilon, proba, min_sample_size, n_tests_factor=1):
+    def __init__(self, epsilon, proba, min_sample_size):
         super(BinomialNFA, self).__init__(epsilon, proba, min_sample_size)
-        self.n_tests_factor = n_tests_factor
 
     def _n_tests(self, membership):
-        return (log_nchoosek(membership.size, self.min_sample_size) +
-                np.log(self.n_tests_factor))
+        return log_nchoosek(membership.size, self.min_sample_size)
 
     def _pfa(self, membership):
         n = membership.size - np.isnan(membership).sum() - self.min_sample_size

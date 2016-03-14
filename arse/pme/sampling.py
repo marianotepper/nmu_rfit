@@ -2,33 +2,45 @@ from __future__ import absolute_import
 import numpy as np
 import scipy.spatial.distance as distance
 import itertools
+import collections
 
 
-class SampleMap(object):
+class SampleSet(collections.MutableSet):
     def __init__(self):
-        self.dict = {}
+        self._dict = {}
+        self._len = 0
 
-    def has_sample(self, sample):
+    def __contains__(self, sample):
         try:
-            return reduce(lambda d, k: d[k], sample, self.dict)
+            return reduce(lambda d, k: d[k], sample, self._dict)
         except KeyError:
             return False
 
-    def add_sample(self, sample):
-        dict = self.dict
+    def __len__(self):
+        return self._len
+
+    def add(self, sample):
+        d = self._dict
         for i, s in enumerate(sample):
             if i == len(sample) - 1:
-                dict[s] = True
+                d[s] = True
                 continue
-            if s not in dict:
-                dict[s] = {}
-            dict = dict[s]
+            if s not in d:
+                d[s] = {}
+            d = d[s]
+        self._len += 1
+
+    def discard(self, sample):
+        pass
+
+    def __iter__(self):
+        pass
 
 
 class UniformSampler(object):
     def __init__(self, n_samples=None):
         self.n_samples = n_samples
-        self.sample_map = SampleMap()
+        self.sample_set = SampleSet()
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
@@ -36,8 +48,8 @@ class UniformSampler(object):
         for _ in range(self.n_samples):
             sample = np.random.choice(all_elems, size=min_sample_size,
                                       replace=False)
-            if not self.sample_map.has_sample(sample):
-                self.sample_map.add_sample(sample)
+            if sample not in self.sample_set:
+                self.sample_set.add(sample)
                 yield sample
 
 
@@ -46,7 +58,7 @@ class GaussianLocalSampler(object):
         self.n_samples = n_samples
         # p(x[i] | x[j]) = exp(-(dist(x[i], x[j])) / sigma)
         self.var = sigma ** 2
-        self.sample_map = SampleMap()
+        self.sample_map = SampleSet()
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)
@@ -61,8 +73,8 @@ class GaussianLocalSampler(object):
                     break
             sample = np.random.choice(all_elems, size=min_sample_size,
                                       replace=False, p=bins)
-            if not self.sample_map.has_sample(sample):
-                self.sample_map.add_sample(sample)
+            if sample not in self.sample_set:
+                self.sample_set.add(sample)
                 yield sample
 
 

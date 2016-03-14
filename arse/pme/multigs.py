@@ -12,7 +12,7 @@ class ModelGenerator(object):
         self.batch = batch
         self.h_ratio = h_ratio
         self.bias = None
-        self.sample_map = sampling.SampleMap()
+        self.sample_set = sampling.SampleSet()
 
     def __iter__(self):
         def generate(s):
@@ -47,8 +47,8 @@ class ModelGenerator(object):
                     probas *= pk
                 probas /= probas.sum()
 
-            if not self.sample_map.has_sample(sample):
-                self.sample_map.add_sample(sample)
+            if sample not in self.sample_set:
+                self.sample_set.add(sample)
                 m = generate(sample)
                 yield m
                 residuals = self._add_model(residuals, m)

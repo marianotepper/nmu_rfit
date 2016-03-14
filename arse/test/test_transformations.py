@@ -212,11 +212,11 @@ def run(transformation, inliers_threshold):
 
         if transformation == 'homography':
             model_class = homography.Homography
-            nfa_proba = 0
+            nfa_proba = np.pi / np.prod(data['img2'].shape[:2])
         else:
             model_class = fundamental.Fundamental
-            nfa_proba = (2 * np.linalg.norm(data['img1'].shape) /
-                         np.prod(data['img1'].shape))
+            img_size = data['img2'].shape[:2]
+            nfa_proba = (2. * np.linalg.norm(img_size) / np.prod(img_size))
 
         generator = multigs.ModelGenerator(model_class, data['data'], n_samples)
         min_sample_size = model_class().min_sample_size
@@ -251,10 +251,10 @@ def run(transformation, inliers_threshold):
 
 
 def run_all():
-    # run('homography', 3.)
-    for thresh in np.arange(2.5e-3, 2.51e-2, 2.5e-3):
-        print(thresh)
-        # run('fundamental', thresh)
+    for thresh in np.power(np.arange(1, 4), 2):
+        run('homography', thresh)
+    # for thresh in np.arange(2.5e-3, 2.51e-2, 2.5e-3):
+    #     run('fundamental', thresh)
 
 if __name__ == '__main__':
     run_all()

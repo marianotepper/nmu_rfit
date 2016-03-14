@@ -251,10 +251,10 @@ def run(transformation, inliers_threshold):
 
 
 def run_all():
-    for thresh in np.power(np.arange(1, 4), 2):
+    for thresh in np.power(np.arange(.5, 4, .5), 2):
         run('homography', thresh)
-    # for thresh in np.arange(2.5e-3, 2.51e-2, 2.5e-3):
-    #     run('fundamental', thresh)
+    for thresh in np.arange(2.5e-3, 2.51e-2, 2.5e-3):
+        run('fundamental', thresh)
 
 if __name__ == '__main__':
     run_all()

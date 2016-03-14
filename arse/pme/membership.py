@@ -1,5 +1,4 @@
 import numpy as np
-from abc import ABCMeta, abstractmethod
 
 
 class GlobalThresholder(object):
@@ -21,20 +20,20 @@ class LocalThresholder(object):
 
 
 def global_membership(distances, inliers_threshold):
-    return (distances <= inliers_threshold) * inliers_threshold
+    return (distances <= inliers_threshold).astype(np.float) * inliers_threshold
 
 
 def local_membership(distances, inliers_threshold, ratio):
     membership = distances <= inliers_threshold
 
     if np.all(membership):
-        return membership * inliers_threshold
+        return membership.astype(np.float) * inliers_threshold
 
     outliers = np.logical_not(membership)
     upper_threshold = inliers_threshold * ratio
     upper_threshold = np.maximum(upper_threshold, np.min(distances[outliers]))
     upper_threshold = np.minimum(upper_threshold, np.max(distances[outliers]))
 
-    membership *= inliers_threshold
+    membership = membership.astype(np.float) * inliers_threshold
     membership[distances > upper_threshold] = np.nan
     return membership

@@ -52,34 +52,48 @@ def clean(model_class, x, thresholder, ac_tester, bic_list, share_elements=True)
         inliers = thresholder.membership(mod, x)
         inliers_list.append(inliers)
 
+    if not model_list:
+        return [], []
+
+    # filter out non-meaningful groups
+    inliers_list, model_list, bic_list = meaningful(ac_tester, inliers_list,
+                                                    model_list, bic_list)
+
+    keep = ac.exclusion_principle(x, thresholder, ac_tester, inliers_list,
+                                  model_list)
+
+    inliers_list = [inliers_list[s] for s in keep]
+    model_list = [model_list[s] for s in keep]
+    bic_list = [bic_list[s] for s in keep]
     if not share_elements:
-        solve_intersections(x, model_list, inliers_list)
-        survivors = [i for i, inliers in enumerate(inliers_list)
-                     if inliers.sum() > min_sample_size]
-        inliers_list = [inliers_list[s] for s in survivors]
-        model_list = [model_list[s] for s in survivors]
-        bic_list = [bic_list[s] for s in survivors]
+        solve_intersections(x, inliers_list, model_list)
+        inliers_list, model_list, bic_list = meaningful(ac_tester, inliers_list,
+                                                        model_list, bic_list)
 
-    left_factors = [bic_utils.sparse(np.nan_to_num(inliers)[:, np.newaxis],
-                                     dtype=np.bool)
-                    for inliers in inliers_list]
-    bic_list = [(lf, rf) for lf, (_, rf) in zip(left_factors, bic_list)]
-
-    if model_list:
-        survivors = ac.exclusion_principle(x, thresholder, ac_tester,
-                                           inliers_list, model_list)
-        model_list = [model_list[s] for s in survivors]
-        bic_list = [bic_list[s] for s in survivors]
+    bic_list = inliers_to_left_factors(inliers_list, bic_list)
 
     return model_list, bic_list
 
 
-def solve_intersections(x, model_list, inliers_list):
-    intersection = np.nansum(np.vstack(inliers_list), axis=0) > 1
-    dists = [np.abs(mod.distances(x[intersection, :])) for mod in model_list]
+def meaningful(ac_tester, inliers_list, model_list, bic_list):
+    z_list = zip(inliers_list, model_list, bic_list)
+    z_list = filter(lambda e: ac_tester.meaningful(e[0]), z_list)
+    return zip(*z_list)
+
+
+def solve_intersections(x, inliers_list, model_list):
+    intersection = np.sum(np.vstack(inliers_list) > 0, axis=0) > 1
+    dists = [mod.distances(x[intersection, :]) for mod in model_list]
     idx = np.argmin(np.vstack(dists), axis=0)
     for i, inliers in enumerate(inliers_list):
         inliers[intersection] = idx == i
+
+
+def inliers_to_left_factors(inliers_list, bic_list):
+    left_factors = [bic_utils.sparse(np.nan_to_num(inliers)[:, np.newaxis],
+                                     dtype=np.bool)
+                    for inliers in inliers_list]
+    return [(lf, rf) for lf, (_, rf) in zip(left_factors, bic_list)]
 
 
 class Logger(object):

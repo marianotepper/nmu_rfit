@@ -1,30 +1,66 @@
 import numpy as np
 import scipy.special as special
-import abc
+from abc import ABCMeta, abstractmethod
 
 
-class BinomialNFA(object):
-    def __init__(self, epsilon, proba):
+class NFA(object):
+    def __init__(self, epsilon, proba, min_sample_size):
         self.epsilon = epsilon
         self.proba = proba
+        self.min_sample_size = min_sample_size
 
-    def nfa(self, membership, min_sample_size):
-        pfa = self._pfa(membership, min_sample_size)
-        n_tests = log_nchoosek(membership.size, min_sample_size)
-        return (pfa + n_tests) / np.log(10)
+    def nfa(self, membership):
+        return (self._pfa(membership) + self._n_tests(membership)) / np.log(10)
 
-    def _pfa(self, membership, min_sample_size):
-        n = membership.size - np.isnan(membership).sum() - min_sample_size
-        k = (membership > 0).sum() - min_sample_size
+    @abstractmethod
+    def _n_tests(self, membership):
+        pass
+
+    @abstractmethod
+    def _pfa(self, membership):
+        pass
+
+    def meaningful(self, membership):
+        return self.nfa(membership) < self.epsilon
+
+
+class BinomialNFA(NFA):
+    def __init__(self, epsilon, proba, min_sample_size, n_tests_factor=1):
+        super(BinomialNFA, self).__init__(epsilon, proba, min_sample_size)
+        self.n_tests_factor = n_tests_factor
+
+    def _n_tests(self, membership):
+        return (log_nchoosek(membership.size, self.min_sample_size) +
+                np.log(self.n_tests_factor))
+
+    def _pfa(self, membership):
+        n = membership.size - np.isnan(membership).sum() - self.min_sample_size
+        k = (membership > 0).sum() - self.min_sample_size
         if k <= 0:
             return np.inf
         if n == k:
             return -np.inf
         return log_binomial(n, k, self.proba)
 
-    def meaningful(self, membership, min_sample_size):
-        nfa = self.nfa(membership, min_sample_size)
-        return nfa < self.epsilon
+
+class ImageTransformNFA(NFA):
+    def __init__(self, epsilon, proba, min_sample_size, n_tests_factor=1):
+        super(ImageTransformNFA, self).__init__(epsilon, proba, min_sample_size)
+        self.n_tests_factor = n_tests_factor
+
+    def _n_tests(self, membership):
+        k = np.maximum((membership > 0).sum(), self.min_sample_size)
+        return (log_nchoosek(membership.size, k) +
+                log_nchoosek(k, self.min_sample_size) +
+                np.log(membership.size - self.min_sample_size) +
+                np.log(self.n_tests_factor))
+
+    def _pfa(self, membership):
+        k = (membership > 0).sum() - self.min_sample_size
+        if k <= 0:
+            return np.inf
+        proba = np.nanmax(membership) * self.proba
+        return k * np.log(proba)
 
 
 def log_binomial(n, k, instance_proba):
@@ -60,3 +96,29 @@ def log_betainc(a, b, x):
         bt = np.exp(logbt)
         # Use continued fraction after making the symmetry transformation.
         return np.log(1.0 - bt * special.betainc(b, a, 1. - x) / b)
+
+
+def log_gammainc(a, x):
+    eps = np.finfo(np.float).eps
+    fp_min = np.finfo(np.float).tiny / eps
+    b = x + 1.0 - a
+    c = 1.0 / fp_min
+    d = 1.0 / b
+    log_h = np.log(d)
+    i = 1
+    while True:
+        an = -i * (i - a)
+        b += 2.0
+        d = an * d + b
+        if np.abs(d) < fp_min:
+            d = fp_min
+        c = b + an / c
+        if np.abs(c) < fp_min:
+            c = fp_min
+        d = 1.0 / d
+        delta = d * c
+        log_h += np.log(delta)
+        if np.abs(delta - 1.0) <= eps:
+            break
+        i += 1
+    return -x + a * np.log(x) - special.gammaln(a) + log_h

@@ -102,10 +102,13 @@ def run_biclustering(model_class, x, original_models, pref_matrix, comp_level,
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def test(model_class, x, name, ransac_gen, thresholder, ac_tester, gt_groups):
+def test(model_class, x, name, ransac_gen, thresholder, ac_tester, gt_groups,
+         dir_name=None):
     print(name, x.shape)
 
     output_dir = '../results/'
+    if dir_name is not None:
+        output_dir += '{0}/'.format(dir_name)
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
     output_prefix = output_dir + name
@@ -217,10 +220,12 @@ def run(restimate_gt=False):
 
         output_prefix = example
         if restimate_gt:
-            output_prefix += '_restimate_gt'
+            dir_name = 'test_2d_restimate_gt'
+        else:
+            dir_name = 'test_2d_given_gt'
 
         res = test(model_class, data, output_prefix, generator, thresholder,
-                   ac_tester, gt_groups)
+                   ac_tester, gt_groups, dir_name=dir_name)
         stats_list.append(res)
 
         print('-'*40)

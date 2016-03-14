@@ -13,7 +13,7 @@ class PreferenceMatrix(object):
         self.mat = sp.csc_matrix((n_rows, 0))
 
     def add_col(self, in_column):
-        in_column = np.nan_to_num(in_column)
+        in_column = (in_column > 0).astype(np.float)
         column = sp.csc_matrix(in_column[:, np.newaxis])
         if self.mat.shape[1] > 0:
             self.mat = sp.hstack([self.mat, column])

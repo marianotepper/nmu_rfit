@@ -183,7 +183,7 @@ def test(model_class, data, name, ransac_gen, thresholder, ac_tester,
 
 
 def run(transformation, inliers_threshold):
-    logger = test_utils.Logger('test_{0}_{1:.0e}.txt'.format(transformation,
+    logger = test_utils.Logger('test_{0}_{1:.1e}.txt'.format(transformation,
                                                              inliers_threshold))
     sys.stdout = logger
 
@@ -229,7 +229,7 @@ def run(transformation, inliers_threshold):
         np.random.seed(seed)
 
         prefix = example[:-4]
-        dir_name = '{0}_{1:.0e}'.format(transformation, inliers_threshold)
+        dir_name = '{0}_{1:.1e}'.format(transformation, inliers_threshold)
 
         res = test(model_class, data, prefix, generator, thresholder, ac_tester,
                    dir_name)

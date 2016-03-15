@@ -78,7 +78,10 @@ def clean(model_class, x, thresholder, ac_tester, bic_list, share_elements=True)
 def meaningful(ac_tester, inliers_list, model_list, bic_list):
     z_list = zip(inliers_list, model_list, bic_list)
     z_list = filter(lambda e: ac_tester.meaningful(e[0]), z_list)
-    return zip(*z_list)
+    if z_list:
+        return zip(*z_list)
+    else:
+        return [], [], []
 
 
 def solve_intersections(x, inliers_list, model_list):

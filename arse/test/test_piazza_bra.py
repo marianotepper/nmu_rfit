@@ -22,7 +22,7 @@ def run(subsampling=1, inliers_threshold=0.2):
     name = 'Piazza_Bra'
     dirname = '../data/' + name + '/'
 
-    mat = scipy.io.loadmat(dirname + 'Results.mat')
+    mat = scipy.io.loadmat(dirname + 'Samantha_Bra.mat')
     data = mat['Points']
 
     # subsample the input points
@@ -32,12 +32,11 @@ def run(subsampling=1, inliers_threshold=0.2):
     n_samples = data.shape[0] * 5
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
-    thresholder = membership.LocalHardThresholder(inliers_threshold,
-                                                  ratio=local_ratio)
+    thresholder = membership.LocalThresholder(inliers_threshold,
+                                              ratio=local_ratio)
     min_sample_size = plane.Plane().min_sample_size
     ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio, min_sample_size)
-
-
+Fixed
     seed = 0
     # seed = np.random.randint(0, np.iinfo(np.uint32).max)
     print('seed:', seed)

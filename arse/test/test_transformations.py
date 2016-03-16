@@ -123,7 +123,10 @@ def run_biclustering(model_class, data, pref_matrix, comp_level, thresholder,
     plot_models(data, bc_groups, palette=colors)
     plt.savefig(output_prefix + '_final_models.pdf', dpi=600)
 
-    inliers = reduce(lambda a, b: np.logical_or(a, b), bc_groups)
+    if bc_groups:
+        inliers = reduce(lambda a, b: np.logical_or(a, b), bc_groups)
+    else:
+        inliers = np.zeros((pref_matrix.shape[0],), dtype=np.bool)
     bc_groups.append(np.logical_not(inliers))
     gt_groups = ground_truth(data['label'])
     gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
@@ -183,7 +186,7 @@ def test(model_class, data, name, ransac_gen, thresholder, ac_tester,
 
 
 def run(transformation, inliers_threshold):
-    logger = test_utils.Logger('test_{0}_{1:.1e}.txt'.format(transformation,
+    logger = test_utils.Logger('test_{0}_{1:e}.txt'.format(transformation,
                                                              inliers_threshold))
     sys.stdout = logger
 
@@ -229,7 +232,7 @@ def run(transformation, inliers_threshold):
         np.random.seed(seed)
 
         prefix = example[:-4]
-        dir_name = '{0}_{1:.1e}'.format(transformation, inliers_threshold)
+        dir_name = '{0}_{1:e}'.format(transformation, inliers_threshold)
 
         res = test(model_class, data, prefix, generator, thresholder, ac_tester,
                    dir_name)

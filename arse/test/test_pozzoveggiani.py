@@ -112,7 +112,8 @@ def run(subsampling=1, inliers_threshold=0.2):
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
     thresholder = membership.LocalThresholder(inliers_threshold,
                                                   ratio=local_ratio)
-    ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio)
+    min_sample_size = plane.Plane().min_sample_size
+    ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio, min_sample_size)
 
     projector = Projector(data, visibility, proj_mat, dirname)
 

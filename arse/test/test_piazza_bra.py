@@ -36,7 +36,7 @@ def run(subsampling=1, inliers_threshold=0.2):
                                               ratio=local_ratio)
     min_sample_size = plane.Plane().min_sample_size
     ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio, min_sample_size)
-Fixed
+
     seed = 0
     # seed = np.random.randint(0, np.iinfo(np.uint32).max)
     print('seed:', seed)

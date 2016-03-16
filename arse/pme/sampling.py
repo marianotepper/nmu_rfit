@@ -58,7 +58,7 @@ class GaussianLocalSampler(object):
         self.n_samples = n_samples
         # p(x[i] | x[j]) = exp(-(dist(x[i], x[j])) / sigma)
         self.var = sigma ** 2
-        self.sample_map = SampleSet()
+        self.sample_set = SampleSet()
 
     def generate(self, x, min_sample_size):
         n_elements = len(x)

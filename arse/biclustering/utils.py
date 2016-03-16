@@ -106,9 +106,9 @@ def svds(array, k):
     success = False
     tol = 0
     while not success:
-        if tol > 1e-3:
+        if tol > 1e-2:
             raise spla.ArpackNoConvergence('SVD failed to converge with '
-                                           'tol={0}'.format(tol))
+                                           'tol={0}'.format(tol), None, None)
         try:
             u, s, vt = spla.svds(array, k, tol=tol)
             success = True

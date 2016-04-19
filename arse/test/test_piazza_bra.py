@@ -11,13 +11,13 @@ import arse.test.utils as utils
 import arse.test.test_3d as test_3d
 
 
-def run(subsampling=1, inliers_threshold=0.2):
+def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
     logger = utils.Logger('piazza_bra_s{0}.txt'.format(subsampling))
     sys.stdout = logger
 
     sigma = 1
     epsilon = 0
-    local_ratio = 3.
+    local_ratio = 2.
 
     name = 'Piazza_Bra'
     dirname = '../data/' + name + '/'
@@ -44,7 +44,7 @@ def run(subsampling=1, inliers_threshold=0.2):
 
     output_prefix = name + '_n{0}'.format(data.shape[0])
     test_3d.test(plane.Plane, data, output_prefix, ransac_gen, thresholder,
-                 ac_tester, run_regular=True)
+                 ac_tester, run_regular=run_regular)
 
     plt.close('all')
 
@@ -53,10 +53,10 @@ def run(subsampling=1, inliers_threshold=0.2):
 
 
 def run_all():
-    run(subsampling=10, inliers_threshold=0.1)
-    run(subsampling=5, inliers_threshold=0.1)
-    run(subsampling=2, inliers_threshold=0.1)
-    run(subsampling=1, inliers_threshold=0.1)
+    run(subsampling=10, inliers_threshold=0.5, run_regular=True)
+    run(subsampling=5, inliers_threshold=0.5, run_regular=False)
+    run(subsampling=2, inliers_threshold=0.5, run_regular=False)
+    run(subsampling=1, inliers_threshold=0.5, run_regular=False)
 
 
 if __name__ == '__main__':

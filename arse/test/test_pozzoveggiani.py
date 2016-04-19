@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 import PIL.Image
 import numpy as np
 import scipy.io
+import functools
 import arse.pme.plane as plane
 import arse.pme.sampling as sampling
+import arse.pme.multigs as multigs
 import arse.pme.membership as membership
 import arse.pme.acontrario as ac
 import arse.test.utils as utils
@@ -75,13 +77,13 @@ class Projector(test_3d.BasePlotter):
             plt.savefig(self.filename_prefix_out + filename + '.pdf', dpi=600)
 
 
-def run(subsampling=1, inliers_threshold=0.2):
+def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
     logger = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
     sys.stdout = logger
 
     sigma = 1
     epsilon = 0
-    local_ratio = 3.
+    local_ratio = 2.
 
     name = 'PozzoVeggiani'
     dirname = '../data/' + name + '/'
@@ -92,8 +94,8 @@ def run(subsampling=1, inliers_threshold=0.2):
     visibility = mat['Visibility']
 
     # Removing far away points for display
-    keep = reduce(np.logical_and, [data[:, 0] > -10, data[:, 0] < 20,
-                                   data[:, 2] > 10, data[:, 2] < 45])
+    keep = functools.reduce(np.logical_and, [data[:, 0] > -10, data[:, 0] < 20,
+                                             data[:, 2] > 10, data[:, 2] < 45])
     data = data[keep, :]
     visibility = visibility[keep, :]
     # Re-order dimensions and invert vertical direction to get upright data
@@ -109,9 +111,9 @@ def run(subsampling=1, inliers_threshold=0.2):
 
     n_samples = data.shape[0]
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
-    ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
+    generator = sampling.ModelGenerator(plane.Plane, data, sampler)
     thresholder = membership.LocalThresholder(inliers_threshold,
-                                                  ratio=local_ratio)
+                                              ratio=local_ratio)
     min_sample_size = plane.Plane().min_sample_size
     ac_tester = ac.BinomialNFA(epsilon, 1. / local_ratio, min_sample_size)
 
@@ -123,8 +125,8 @@ def run(subsampling=1, inliers_threshold=0.2):
     np.random.seed(seed)
 
     output_prefix = name + '_n{0}'.format(data.shape[0])
-    test_3d.test(plane.Plane, data, output_prefix, ransac_gen, thresholder,
-                 ac_tester, plotter=projector, run_regular=True)
+    test_3d.test(plane.Plane, data, output_prefix, generator, thresholder,
+                 ac_tester, plotter=projector, run_regular=run_regular)
 
     plt.close('all')
 
@@ -133,10 +135,8 @@ def run(subsampling=1, inliers_threshold=0.2):
 
 
 def run_all():
-    run(subsampling=10, inliers_threshold=0.2)
-    run(subsampling=5, inliers_threshold=0.2)
-    run(subsampling=2, inliers_threshold=0.2)
-    run(subsampling=1, inliers_threshold=0.2)
+    for s_level in [10, 5, 2, 1]:
+        run(subsampling=s_level)
 
 
 if __name__ == '__main__':

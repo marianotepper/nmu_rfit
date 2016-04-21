@@ -154,23 +154,12 @@ def test(model_class, x, name, ransac_gen, thresholder, ac_tester, gt_groups,
     return stats_reg, stats_comp
 
 
-def run(restimate_gt=False):
-    log_file = 'test_2d_{0}.txt'
-    if restimate_gt:
-        log_file = log_file.format('restimate_gt')
-    else:
-        log_file = log_file.format('given_gt')
-    # RANSAC parameter
-    inliers_threshold = 0.015
+def run(types, inliers_threshold=0.02, local_ratio=3., restimate_gt=False):
 
-    logger = test_utils.Logger(log_file)
-    sys.stdout = logger
-
-    # RANSAC parameter
+    # Sampling ratio with respect to the number of elements
     sampling_factor = 10
     # a contrario test parameters
     epsilon = 0.
-    local_ratio = 3.
 
     config = {'Star': line.Line,
               'Stairs': line.Line,
@@ -180,7 +169,7 @@ def run(restimate_gt=False):
     stats_list = []
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
     for example in mat.keys():
-        for c in config:
+        for c in types:
             if example.find(c) == 0:
                 ex_type = c
                 break
@@ -239,13 +228,25 @@ def run(restimate_gt=False):
     test_utils.compute_stats(comp_list)
     print('-'*40)
 
-    sys.stdout = logger.stdout
-    logger.close()
-
 
 def run_all():
-    run(restimate_gt=False)
-    run(restimate_gt=True)
+    for restimate_gt in [False, True]:
+        log_file = 'test_2d_{0}.txt'
+        if restimate_gt:
+            log_file = log_file.format('restimate_gt')
+        else:
+            log_file = log_file.format('given_gt')
+
+        logger = test_utils.Logger(log_file)
+        sys.stdout = logger
+
+        run(['Star', 'Circles'], inliers_threshold=0.015, local_ratio=3.,
+            restimate_gt=restimate_gt)
+        run(['Stairs'], inliers_threshold=0.04, local_ratio=2.,
+            restimate_gt=restimate_gt)
+
+        sys.stdout = logger.stdout
+        logger.close()
 
 
 if __name__ == '__main__':

@@ -72,16 +72,6 @@ def plot_models(data, groups, palette, s=10, marker='o'):
         for g, color in zip(groups, palette):
             plt.scatter(pos_rc[g, 0], pos_rc[g, 1], c=color, edgecolors='face',
                         marker=marker, s=s)
-
-        # labels = ['{0}'.format(i) for i in range(pos.shape[0])]
-        # for label, x, y in zip(labels, pos_rc[:, 0], pos_rc[:, 1]):
-        #     plt.annotate(label, xy=(x, y), xytext=(-10, 10), size=3,
-        #                  textcoords='offset points', ha='right', va='bottom',
-        #                  bbox=dict(boxstyle='round, pad=0.5', fc='yellow',
-        #                            alpha=0.5),
-        #                  arrowprops=dict(arrowstyle='->', linewidth=.5,
-        #                                  color='yellow',
-        #                                  connectionstyle='arc3,rad=0'))
         plt.axis('off')
 
     x = data['data']

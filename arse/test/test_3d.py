@@ -99,15 +99,14 @@ class BasePlotter(object):
 
 def run_biclustering(model_class, x, pref_matrix, comp_level, thresholder,
                      ac_tester, output_prefix, plotter=None, gt_groups=None,
-                     palette='Set1', save_animation=True, share_elements=True):
+                     palette='Set1', save_animation=True):
     t = timeit.default_timer()
-    bic_list = bc.bicluster(pref_matrix, comp_level=comp_level,
-                            share_elements=share_elements)
+    bic_list = bc.bicluster(pref_matrix, comp_level=comp_level)
     t1 = timeit.default_timer() - t
     print('Time:', t1)
 
     models, bic_list = test_utils.clean(model_class, x, thresholder, ac_tester,
-                                        bic_list)
+                                        bic_list, check_overlap=True)
     bic_groups = [bic[0] for bic in bic_list]
 
     palette = sns.color_palette(palette, len(bic_list), desat=.5)
@@ -142,7 +141,7 @@ def run_biclustering(model_class, x, pref_matrix, comp_level, thresholder,
 
 def test(model_class, x, name, ransac_gen, thresholder, ac_tester,
          compression_level=32, plotter=None, run_regular=True, gt_groups=None,
-         save_animation=True, share_elements=True):
+         save_animation=True):
     print(name, x.shape)
 
     output_dir = '../results/'
@@ -181,8 +180,7 @@ def test(model_class, x, name, ransac_gen, thresholder, ac_tester,
                                      compression_level, thresholder, ac_tester,
                                      output_prefix + '_bic_reg',
                                      plotter=plotter, gt_groups=gt_groups,
-                                     save_animation=save_animation,
-                                     share_elements=share_elements)
+                                     save_animation=save_animation)
 
         return stats_comp, stats_reg
     else:

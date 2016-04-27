@@ -140,7 +140,7 @@ def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
 def run_all():
     subsampling_list = [10, 5, 2, 1]
     for s_level in subsampling_list:
-        run(subsampling=s_level, inliers_threshold=.1, run_regular=True)
+        run(subsampling=s_level, run_regular=True)
 
 
 if __name__ == '__main__':

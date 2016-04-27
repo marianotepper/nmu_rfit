@@ -11,13 +11,13 @@ import arse.test.utils as utils
 import arse.test.test_3d as test_3d
 
 
-def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
+def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
     logger = utils.Logger('piazza_bra_s{0}.txt'.format(subsampling))
     sys.stdout = logger
 
     sigma = 1
     epsilon = 0
-    local_ratio = 2.
+    local_ratio = 3.
 
     name = 'Piazza_Bra'
     dirname = '../data/' + name + '/'
@@ -29,7 +29,7 @@ def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
     points_considered = np.arange(0, data.shape[0], subsampling)
     data = data[points_considered, :]
 
-    n_samples = data.shape[0] * 5
+    n_samples = data.shape[0] * 2
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
     ransac_gen = sampling.ModelGenerator(plane.Plane, data, sampler)
     thresholder = membership.LocalThresholder(inliers_threshold,
@@ -53,10 +53,10 @@ def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
 
 
 def run_all():
-    run(subsampling=10, inliers_threshold=0.5, run_regular=True)
-    run(subsampling=5, inliers_threshold=0.5, run_regular=False)
-    run(subsampling=2, inliers_threshold=0.5, run_regular=False)
-    run(subsampling=1, inliers_threshold=0.5, run_regular=False)
+    run(subsampling=10, run_regular=True)
+    run(subsampling=5, run_regular=False)
+    run(subsampling=2, run_regular=False)
+    run(subsampling=1, run_regular=False)
 
 
 if __name__ == '__main__':

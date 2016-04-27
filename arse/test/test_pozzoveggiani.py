@@ -77,13 +77,13 @@ class Projector(test_3d.BasePlotter):
             plt.savefig(self.filename_prefix_out + filename + '.pdf', dpi=600)
 
 
-def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
+def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
     logger = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
     sys.stdout = logger
 
     sigma = 1
     epsilon = 0
-    local_ratio = 2.
+    local_ratio = 3
 
     name = 'PozzoVeggiani'
     dirname = '../data/' + name + '/'
@@ -104,12 +104,15 @@ def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
     proj_mat[:, 1, :] *= -1
     proj_mat = np.take(proj_mat, [0, 2, 1, 3], axis=1)
 
+    # center data
+    data -= np.mean(data, axis=0)
+
     # subsample the input points
     points_considered = np.arange(0, data.shape[0], subsampling)
     data = data[points_considered, :]
     visibility = visibility[points_considered, :]
 
-    n_samples = data.shape[0]
+    n_samples = data.shape[0] * 2
     sampler = sampling.GaussianLocalSampler(sigma, n_samples)
     generator = sampling.ModelGenerator(plane.Plane, data, sampler)
     thresholder = membership.LocalThresholder(inliers_threshold,
@@ -135,8 +138,9 @@ def run(subsampling=1, inliers_threshold=0.5, run_regular=True):
 
 
 def run_all():
-    for s_level in [10, 5, 2, 1]:
-        run(subsampling=s_level)
+    subsampling_list = [10, 5, 2, 1]
+    for s_level in subsampling_list:
+        run(subsampling=s_level, inliers_threshold=.1, run_regular=True)
 
 
 if __name__ == '__main__':

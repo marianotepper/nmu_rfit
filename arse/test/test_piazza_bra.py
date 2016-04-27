@@ -53,10 +53,10 @@ def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
 
 
 def run_all():
-    run(subsampling=10, run_regular=True)
-    run(subsampling=5, run_regular=False)
+    # run(subsampling=10, run_regular=True)
+    # run(subsampling=5, run_regular=False)
     run(subsampling=2, run_regular=False)
-    run(subsampling=1, run_regular=False)
+    # run(subsampling=1, run_regular=False)
 
 
 if __name__ == '__main__':

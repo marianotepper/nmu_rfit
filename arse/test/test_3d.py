@@ -111,10 +111,6 @@ def run_biclustering(model_class, x, pref_matrix, comp_level, thresholder,
 
     palette = sns.color_palette(palette, len(bic_list), desat=.5)
 
-    plt.figure()
-    pref.plot(pref_matrix, bic_list=bic_list, palette=palette)
-    plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
-
     mod_inliers_list = zip(models, bic_groups)
 
     filename = output_prefix + '_final_models'
@@ -161,10 +157,6 @@ def test(model_class, x, name, ransac_gen, thresholder, ac_tester,
     print('Preference matrix size:', pref_matrix.shape)
 
     scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
-
-    plt.figure()
-    pref.plot(pref_matrix)
-    plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
 
     print('Running compressed bi-clustering')
     stats_comp = run_biclustering(model_class, x, pref_matrix,

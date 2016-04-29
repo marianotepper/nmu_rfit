@@ -67,7 +67,7 @@ def clean(model_class, x, thresholder, ac_tester, bic_list,
                                                    model_list, bic_list)
 
     if check_overlap:
-        keep = keep_disjoint(ac_tester, inliers_list, model_list)
+        keep = keep_disjoint(ac_tester, inliers_list)
         inliers_list, model_list, bic_list = filter_in(keep, inliers_list,
                                                        model_list, bic_list)
 
@@ -92,16 +92,18 @@ def filter_in(keep, inliers_list, model_list, bic_list):
     return inliers_list, model_list, bic_list
 
 
-def keep_disjoint(tester, inliers_list, model_list, tol=0.5):
+def keep_disjoint(tester, inliers_list, tol=0.3):
     size = range(len(inliers_list))
     to_remove = []
     for i1, i2 in itt.combinations(size, 2):
-        in1 = inliers_list[i1] > 0
-        in2 = inliers_list[i2] > 0
-        overlap = float(np.sum(np.logical_and(in1, in2)))
-        overlap /= np.maximum(np.sum(in1), np.sum(in2))
+        in1 = inliers_list[i1]
+        in2 = inliers_list[i2]
+        in1_binary = in1 > 0
+        in2_binary = in2 > 0
+        overlap = float(np.sum(np.logical_and(in1_binary, in2_binary)))
+        overlap /= np.maximum(np.sum(in1_binary), np.sum(in2_binary))
         if overlap > tol:
-            if tester.nfa(inliers_list[i1]) < tester.nfa(inliers_list[i2]):
+            if tester.nfa(in1) < tester.nfa(in2):
                 to_remove.append(i2)
             else:
                 to_remove.append(i1)

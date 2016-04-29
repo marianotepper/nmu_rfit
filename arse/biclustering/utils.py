@@ -35,7 +35,6 @@ def sparsify(x, tol=1e-4, dtype=None):
     return sparse((v[mask], (i[mask], j[mask])), shape=x.shape, dtype=dtype)
 
 
-
 @multipledispatch.dispatch(sp.spmatrix, sp.spmatrix)
 def relative_error(mat_ref, mat, ord='fro'):
     if ord == 'fro':

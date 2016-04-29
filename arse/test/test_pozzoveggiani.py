@@ -2,13 +2,13 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 import matplotlib.pyplot as plt
+import seaborn.apionly as sns
 import PIL.Image
 import numpy as np
 import scipy.io
 import functools
 import arse.pme.plane as plane
 import arse.pme.sampling as sampling
-import arse.pme.multigs as multigs
 import arse.pme.membership as membership
 import arse.pme.acontrario as ac
 import arse.test.utils as utils
@@ -78,7 +78,8 @@ class Projector(test_3d.BasePlotter):
 
 
 def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
-    logger = utils.Logger('pozzoveggiani_s{0}.txt'.format(subsampling))
+    log_filename = 'pozzoveggiani_s{0}.txt'.format(subsampling)
+    logger = utils.Logger(log_filename)
     sys.stdout = logger
 
     sigma = 1
@@ -136,11 +137,20 @@ def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
     sys.stdout = logger.stdout
     logger.close()
 
+    return log_filename
+
 
 def run_all():
     subsampling_list = [10, 5, 2, 1]
+    log_filenames = []
     for s_level in subsampling_list:
-        run(subsampling=s_level, run_regular=True)
+        fn = run(subsampling=s_level, run_regular=True)
+        log_filenames.append(fn)
+
+    # log_filenames = ['pozzoveggiani_s10.txt', 'pozzoveggiani_s5.txt',
+    #                  'pozzoveggiani_s2.txt', 'pozzoveggiani_s1.txt']
+    test_3d.plot_times(log_filenames, 'pozzoveggiani_times', relative=False)
+    test_3d.plot_times(log_filenames, 'pozzoveggiani_times', relative=True)
 
 
 if __name__ == '__main__':

@@ -7,6 +7,7 @@ import numpy as np
 import scipy.sparse as sp
 import timeit
 import scipy.io
+import re
 import arse.pme.preference as pref
 import arse.biclustering as bc
 import arse.test.utils as test_utils
@@ -98,8 +99,8 @@ class BasePlotter(object):
 
 
 def run_biclustering(model_class, x, pref_matrix, comp_level, thresholder,
-                     ac_tester, output_prefix, plotter=None, gt_groups=None,
-                     palette='Set1', save_animation=True):
+                     ac_tester, output_prefix, plotter=None, palette='Set1',
+                     save_animation=True):
     t = timeit.default_timer()
     bic_list = bc.bicluster(pref_matrix, comp_level=comp_level)
     t1 = timeit.default_timer() - t
@@ -128,15 +129,9 @@ def run_biclustering(model_class, x, pref_matrix, comp_level, thresholder,
         plotter.filename_prefix_out = output_prefix
         special_plot(mod_inliers_list, palette)
 
-    if gt_groups is not None:
-        gnmi, prec, rec = test_utils.compute_measures(gt_groups, bic_groups)
-        return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
-    else:
-        return dict(time=t1)
-
 
 def test(model_class, x, name, ransac_gen, thresholder, ac_tester,
-         compression_level=32, plotter=None, run_regular=True, gt_groups=None,
+         compression_level=32, plotter=None, run_regular=True,
          save_animation=True):
     print(name, x.shape)
 
@@ -159,21 +154,80 @@ def test(model_class, x, name, ransac_gen, thresholder, ac_tester,
     scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
 
     print('Running compressed bi-clustering')
-    stats_comp = run_biclustering(model_class, x, pref_matrix,
-                                  compression_level, thresholder, ac_tester,
-                                  output_prefix + '_bic_comp', plotter=plotter,
-                                  gt_groups=gt_groups,
-                                  save_animation=save_animation)
+    run_biclustering(model_class, x, pref_matrix, compression_level,
+                     thresholder, ac_tester, output_prefix + '_bic_comp',
+                     plotter=plotter, save_animation=save_animation)
 
     if run_regular:
         print('Running regular bi-clustering')
         compression_level = None
-        stats_reg = run_biclustering(model_class, x, pref_matrix,
-                                     compression_level, thresholder, ac_tester,
-                                     output_prefix + '_bic_reg',
-                                     plotter=plotter, gt_groups=gt_groups,
-                                     save_animation=save_animation)
+        run_biclustering(model_class, x, pref_matrix, compression_level,
+                         thresholder, ac_tester, output_prefix + '_bic_reg',
+                         plotter=plotter, save_animation=save_animation)
 
-        return stats_comp, stats_reg
-    else:
-        return stats_comp
+
+def plot_times(log_filenames, output_filename, relative=False, col_width=0.35):
+    pattern_size = 'Preference matrix size: \((?P<m>.+), (?P<n>.+)\)'
+    pref_sizes = []
+    comp_time = []
+    reg_time = []
+    for fn in log_filenames:
+        with open(fn, 'r') as f:
+            s = str(f.read())
+            m = re.search(pattern_size, s).groupdict()
+            pref_sizes.append((int(m['m']), int(m['n'])))
+
+            def retrieve_time(pat_type):
+                pattern_time = 'Running {0} bi-clustering\nTime: (?P<time>.+)'
+                m = re.search(pattern_time.format(pat_type), s)
+                if m is None:
+                    return np.nan
+                else:
+                    return float(m.groupdict()['time'])
+
+            comp_time.append(retrieve_time('compressed'))
+            reg_time.append(retrieve_time('regular'))
+
+    idx = np.arange(len(log_filenames))
+    rse_time = np.array(reg_time)
+    arse_time = np.array(comp_time)
+    if relative:
+        ps = np.array([np.prod(s) for s in pref_sizes])
+        rse_time = rse_time / ps
+        arse_time = arse_time / ps
+
+    colors = sns.color_palette('Set1', n_colors=2)
+
+    with sns.axes_style('whitegrid'):
+        plt.figure()
+        plt.yscale('log')
+
+        bars = plt.bar(idx, rse_time, col_width, linewidth=0, color=colors[0])
+        bars.set_label('RSE')
+        bars = plt.bar(idx + col_width, arse_time, col_width, linewidth=0,
+                       color=colors[1])
+        bars.set_label('ARSE')
+
+        plt.xticks(idx + col_width, pref_sizes, horizontalalignment='center',
+                   fontsize='16')
+        _, labels = plt.yticks()
+        for l in labels:
+            l.set_fontsize(16)
+
+        plt.xlabel('Preference matrix size', fontsize='16')
+        if relative:
+            plt.ylabel('Time / size', fontsize='16')
+            loc = 'upper right'
+        else:
+            plt.ylabel('Time (s)', fontsize='16')
+            loc = 'upper left'
+
+        plt.legend(ncol=2, fontsize='16', loc=loc)
+
+        plt.xlim(-col_width, idx.size + col_width / 2)
+        plt.tight_layout()
+
+        if relative:
+            output_filename += '_relative'
+        output_filename += '.pdf'
+        plt.savefig(output_filename, dpi=600)

@@ -12,7 +12,8 @@ import arse.test.test_3d as test_3d
 
 
 def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
-    logger = utils.Logger('piazza_bra_s{0}.txt'.format(subsampling))
+    log_filename = 'piazza_bra_s{0}.txt'.format(subsampling)
+    logger = utils.Logger(log_filename)
     sys.stdout = logger
 
     sigma = 1
@@ -51,13 +52,21 @@ def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
     sys.stdout = logger.stdout
     logger.close()
 
+    return log_filename
+
 
 def run_all():
-    # run(subsampling=10, run_regular=True)
-    # run(subsampling=5, run_regular=False)
-    run(subsampling=2, run_regular=False)
-    # run(subsampling=1, run_regular=False)
+    subsampling_list = [10, 5, 2, 1]
+    run_regular_list = [True, True, False, False]
+    log_filenames = []
+    for s_level, run_regular in zip(subsampling_list, run_regular_list):
+        fn = run(subsampling=s_level, run_regular=run_regular)
+        log_filenames.append(fn)
 
+    # log_filenames = ['piazza_bra_s10.txt', 'piazza_bra_s5.txt',
+    #                  'piazza_bra_s2.txt', 'piazza_bra_s1.txt']
+    test_3d.plot_times(log_filenames, 'piazza_bra_times', relative=False)
+    test_3d.plot_times(log_filenames, 'piazza_bra_times', relative=True)
 
 if __name__ == '__main__':
     run_all()

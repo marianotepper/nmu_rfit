@@ -105,9 +105,6 @@ def run(subsampling=1, inliers_threshold=0.1, run_regular=True):
     proj_mat[:, 1, :] *= -1
     proj_mat = np.take(proj_mat, [0, 2, 1, 3], axis=1)
 
-    # center data
-    data -= np.mean(data, axis=0)
-
     # subsample the input points
     points_considered = np.arange(0, data.shape[0], subsampling)
     data = data[points_considered, :]

@@ -1,7 +1,7 @@
 *.txt
-/arse/results/*
-/arse/pme/lsd/lsd
-/arse/pme/lsd/lsd_call_example
-/arse/pme/lsd/doc
-/arse/data/*
-!/arse/data/sources.txt
+/rnmu/results/*
+/rnmu/pme/lsd/lsd
+/rnmu/pme/lsd/lsd_call_example
+/rnmu/pme/lsd/doc
+/rnmu/data/*
+!/rnmu/data/sources.txt

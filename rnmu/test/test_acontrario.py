@@ -97,10 +97,8 @@ def plot_projection(data, mss, sigma, subplots):
     color[:, 3] = membership
     plt.scatter(loc, 2 * np.ones_like(loc), color=color, marker='o', s=10)
 
-    plt.axis('equal')
 
-
-def plot_soft_line(line, sigma, box, n_levels=10, color='r', alpha=0.8):
+def plot_soft_line(ax, line, sigma, box, n_levels=10, color='r', alpha=0.8):
     x_min, x_max = box
     xi, yi = np.mgrid[slice(x_min[0], x_max[0], .001),
                       slice(x_min[1], x_max[1], .001)]
@@ -115,7 +113,7 @@ def plot_soft_line(line, sigma, box, n_levels=10, color='r', alpha=0.8):
     colors = np.tile(c, (n_levels, 1))
     colors[:, 3] = levels
 
-    plt.contourf(xi, yi, alphas, levels=levels, colors=colors, antialiased=True)
+    ax.contourf(xi, yi, alphas, levels=levels, colors=colors, antialiased=True)
 
 
 def beta_derivative(x, a, b):
@@ -126,99 +124,164 @@ def beta_derivative(x, a, b):
     return fprime, p
 
 
-def plot_orthogonal_projection(data, mss, sigma, subplots):
+def plot_orthogonal_projection(data, mss, sigma, axes):
     line = Line(data[mss, :])
 
     dists = line.distances(data) / sigma
-    membership = np.exp(-np.power(dists, 2))
+    membership = np.exp(-(dists ** 2))
 
-    plt.subplot(subplots[0])
+    if axes is not None:
+        x_lim = (data[:, 0].min() - 0.1, data[:, 0].max() + 0.1)
+        y_lim = (data[:, 1].min() - 0.1, data[:, 1].max() + 0.1)
+        bbox = np.vstack((x_lim, y_lim)).T
 
-    x_lim = (data[:, 0].min() - 0.1, data[:, 0].max() + 0.1)
-    y_lim = (data[:, 1].min() - 0.1, data[:, 1].max() + 0.1)
-    bbox = np.vstack((x_lim, y_lim)).T
-    plt.xlim(x_lim)
-    plt.ylim(y_lim)
+        ax = axes[0]
+        ax.set_xlim(x_lim)
+        ax.set_ylim(y_lim)
+        ax.scatter(data[:, 0], data[:, 1], c='w', s=10)
+        ax.scatter(data[mss, 0], data[mss, 1], c='r', s=10)
+        plot_soft_line(ax, line, sigma, bbox, n_levels=10, color='r', alpha=0.8)
+        ax.set_aspect('equal', adjustable='box')
 
-    plt.scatter(data[:, 0], data[:, 1], c='w', s=10)
-    plt.scatter(data[mss, 0], data[mss, 1], c='r', s=10)
-    plot_soft_line(line, sigma, bbox, n_levels=10, color='r', alpha=0.8)
+    cutoff = 3
+    idx = membership > np.exp(-(cutoff ** 2))
+    membership = membership[idx]
+    membership = np.insert(membership, 0, 0)
 
-    plt.axis('equal')
+    pvalue = scipy.stats.kstest(membership, 'uniform', alternative='less')[1]
 
-    idx = np.logical_and(membership > 0, membership < 1)
-    est_values = membership[idx]
+    if axes is not None:
+        membership.sort()
 
-    mean = np.mean(est_values)
-    var = np.var(est_values, ddof=1)
-    a = mean * (mean * (1 - mean) / var - 1)
-    b = (1 - mean) * (mean * (1 - mean) / var - 1)
-    # print(a, b)
+        n = len(membership)
+        acc = np.arange(n, dtype=np.float)
+        acc /= n
 
-    hist, bin_edges = np.histogram(membership, bins=100, range=(0, 1),
-                                   density=True)
-    hist = np.cumsum(hist * np.diff(bin_edges))
-    x = bin_edges[:-1] + np.diff(bin_edges) / 2
-    center = np.logical_and(x > 0.2, x < 0.8)
-    x = x[center]
-    hist_center = hist[center]
-    slope = Line(np.vstack((x, hist_center)).T)
+        below = membership > acc
 
-    plt.subplot(subplots[1])
-    plt.hist(membership, bins=100, normed=True, cumulative=True, histtype='step', edgecolor='k', linewidth=2)
-    # vals = np.linspace(0, 1, num=100)
-    # plt.plot(vals, scipy.stats.beta.cdf(vals, a, b), 'g-', linewidth=2)
-    # fprime, p = beta_derivative(0.5, a, b)
-    # plt.plot([0, 1], [p, fprime + p], 'r--', linewidth=2)
-    # plt.scatter(0.5, scipy.stats.beta.cdf(0.5, a, b), c='k')
-    # slope.plot(color='r', linewidth=2)
-    plt.plot([0, 1], [ hist[0], 1])
-    plt.xlim((0, 1))
-    plt.ylim((hist[0], 1))
-    # one_crossing = -(slope.eq[0] + slope.eq[2]) / slope.eq[1]
-    # plt.title('{}'.format(one_crossing))
+        idx = np.where(below)[0]
+        starts = np.setdiff1d(idx - 1, idx)
+        ends = np.setdiff1d(idx + 1, idx)
+
+        def get_crossing(i):
+            if i < 0 or i + 2 >= n:
+                return None
+            sl = slice(i, i + 2)
+            x1 = membership[sl]
+            y2 = acc[sl]
+
+            pts2 = np.vstack((x1, y2)).T
+            crossing = np.cross([-1, 1, 0], Line(pts2).eq)
+            crossing /= crossing[2]
+            return crossing
+
+        membership_all_runs = []
+        acc_all_runs = []
+        for s, e in zip(starts, ends):
+            run = slice(s + 1, e)
+            membership_run = membership[run]
+            acc_run = acc[run]
+
+            crossing = get_crossing(s)
+            if crossing is not None:
+                membership_run = np.insert(membership_run, 0, crossing[0])
+                acc_run = np.insert(acc_run, 0, crossing[1])
+
+            crossing = get_crossing(e - 1)
+            if crossing is not None:
+                membership_run = np.append(membership_run, crossing[0])
+                acc_run = np.append(acc_run, crossing[1])
+
+            membership_all_runs = np.hstack(
+                (membership_all_runs, membership_run))
+            acc_all_runs = np.hstack((acc_all_runs, acc_run))
+
+        ax = axes[1]
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+
+        ax.plot(membership, acc, 'k-', linewidth=2)
+        ax.plot([0, 1], [0, 1], 'g-', linewidth=2)
+
+        ax.fill_between(membership_all_runs, membership_all_runs, acc_all_runs,
+                         color='g', alpha=0.5)
+
+        arg_Dmin = np.argmax(membership - acc)
+        pt = membership[arg_Dmin]
+        ax.plot([pt, pt], [pt, acc[arg_Dmin]], 'r-', linewidth = 2)
+
+        ax.set_aspect('equal', adjustable='box')
+
+        # ax.set_title('p-value: {:.2e}'.format(pvalue))
+        ax.set_title('NFA: {:.2e}'.format(n_tests(n) * pvalue))
+
+    return pvalue
 
 
-def main():
+def main(sigma=0.02):
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
-    print(mat.keys())
 
-    data = mat['Stairs4_S00075_O60'].T
+    # data = mat['Stairs4_S00075_O60'].T
     # data = mat['Star5_S00075_O50'].T
-    # data = 2 * np.random.rand(500, 2) - 1
-    # noise = 2 * np.random.rand(500, 2) - 1
-    # data = np.vstack([data, noise])
+    data = 2 * np.random.rand(500, 2) - 1
     n = len(data)
     print(n, n_tests(n))
 
-    # plt.figure()
-
     random_sample = np.random.randint(n, size=2)
-    # random_sample = [66, 494]
-    # random_sample = [283r, 473]
-    # random_sample = [380, 147]
-    # random_sample = [36, 392]
-    # random_sample = [60, 80]
+    # random_sample = [1, 30]
     print(random_sample)
 
-    # sigma = 0.03
-    # plot_projection(data, [0, 40], sigma, [241, 242])
-    # plot_projection(data, random_sample, sigma, [245, 246])
-    #
-    sigma = 0.02
-    # plot_projection(data, [0, 40], sigma, [243, 244])
-    # plot_projection(data, random_sample, sigma, [247, 248])
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    plot_orthogonal_projection(data, random_sample, sigma, axes)
 
-    # plot_orthogonal_projection(data, [3, 10], sigma, [221, 222])
-    # plot_orthogonal_projection(data, random_sample, sigma, [223, 224])
+    # i = 0
+    # for j in range(0, 50):
+    #     if i == j:
+    #         continue
+    #     random_sample = [i, j]
+    #     plt.figure()
+    #     plot_orthogonal_projection(data, random_sample, sigma, [121, 122])
 
-    for j in range(40, 60):
-        random_sample = [0, j]
-        plt.figure()
-        plot_orthogonal_projection(data, random_sample, sigma, [121, 122])
+
+def paper_figure(sigma=0.02):
+    mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
+
+    data = mat['Stairs4_S00075_O60'].T
+    n = len(data)
+    print(n, n_tests(n))
+
+    fig, axes = plt.subplots(nrows=2, ncols=4)
+
+    plot_orthogonal_projection(data, [3, 10], sigma, axes[:, 0])
+    plot_orthogonal_projection(data, [60, 92], sigma, axes[:, 1])
+    plot_orthogonal_projection(data, [4, 180], sigma, axes[:, 2])
+    plot_orthogonal_projection(data, [250, 260], sigma, axes[:, 3])
+
+    fig.tight_layout(pad=0, h_pad=-3, w_pad=-1)
+
+
+def half_layout(sigma=0.02):
+    data = np.random.rand(500, 2)
+    data[:, 0] /= 2
+    data = np.append(data, np.array([[1, 0], [.5, 0], [.5, 1]]), axis=0)
+    n = len(data)
+    print(data.shape, n_tests(n))
+
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+
+    plot_orthogonal_projection(data, [-1, -2], sigma, axes)
+
+    # i = 0
+    # for j in range(0, 50):
+    #     if i == j:
+    #         continue
+    #     random_sample = [i, j]
+    #     plt.figure()
+    #     plot_orthogonal_projection(data, random_sample, sigma, [121, 122])
 
 
 if __name__ == '__main__':
-    # print(np.exp(-.5**2))
     main()
+    # half_layout()
+    # paper_figure()
     plt.show()

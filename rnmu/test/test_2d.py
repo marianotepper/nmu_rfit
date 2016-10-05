@@ -8,10 +8,9 @@ import numpy as np
 import scipy.io
 import re
 import timeit
-import rnmu.approximation as approximation
 import rnmu.test.utils as test_utils
+import rnmu.pme.detection as detection
 import rnmu.pme.multigs as multigs
-import rnmu.pme.preference as pref
 import rnmu.pme.sampling as sampling
 import rnmu.pme.line as line
 import rnmu.pme.circle as circle
@@ -33,10 +32,10 @@ def base_plot(x):
     plt.scatter(x[:, 0], x[:, 1], c='w', marker='o', s=10)
 
 
-def plot_final_models(x, models, palette):
+def plot_models(x, models, palette):
     base_plot(x)
-    for i, mod in enumerate(models):
-        mod.plot(color=palette[i], linewidth=5, alpha=0.5)
+    for mod, color in zip(models, palette):
+        mod.plot(color=color, linewidth=5, alpha=0.5)
 
 
 def plot_original_models(x, original_models, bic_list, palette):
@@ -49,10 +48,11 @@ def plot_original_models(x, original_models, bic_list, palette):
 def plot_final_biclusters(x, bic_list, palette):
     base_plot(x)
     for i, (lf, rf) in enumerate(bic_list):
-        sel = np.nonzero(lf)[0]
-        color = np.array(len(sel) * [palette[i]])
-        color = np.append(color, lf, axis=1)
-        plt.scatter(x[sel, 0], x[sel, 1], c=color, marker='o', s=10)
+        sel = np.squeeze(lf > 0)
+        color = np.array(sel.sum() * [palette[i]])
+        color = np.append(color, lf[sel], axis=1)
+        plt.scatter(x[sel, 0], x[sel, 1], c=color, marker='o', s=10,
+                    edgecolors='none')
 
 
 def ground_truth(data, n_groups, group_size=50):
@@ -65,84 +65,62 @@ def ground_truth(data, n_groups, group_size=50):
     return gt_groups
 
 
-def run_biclustering(model_class, x, original_models, pref_matrix,
-                     gt_groups, output_prefix, palette='Set1'):
+def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
     t = timeit.default_timer()
-    bic_list = approximation.recursive_nmu(pref_matrix, r=4)
+    pref_matrix, orig_models, models, bic_list = detection.run(ransac_gen, x,
+                                                               sigma,
+                                                               n_models=20)
     t1 = timeit.default_timer() - t
-    print('Time:', t1)
+    print('Total time:', t1)
 
-    models, bic_list = test_utils.clean(model_class, x, bic_list)
+    base_plot(x)
+    if name is not None:
+        plt.savefig(name + '_data.pdf', dpi=600)
+
+    plt.figure()
+    detection.plot(pref_matrix)
+    if name is not None:
+        plt.savefig(name + '_pref_mat.pdf', dpi=600)
 
     palette = sns.color_palette(palette, len(bic_list))
 
-    plot_final_models(x, models, palette=palette)
-    # plt.savefig(output_prefix + '_final_models.pdf', dpi=600)
+    plot_models(x, models, palette=palette)
+    if name is not None:
+        plt.savefig(name + '_final_models.pdf', dpi=600)
 
     plot_final_biclusters(x, bic_list, palette=palette)
 
-    plot_original_models(x, original_models, bic_list, palette)
-    # plt.savefig(output_prefix + '_bundles.pdf', dpi=600)
-    #
-    # bc_groups = [bic[0] for bic in bic_list]
-    # gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
-    #
-    # return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
-    return None
+    plot_original_models(x, orig_models, bic_list, palette)
+    # if name is not None:
+    #     plt.savefig(name + '_bundles.pdf', dpi=600)
 
+    bc_groups = [bic[0] for bic in bic_list]
+    gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
 
-def test(model_class, x, name, ransac_gen, gt_groups, dir_name=None):
-    print(name, x.shape)
-
-    output_dir = '../results/'
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    if dir_name is not None:
-        output_dir += '{0}/'.format(dir_name)
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    output_prefix = output_dir + name
-
-    base_plot(x)
-    plt.savefig(output_prefix + '_data.pdf', dpi=600)
-
-    pref_matrix, orig_models = pref.build_preference_matrix(ransac_gen, x)
-
-    scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix,
-                                              'orig_models': orig_models})
-    with open(output_prefix + '.pickle', 'wb') as handle:
-        pickle.dump(pref_matrix, handle)
-        pickle.dump(orig_models, handle)
-    with open(output_prefix + '.pickle', 'rb') as handle:
-        pref_matrix = pickle.load(handle)
-        orig_models = pickle.load(handle)
-
-    print('Preference matrix size:', pref_matrix.shape)
-
-    plt.figure()
-    pref.plot(pref_matrix)
-    # plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
-
-    plt.figure()
-    pref.plot(pref_matrix.dot(pref_matrix.T))
-    # plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
-
-    print('Running regular bi-clustering')
-    stats_reg = run_biclustering(model_class, x, orig_models, pref_matrix,
-                                 gt_groups, output_prefix + '_bic_reg')
-
-    return stats_reg
+    return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
 def run(types):
-
     # Sampling ratio with respect to the number of elements
-    sampling_factor = 10
+    sampling_factor = 50
+    sigma = 0.05
 
     config = {'Star': line.Line,
               'Stairs': line.Line,
               'Circles': circle.Circle,
               }
+
+    dir_name = 'test_2d'
+    if dir_name is not None:
+        output_dir = '../results/'
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+        output_dir += '{0}/'.format(dir_name)
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+
+    logger = test_utils.Logger(output_dir + 'test_2d.txt')
+    sys.stdout = logger
 
     stats_list = []
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
@@ -158,7 +136,8 @@ def run(types):
         data = mat[example].T
 
         n_samples = data.shape[0] * sampling_factor
-        # generator = multigs.ModelGenerator(model_class, n_samples, batch=10, h_ratio=.1)
+        # generator = multigs.ModelGenerator(model_class, n_samples, batch=10,
+        #                                    h_ratio=.1)
         sampler = sampling.UniformSampler(n_samples)
         generator = sampling.ModelGenerator(model_class, sampler)
 
@@ -175,11 +154,9 @@ def run(types):
         print('seed:', seed)
         np.random.seed(seed)
 
-        output_prefix = example
-        dir_name = 'test_2d'
-
-        res = test(model_class, data, output_prefix, generator, gt_groups,
-                   dir_name=dir_name)
+        output_prefix = output_dir + example
+        res = test(generator, data, sigma, name=output_prefix,
+                   gt_groups=gt_groups)
         stats_list.append(res)
 
         print('-'*40)
@@ -194,17 +171,14 @@ def run(types):
     # test_utils.compute_stats(comp_list)
     # print('-'*40)
 
-
-def run_all():
-    logger = test_utils.Logger('test_2d.txt')
-    sys.stdout = logger
-
-    # run(['Star', 'Circles', 'Stairs'])
-    run(['Stairs'])
-    # run(['Circles'])
-
     sys.stdout = logger.stdout
     logger.close()
+
+
+def run_all():
+    run(['Star', 'Circles', 'Stairs'])
+    # run(['Stairs'])
+    # run(['Circles'])
 
 
 if __name__ == '__main__':

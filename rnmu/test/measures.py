@@ -23,24 +23,13 @@ def nmi(groups1, groups2):
     sumc0 = c.sum(axis=0)
     sumc1 = c.sum(axis=1)
 
-    if sp.issparse(c):
-        sumc0 = sumc0.A.squeeze()
-        sumc1 = sumc1.A.squeeze()
-        i, j, v = sp.find(c)
-        temp = v.copy()
-        temp = np.log(temp)
-        temp += np.log(n)
-        temp -= np.log(sumc0[j])
-        temp -= np.log(sumc1[i])
-        temp = c * v
-    else:
-        mask = [c > 0]
-        temp = c.copy()
-        temp[mask] = np.log(c[mask])
-        temp += np.log(n)
-        temp -= np.log(np.atleast_2d(sumc0))
-        temp -= np.log(np.atleast_2d(sumc1).T)
-        temp = c * temp
+    mask = [c > 0]
+    temp = c.copy()
+    temp[mask] = np.log(c[mask])
+    temp += np.log(n)
+    temp -= np.log(np.atleast_2d(sumc0))
+    temp -= np.log(np.atleast_2d(sumc1).T)
+    temp *= c
 
     term1 = temp.sum()
     term2 = np.sum(sumc1 * (np.log(sumc1) - np.log(n)))
@@ -56,13 +45,10 @@ def confusion_matrix(groups1, groups2):
 
     sparse_conf = nc1 * nc2 > 1e6
     # Build the confusion matrix
-    if sparse_conf:
-        conf = sp.lil_matrix((nc1, nc2))
-    else:
-        conf = np.zeros((nc1, nc2))
+    conf = np.zeros((nc1, nc2))
     for i, ci in enumerate(groups1):
         for j, cj in enumerate(groups2):
-            conf[i, j] = intersect_size(ci, cj)
+            conf[i, j] = intersect(ci, cj)
     return conf
 
 
@@ -82,10 +68,8 @@ def entropy(c, n):
 
 
 def entropy_per_group(group_list):
-    h = np.zeros((len(group_list),))
-    for i, c in enumerate(group_list):
-        h[i] = entropy(c, c.shape[0])
-    return h
+    h = [entropy(c, c.shape[0]) for c in group_list]
+    return np.array(h)
 
 
 def gnmi(groups1, groups2):
@@ -115,7 +99,7 @@ def gnmi(groups1, groups2):
         lc1 = size(c1)
         for i2, c2 in enumerate(groups2):
             lc2 = size(c2)
-            l12 = intersect_size(c1, c2)
+            l12 = intersect(c1, c2)
 
             ent = np.array([[-plogp((n - lc1 - lc2 + l12) / n),
                              -plogp((lc1 - l12) / n)],
@@ -141,15 +125,15 @@ def gnmi(groups1, groups2):
     sum_h21 /= len(groups2)
 
     # N(X|Y)
-    return 1 - (sum_h12 + sum_h21)/2
+    return 1 - (sum_h12 + sum_h21) / 2
 
 
-def intersect_size(c1, c2):
+def intersect(c1, c2):
     if sp.issparse(c1):
         c1 = c1.toarray()
     if sp.issparse(c2):
         c2 = c2.toarray()
-    return float(np.logical_and(np.squeeze(c1), np.squeeze(c2)).sum())
+    return np.dot(np.squeeze(c1), np.squeeze(c2))
 
 
 def size(c):
@@ -167,8 +151,19 @@ def mean_precision_recall(gt_groups, groups):
     if not groups:
         return 0, 0
     conf = confusion_matrix(gt_groups, groups)
+
+    import matplotlib.pyplot as plt
+    plt.matshow(conf)
+
     idx = hungarian.linear_assignment(conf.max() - conf)
     conf = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
+
+    import matplotlib.pyplot as plt
+    plt.matshow(conf)
+
+    print [size(c) for c in gt_groups]
+    print [size(c) for c in groups]
+
     precision = np.trace(conf) / sum([size(c) for c in groups])
     recall = np.trace(conf) / sum([size(c) for c in gt_groups])
     return precision, recall

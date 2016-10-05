@@ -4,23 +4,25 @@ import matplotlib.pyplot as plt
 
 
 class Circle(object):
-
-    def __init__(self, data=None):
+    def __init__(self, data=None, weights=None):
         self.center = None
         self.radius = None
         if data is not None:
-            self.fit(data)
+            self.fit(data, weights=weights)
 
     @property
     def min_sample_size(self):
         return 3
 
-    def fit(self, data):
+    def fit(self, data, weights=None):
         if data.shape[0] < self.min_sample_size:
             raise ValueError('At least three points are needed to fit a circle')
 
         a = np.hstack((data, np.ones((data.shape[0], 1))))
         b = -np.sum(data ** 2, axis=1)
+        if weights is not None:
+            a *= weights[:, np.newaxis]
+            b *= weights
         y = np.linalg.lstsq(a, b)[0]
         self.center = -0.5 * y[:2]
         self.radius = np.sqrt(np.sum(self.center ** 2) - y[2])

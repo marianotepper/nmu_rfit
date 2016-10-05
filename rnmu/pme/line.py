@@ -1,30 +1,30 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import utils
 
 
 class Line(object):
-    def __init__(self, data=None):
+    def __init__(self, data=None, weights=None):
         self.eq = None
         if data is not None:
-            self.fit(data)
+            self.fit(data, weights=weights)
 
     @property
     def min_sample_size(self):
         return 2
 
-    def fit(self, data):
+    def fit(self, data, weights=None):
         if data.shape[0] < self.min_sample_size:
             raise ValueError('At least two points are needed to fit a line')
         if data.shape[1] != 2:
             raise ValueError('Points must be 2D')
 
         data = np.hstack((data, np.ones((data.shape[0], 1))))
-        data_norm, trans = utils.normalize_2d(data)
-        if data_norm.shape[0] == 2:
-            data_norm = np.vstack((data_norm, np.zeros((1, 3))))
-        _, _, v = np.linalg.svd(data_norm, full_matrices=False)
-        self.eq = v[2, :].dot(trans.T)
+        if weights is not None:
+            data *= weights[:, np.newaxis]
+        if data.shape[0] == 2:
+            data = np.vstack((data, np.zeros((1, 3))))
+        _, _, v = np.linalg.svd(data, full_matrices=False)
+        self.eq = v[2, :]
         self.eq /= np.linalg.norm(self.eq[:2])
 
     def distances(self, data):

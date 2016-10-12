@@ -1,6 +1,6 @@
 from __future__ import absolute_import
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Circle(object):
@@ -17,6 +17,11 @@ class Circle(object):
     def fit(self, data, weights=None):
         if data.shape[0] < self.min_sample_size:
             raise ValueError('At least three points are needed to fit a circle')
+        if (weights is not None and
+                    np.count_nonzero(weights) < self.min_sample_size):
+            raise ValueError('At least three points are needed to fit a circle')
+        if data.shape[1] != 2:
+            raise ValueError('Points must be 2D')
 
         a = np.hstack((data, np.ones((data.shape[0], 1))))
         b = -np.sum(data ** 2, axis=1)

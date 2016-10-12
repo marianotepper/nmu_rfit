@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Line(object):
@@ -14,6 +14,9 @@ class Line(object):
 
     def fit(self, data, weights=None):
         if data.shape[0] < self.min_sample_size:
+            raise ValueError('At least two points are needed to fit a line')
+        if (weights is not None and
+                    np.count_nonzero(weights) < self.min_sample_size):
             raise ValueError('At least two points are needed to fit a line')
         if data.shape[1] != 2:
             raise ValueError('Points must be 2D')
@@ -31,17 +34,6 @@ class Line(object):
         if data.shape[1] == 2:
             data = np.hstack((data, np.ones((data.shape[0], 1))))
         return np.abs(np.dot(data, self.eq))
-
-    def project(self, data):
-        u = np.array([self.eq[1], -self.eq[0]])
-        if abs(self.eq[1]) > abs(self.eq[0]):
-            x0 = np.array([0, -self.eq[2] / self.eq[1]])
-        else:
-            x0 = np.array([-self.eq[2] / self.eq[0], 0])
-        u /= np.linalg.norm(u)
-        s = np.dot(data - x0, u)
-        proj = x0 + np.atleast_2d(s).T * u
-        return proj, s, u, x0
 
     def plot(self, limits=None, **kwargs):
         if limits is None:

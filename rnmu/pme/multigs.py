@@ -22,7 +22,8 @@ class ModelGenerator(object):
         n_elements = self.elements.shape[0]
         min_sample_size = self.model_class().min_sample_size
 
-        sampler = sampling.UniformSampler(min(self.batch, self.n_samples))
+        sampler = sampling.UniformSampler(n_samples=min(self.batch,
+                                                        self.n_samples))
         mss_samples = sampler.generate(self.elements, min_sample_size)
 
         residuals = None

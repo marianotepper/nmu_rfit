@@ -1,7 +1,10 @@
 import numpy as np
 
 
-def recursive_nmu(array, r=1, max_iter=5e2, tol=1e-3, downdate='minus'):
+def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus'):
+    if r is None:
+        r = min(array.shape)
+
     array = array.copy()
     factors = []
     for _ in range(r):
@@ -9,9 +12,9 @@ def recursive_nmu(array, r=1, max_iter=5e2, tol=1e-3, downdate='minus'):
         factors.append((u, v))
         if downdate == 'minus':
             array = np.maximum(0, array - np.dot(u, v))
-        if downdate == 'hard_col' or downdate == 'hard':
+        if downdate == 'hard-col' or downdate == 'hard-both':
             array[:, np.squeeze(v > 0)] = 0
-        if downdate == 'hard_row' or downdate == 'hard':
+        if downdate == 'hard-row' or downdate == 'hard-both':
             array[np.squeeze(u > 0), :] = 0
         if array.max() == 0:
             break

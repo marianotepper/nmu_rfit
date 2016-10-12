@@ -27,10 +27,6 @@ def plot_soft_point(ax, point, sigma, box, n_levels=64, color='r', alpha=0.8):
     ax.contourf(xi, yi, alphas, levels=levels, colors=colors, antialiased=True)
 
 
-def n_tests(n):
-    return n * (n - 1.) / 2
-
-
 def plot_orthogonal_projection(data, mss, sigma, cutoff, axes=None):
     point = Point(data[mss, :])
 
@@ -134,7 +130,7 @@ def main(sigma=0.07, cutoff=1.5):
     data = np.append(noise, cl, axis=0)
 
     n = len(data)
-    print(n, n_tests(n))
+    print(n)
 
     # random_sample = np.random.randint(n, size=1)
     # print(random_sample)

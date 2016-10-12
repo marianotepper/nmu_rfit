@@ -26,10 +26,6 @@ def plot_soft_line(ax, line, sigma, box, n_levels=64, color='r', alpha=0.8):
     ax.contourf(xi, yi, alphas, levels=levels, colors=colors, antialiased=True)
 
 
-def n_tests(n):
-    return n * (n - 1.) / 2
-
-
 def plot_orthogonal_projection(data, mss, sigma, cutoff, axes=None):
     line = Line(data[mss, :])
 
@@ -124,7 +120,7 @@ def main(sigma=0.02, cutoff=3, transversal=True):
     # data = mat['Star5_S00075_O50'].T
     data = np.random.rand(5000, 2)
     n = len(data)
-    print(n, n_tests(n))
+    print(n)
 
     random_sample = np.random.randint(n, size=2)
     # random_sample = [1, 30]
@@ -147,7 +143,7 @@ def paper_figure(sigma=0.02, cutoff=3, transversal=True):
 
     data = mat['Stairs4_S00075_O60'].T
     n = len(data)
-    print(n, n_tests(n))
+    print(n)
 
     fig, axes = plt.subplots(nrows=2, ncols=4)
 
@@ -181,7 +177,7 @@ def half_layout(sigma=0.02, cutoff=3, add_line=False, transversal=True):
 
 
     n = len(data)
-    print(data.shape, n_tests(n))
+    print(n)
 
     fig, axes = plt.subplots(nrows=1, ncols=2)
 

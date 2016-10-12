@@ -9,7 +9,7 @@ from rnmu.pme.line import Line
 import rnmu.pme.stats as stats
 
 
-def plot_soft_point(ax, point, sigma, box, n_levels=10, color='r', alpha=0.8):
+def plot_soft_point(ax, point, sigma, box, n_levels=64, color='r', alpha=0.8):
     x_min, x_max = box
     xi, yi = np.mgrid[slice(x_min[0], x_max[0], .001),
                       slice(x_min[1], x_max[1], .001)]

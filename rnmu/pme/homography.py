@@ -1,7 +1,5 @@
 import numpy as np
-import cv2
-import warnings
-
+from rnmu.pme.proj_geom_utils import keep_finite, normalize_2d
 
 
 class Homography(object):
@@ -31,26 +29,23 @@ class Homography(object):
             raise ValueError('Points must be 6D (2 x 3D)')
 
         pts1, trans1 = normalize_2d(data[:, :3], weights=weights)
-        pts2, trans2 = normalize_2d(data[:, 3:], weights=weights)
+        pts2, trans2, trans2_inv = normalize_2d(data[:, 3:], weights=weights,
+                                                ret_inv=True)
 
-        mat = []
+        mat = np.zeros((9, 9))
         zero = np.zeros((3,))
         for i in range(np.count_nonzero(mask)):
             r1 = np.hstack([-pts1[i, :], zero, pts1[i, :] * pts2[i, 0]])
             r2 = np.hstack([zero, -pts1[i, :], pts1[i, :] * pts2[i, 1]])
-            if weights is None:
-                mat.append(r1)
-                mat.append(r2)
-            elif weights[i] > 0:
-                mat.append(r1 * weights[i])
-                mat.append(r2 * weights[i])
-
-        mat = np.array(mat)
+            if weights is not None:
+                r1 *= weights[i]
+                r2 *= weights[i]
+            mat += np.outer(r1, r1)
+            mat += np.outer(r2, r2)
         try:
-            _, _, vt = np.linalg.svd(mat)
-            self.H = vt[8, :].reshape((3, 3))
-
-            self.H = np.linalg.solve(trans2.T, self.H.dot(trans1.T)).T
+            _, v = np.linalg.eigh(mat)
+            self.H = v[:, 0].reshape((3, 3))
+            self.H = trans1.dot(self.H.T).dot(trans2_inv)
             self.H /= self.H[2, 2]
         except np.linalg.LinAlgError:
             self.H = None
@@ -67,40 +62,6 @@ class Homography(object):
 
         trans /= np.atleast_2d(trans[:, 2]).T
         return np.sum(np.power(pts2 - trans, 2), axis=1)
-
-
-def keep_finite(data):
-    if data.shape[1] != 6:
-        raise ValueError('The points must be Nx6');
-
-    # Find the indices of the points that are not at infinity
-    finite_idx = np.logical_and(np.abs(data[:, 2]) > np.finfo(float).eps,
-                                np.abs(data[:, 5]) > np.finfo(float).eps)
-
-    if np.count_nonzero(finite_idx) != len(data):
-        warnings.warn('Found points at infinity', RuntimeWarning)
-
-    return finite_idx
-
-
-def normalize_2d(points, weights=None):
-    if points.shape[1] != 3:
-        raise ValueError('The points must be Nx3');
-
-    # Ensure that homogeneous coord is 1
-    points[:, 0] /= points[:, 2]
-    points[:, 1] /= points[:, 2]
-    points[:, 2] = 1
-
-    centroid = np.average(points[:, :2], weights=weights, axis=0)
-    dist = np.linalg.norm(points[:, :2] - centroid, ord=2, axis=1)
-    scale = np.sqrt(2) / np.average(dist, weights=weights)
-
-    trans = np.array([[scale, 0, 0],
-                      [0, scale, 0],
-                      [-scale * centroid[0], -scale * centroid[1], 1]])
-
-    return points.dot(trans), trans
 
 
 if __name__ == '__main__':

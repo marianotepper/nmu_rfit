@@ -1,6 +1,5 @@
 # coding: utf-8
 import numpy as np
-import scipy.sparse as sp
 import sklearn.utils.linear_assignment_ as hungarian
 
 
@@ -129,10 +128,6 @@ def gnmi(groups1, groups2):
 
 
 def intersect(c1, c2):
-    if sp.issparse(c1):
-        c1 = c1.toarray()
-    if sp.issparse(c2):
-        c2 = c2.toarray()
     return np.dot(np.squeeze(c1), np.squeeze(c2))
 
 
@@ -152,18 +147,21 @@ def mean_precision_recall(gt_groups, groups):
         return 0, 0
     conf = confusion_matrix(gt_groups, groups)
 
-    import matplotlib.pyplot as plt
-    plt.matshow(conf)
-
     idx = hungarian.linear_assignment(conf.max() - conf)
-    conf = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
+    conf_sorted = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
 
     import matplotlib.pyplot as plt
-    plt.matshow(conf)
+    import seaborn.apionly as sns
+    plt.matshow(conf, interpolation='none',
+                cmap=sns.light_palette('navy', n_colors=256, as_cmap=True))
+
+    plt.matshow(conf_sorted, interpolation='none',
+                cmap=sns.light_palette('navy', n_colors=256, as_cmap=True))
 
     print [size(c) for c in gt_groups]
     print [size(c) for c in groups]
+    print np.diag(conf_sorted)
 
-    precision = np.trace(conf) / sum([size(c) for c in groups])
-    recall = np.trace(conf) / sum([size(c) for c in gt_groups])
+    precision = np.trace(conf_sorted) / sum([size(c) for c in groups])
+    recall = np.trace(conf_sorted) / sum([size(c) for c in gt_groups])
     return precision, recall

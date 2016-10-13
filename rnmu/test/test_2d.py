@@ -47,9 +47,9 @@ def plot_original_models(x, original_models, bic_list, palette):
 
 def plot_final_biclusters(x, bic_list, palette):
     base_plot(x)
-    for i, (lf, rf) in enumerate(bic_list):
+    for (lf, rf), color in zip(bic_list, palette):
         sel = np.squeeze(lf > 0)
-        color = np.array(sel.sum() * [palette[i]])
+        color = np.array(sel.sum() * [color])
         color = np.append(color, lf[sel], axis=1)
         plt.scatter(x[sel, 0], x[sel, 1], c=color, marker='o', s=10,
                     edgecolors='none')
@@ -67,9 +67,7 @@ def ground_truth(data, n_groups, group_size=50):
 
 def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
     t = timeit.default_timer()
-    pref_matrix, orig_models, models, bic_list = detection.run(ransac_gen, x,
-                                                               sigma,
-                                                               n_models=20)
+    pref_mat, orig_models, models, bics = detection.run(ransac_gen, x, sigma)
     t1 = timeit.default_timer() - t
     print('Total time:', t1)
 
@@ -78,23 +76,28 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
         plt.savefig(name + '_data.pdf', dpi=600)
 
     plt.figure()
-    detection.plot(pref_matrix)
+    detection.plot(pref_mat)
     if name is not None:
         plt.savefig(name + '_pref_mat.pdf', dpi=600)
 
-    palette = sns.color_palette(palette, len(bic_list))
+    palette = sns.color_palette(palette, len(bics))
+
+    plt.figure()
+    detection.plot(bics, palette=palette)
+    if name is not None:
+        plt.savefig(name + '_pref_mat_bic.pdf', dpi=600)
 
     plot_models(x, models, palette=palette)
     if name is not None:
         plt.savefig(name + '_final_models.pdf', dpi=600)
 
-    plot_final_biclusters(x, bic_list, palette=palette)
+    plot_final_biclusters(x, bics, palette=palette)
 
-    plot_original_models(x, orig_models, bic_list, palette)
+    plot_original_models(x, orig_models, bics, palette)
     # if name is not None:
     #     plt.savefig(name + '_bundles.pdf', dpi=600)
 
-    bc_groups = [bic[0] for bic in bic_list]
+    bc_groups = [bic[0] for bic in bics]
     gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
 
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)

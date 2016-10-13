@@ -7,9 +7,11 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus'):
 
     array = array.copy()
     factors = []
-    for _ in range(r):
+    for k in range(r):
         u, v = nmu_admm(array, max_iter, tol)
         factors.append((u, v))
+        if k == r - 1:
+            continue
         if downdate == 'minus':
             array = np.maximum(0, array - np.dot(u, v))
         if downdate == 'hard-col' or downdate == 'hard-both':

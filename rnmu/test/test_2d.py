@@ -163,8 +163,8 @@ def run(types):
         stats_list.append(res)
 
         print('-'*40)
-        break
-        # plt.close('all')
+        # break
+        plt.close('all')
 
     # reg_list, comp_list = zip(*stats_list)
     #

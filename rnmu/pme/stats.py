@@ -11,6 +11,7 @@ def concentration_nfa(membership, ms_size, trim=True):
     n = len(membership)
     membership = membership[membership > 0]
     if trim:
+        n -= ms_size
         ones = np.where(membership == 1)[0]
         membership = np.delete(membership, ones[-min(len(ones), ms_size):])
     if len(membership) > 0:

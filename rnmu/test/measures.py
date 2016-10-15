@@ -150,18 +150,6 @@ def mean_precision_recall(gt_groups, groups):
     idx = hungarian.linear_assignment(conf.max() - conf)
     conf_sorted = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
 
-    import matplotlib.pyplot as plt
-    import seaborn.apionly as sns
-    plt.matshow(conf, interpolation='none',
-                cmap=sns.light_palette('navy', n_colors=256, as_cmap=True))
-
-    plt.matshow(conf_sorted, interpolation='none',
-                cmap=sns.light_palette('navy', n_colors=256, as_cmap=True))
-
-    print [size(c) for c in gt_groups]
-    print [size(c) for c in groups]
-    print np.diag(conf_sorted)
-
     precision = np.trace(conf_sorted) / sum([size(c) for c in groups])
     recall = np.trace(conf_sorted) / sum([size(c) for c in gt_groups])
     return precision, recall

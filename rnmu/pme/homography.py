@@ -57,16 +57,28 @@ class Homography(object):
         pts2 = data[:, 3:]
         trans = np.dot(pts1, self.H)
 
-        mask = trans[:, 2] == 0
-        trans[mask] = 1e-16
+        if np.any(trans[:, 2] == 0):
+            return np.ones((len(data),)) * np.inf
 
-        trans /= np.atleast_2d(trans[:, 2]).T
-        return np.sum(np.power(pts2 - trans, 2), axis=1)
+        trans /= trans[:, 2][:, np.newaxis]
+        return np.sqrt(np.sum(np.power(pts2 - trans, 2), axis=1))
 
 
 if __name__ == '__main__':
     data1 = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    data2 = data1 * 2 + 3
+    rot = np.array([[np.cos(np.pi/4), np.sin(np.pi/4)],
+                    [-np.sin(np.pi/4), np.cos(np.pi/4)]])
+
+    # data2 = (data1 * [2, 1]).dot(rot) + 3
+    data2 = data1.dot(rot) + 3
     data = np.hstack((data1, np.ones((4, 1)), data2, np.ones((4, 1))))
     print data.shape
-    Homography(data=data)
+    mod = Homography(data=data)
+    print mod.H
+    test1 = np.array([[2, 2]])
+    test2 = test1.dot(rot) + 2
+    print test1.shape, test2.shape
+    test = np.hstack((test1, np.ones((1, 1)), test2, np.ones((1, 1))))
+    print test.shape
+    print mod.distances(test)
+

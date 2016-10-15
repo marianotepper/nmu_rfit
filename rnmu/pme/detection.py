@@ -1,35 +1,46 @@
 from __future__ import absolute_import, print_function
+import matplotlib.cm as cm
+import matplotlib.colors as mpl_colors
 import matplotlib.pyplot as plt
 import numpy as np
 import timeit
+import seaborn.apionly as sns
 import rnmu.pme.approximation as approximation
-from rnmu.pme.stats import meaningful, concentration_nfa
+from rnmu.pme.stats import meaningful
 
 
-def run(ransac_gen, data, sigma, n_models=10):
-    pref_matrix, orig_models = build_preference_matrix(ransac_gen, data, sigma)
+def run(ransac_gen, data, sigma, cutoff=3, downdate='hard-col', overlaps=True):
+    t = timeit.default_timer()
+    pref_matrix, orig_models = build_preference_matrix(ransac_gen, data, sigma,
+                                                       cutoff)
+    t1 = timeit.default_timer() - t
     print('Preference matrix size:', pref_matrix.shape)
+    print('Preference matrix computation time:', t1)
+
+    if pref_matrix.size == 0:
+        return pref_matrix, orig_models, [], []
 
     t = timeit.default_timer()
-    bic_list = approximation.recursive_nmu(pref_matrix, r=n_models)
+    bics = approximation.recursive_nmu(pref_matrix, downdate=downdate)
     t1 = timeit.default_timer() - t
-    print('NMU Time:', t1)
+    print('NMU time:', t1)
 
-    print('Biclusters:', len(bic_list))
+    print('Biclusters:', len(bics))
 
-    models, bic_list = clean(ransac_gen.model_class, data, sigma, bic_list)
+    models, bics = clean(ransac_gen.model_class, data, sigma, cutoff, overlaps,
+                         bics)
 
-    print('Models', len(models))
+    print('Refined biclusters:', len(models))
 
-    return pref_matrix, orig_models, models, bic_list
+    return pref_matrix, orig_models, models, bics
 
 
-def build_preference_matrix(ransac_gen, elements, sigma):
+def build_preference_matrix(ransac_gen, elements, sigma, cutoff):
     ransac_gen.elements = elements
     pref_matrix = []
     original_models = []
-    for i, model in enumerate(ransac_gen):
-        mem = membership(model, elements, sigma)
+    for model in ransac_gen:
+        mem = membership(model, elements, sigma, cutoff)
         if meaningful(mem, model.min_sample_size):
             pref_matrix.append(mem)
             original_models.append(model)
@@ -38,49 +49,73 @@ def build_preference_matrix(ransac_gen, elements, sigma):
     return pref_matrix, original_models
 
 
-def membership(model, data, sigma, cutoff=3):
+def membership(model, data, sigma, cutoff):
     dists = model.distances(data) / sigma
-    sim = np.exp(-np.power(dists, 2))
-    sim[dists > 3] = 0
+    sim = np.exp(-(dists ** 2))
+    sim[dists > cutoff] = 0
     return sim
 
 
-def plot(array, palette='Blues'):
-    plt.imshow(array, interpolation='none', cmap=plt.get_cmap(palette))
-    plt.tick_params(
-        which='both',  # both major and minor ticks are affected
-        bottom='off',
-        top='off',
-        left='off',
-        right='off',
-        labelbottom='off',
-        labelleft='off')
-    plt.axis('image')
-
-
-def clean(model_class, data, sigma, bic_list):
+def clean(model_class, data, sigma, cutoff, overlaps, bics):
     min_sample_size = model_class().min_sample_size
-    bic_list = [bic for bic in bic_list
-                if np.count_nonzero(bic[1]) >= 1 and
-                np.count_nonzero(bic[0]) >= min_sample_size]
 
-    bic_list_final = []
-    model_list = []
-    for lf, rf in bic_list:
+    bics_final = []
+    models = []
+    for lf, rf in bics:
+        if np.count_nonzero(rf) <= 1 or np.count_nonzero(lf) < min_sample_size:
+            continue
         inliers = np.squeeze(lf)
         mod = model_class(data, weights=inliers)
-        mem = membership(mod, data, sigma)
+        mem = membership(mod, data, sigma, cutoff)
         if meaningful(mem, mod.min_sample_size):
-            model_list.append(mod)
-            bic_list_final.append((lf, rf))
+            models.append(mod)
+            bics_final.append((mem[:, np.newaxis], rf))
 
-    return model_list, bic_list_final
+    if not bics_final:
+        return [], []
+
+    models, bics_final = _eliminate_redundancy(bics_final, models)
+
+    if not bics_final:
+        return [], []
+
+    if not overlaps:
+        _solve_intersections(data, bics_final, models)
+
+    return models, bics_final
 
 
-def keep_meaningful(inliers_list, model_list, bic_list):
-    z_list = zip(inliers_list, model_list, bic_list)
-    z_list = filter(lambda e: meaningful(e[0], e[1].min_sample_size), z_list)
-    if z_list:
-        return zip(*z_list)
-    else:
-        return [], [], []
+def _eliminate_redundancy(bics, models):
+    left_factors = np.concatenate(zip(*bics)[0], axis=1)
+    r = left_factors.T.dot(left_factors)
+    idx = np.unique(np.argmax(r, axis=0))
+    models = [models[i] for i in idx]
+    bics_final = [bics[i] for i in idx]
+    return models, bics_final
+
+
+def _solve_intersections(data, bics, models):
+    left_factors = np.concatenate(zip(*bics)[0], axis=1)
+    intersection = np.sum(left_factors > 0, axis=1) > 1
+    dists = [mod.distances(data[intersection, :]) for mod in models]
+    idx = np.argmin(np.vstack(dists), axis=0)
+    for i, bics in enumerate(bics):
+        bics[0][intersection] = idx[:, np.newaxis] == i
+
+
+def plot(array_or_bic_list, palette='Set1'):
+    plt.hold(True)
+    try:
+        plt.imshow(array_or_bic_list, interpolation='none', cmap=cm.gray_r)
+    except TypeError:
+        palette = sns.color_palette(palette, len(array_or_bic_list))
+
+        for (u, v), c in zip(array_or_bic_list, palette):
+            colors = [np.array([1., 1., 1., 0])] +\
+                     sns.light_palette(c, n_colors=63)
+            cmap = mpl_colors.ListedColormap(colors)
+            plt.imshow(u.dot(v), interpolation='none', cmap=cmap)
+        plt.tick_params(which='both',  # both major and minor ticks are affected
+                        bottom='off', top='off', left='off', right='off',
+                        labelbottom='off', labelleft='off')
+        plt.axis('image')

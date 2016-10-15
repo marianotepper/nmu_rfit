@@ -8,16 +8,13 @@ import seaborn.apionly as sns
 import scipy.spatial.distance as distance
 import numpy as np
 import scipy.io
-import pickle
 import timeit
-import rnmu.approximation as bc
-import rnmu.test.utils as test_utils
-import rnmu.pme.preference as pref
-import rnmu.pme.multigs as multigs
-import rnmu.pme.membership as membership
-import rnmu.pme.homography as homography
+import rnmu.pme.detection as detection
 import rnmu.pme.fundamental as fundamental
-import rnmu.pme.acontrario as ac
+import rnmu.pme.homography as homography
+import rnmu.pme.multigs as multigs
+import rnmu.pme.sampling as sampling
+import rnmu.test.utils as test_utils
 
 
 def load(path, tol=1e-5):
@@ -69,10 +66,19 @@ def plot_models(data, groups, palette, s=10, marker='o'):
         plt.hold(True)
         gray_image = PIL.Image.fromarray(img).convert('L')
         plt.imshow(gray_image, cmap='gray', interpolation='none')
-        for g, color in zip(groups, palette):
-            plt.scatter(pos_rc[g, 0], pos_rc[g, 1], c=color, edgecolors='face',
-                        marker=marker, s=s)
+
+        for g, c in zip(groups, palette):
+            colors = np.repeat(np.atleast_2d(c), len(g), axis=0)
+            if colors.shape[1] == 3:
+                colors = np.append(colors, g[:, np.newaxis], axis=1)
+            if colors.shape[1] == 4:
+                colors[:, 3] = g
+            plt.scatter(pos_rc[:, 0], pos_rc[:, 1], c=colors,
+                        edgecolors='face', marker=marker, s=s)
+
         plt.axis('off')
+
+    palette = sns.color_palette(palette, len(groups))
 
     x = data['data']
     plt.figure()
@@ -92,96 +98,57 @@ def ground_truth(labels):
     return gt_groups
 
 
-def run_biclustering(model_class, data, pref_matrix, comp_level, thresholder,
-                     ac_tester, output_prefix, palette='Set1'):
+def test(ransac_gen, data, sigma, name=None, palette='Set1'):
     t = timeit.default_timer()
-    bic_list = bc.bicluster(pref_matrix, comp_level=comp_level)
+    pref_mat, _, _, bics = detection.run(ransac_gen, data['data'], sigma,
+                                         overlaps=False, downdate='hard-col')
     t1 = timeit.default_timer() - t
-    print('Time:', t1)
+    print('Total time:', t1)
 
-    bic_list = test_utils.clean(model_class, data['data'], thresholder,
-                                ac_tester, bic_list, share_elements=False)[1]
-
-    colors = sns.color_palette(palette, len(bic_list))
+    gt_groups = ground_truth(data['label'])
+    gt_colors = sns.color_palette(palette, len(gt_groups) - 1)
+    gt_colors.insert(0, [1., 1., 1.])
+    plot_models(data, gt_groups, palette=gt_colors)
+    if name is not None:
+        plt.savefig(name + '_gt10.pdf', dpi=600)
+    plot_models(data, gt_groups, palette=gt_colors, s=.1, marker='.')
+    if name is not None:
+        plt.savefig(name + '_gt1.pdf', dpi=600)
 
     plt.figure()
-    pref.plot(pref_matrix, bic_list=bic_list, palette=colors)
-    plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
+    detection.plot(pref_mat)
+    if name is not None:
+        plt.savefig(name + '_pref_mat.pdf', dpi=600)
 
-    bc_groups = [np.squeeze(bic[0].toarray()) for bic in bic_list]
+    plt.figure()
+    detection.plot(bics, palette=palette)
+    if name is not None:
+        plt.savefig(name + '_pref_mat_bic.pdf', dpi=600)
 
-    plot_models(data, bc_groups, palette=colors)
-    plt.savefig(output_prefix + '_final_models.pdf', dpi=600)
+    bc_groups = [bic[0].flatten() for bic in bics]
+
+    plot_models(data, bc_groups, palette=palette)
+    if name is not None:
+        plt.savefig(name + '_final_models.pdf', dpi=600)
 
     if bc_groups:
-        inliers = reduce(lambda a, b: np.logical_or(a, b), bc_groups)
+        outliers = np.sum(np.vstack(bc_groups), axis=0) == 0
     else:
-        inliers = np.zeros((pref_matrix.shape[0],), dtype=np.bool)
-    bc_groups.append(np.logical_not(inliers))
-    gt_groups = ground_truth(data['label'])
-    gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
+        outliers = np.ones((len(data['data']),))
+    bc_groups.append(outliers.astype(dtype=float))
 
+    gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def test(model_class, data, name, ransac_gen, thresholder, ac_tester,
-         dir_name):
-    x = data['data']
-    print(name, x.shape)
-
+def run(transformation, sigma, sampling_type='multigs', n_samples=2000):
+    dir_name = '{0}_{1:e}'.format(transformation, sigma)
     output_dir = '../results/{0}/'.format(dir_name)
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
-    output_prefix = output_dir + name
 
-    base_plot(data)
-    plt.savefig(output_prefix + '_data.pdf', dpi=600)
-
-    gt_groups = ground_truth(data['label'])
-    gt_colors = sns.color_palette('Set1', len(gt_groups) - 1)
-    gt_colors.insert(0, [1., 1., 1.])
-    plot_models(data, gt_groups, palette=gt_colors)
-    plt.savefig(output_prefix + '_gt10.pdf', dpi=600)
-    plot_models(data, gt_groups, palette=gt_colors, s=.1, marker='.')
-    plt.savefig(output_prefix + '_gt1.pdf', dpi=600)
-
-    pref_matrix, _ = pref.build_preference_matrix(ransac_gen, thresholder,
-                                                  ac_tester)
-
-    scipy.io.savemat(output_prefix + '.mat', {'pref_matrix': pref_matrix})
-    with open(output_prefix + '.pickle', 'wb') as handle:
-        pickle.dump(pref_matrix, handle)
-    with open(output_prefix + '.pickle', 'rb') as handle:
-        pref_matrix = pickle.load(handle)
-
-    print('Preference matrix size:', pref_matrix.shape)
-
-    plt.figure()
-    pref.plot(pref_matrix)
-    plt.savefig(output_prefix + '_pref_mat.pdf', dpi=600)
-
-    print('Running regular bi-clustering')
-    compression_level = None
-    stats_reg = run_biclustering(model_class, data, pref_matrix,
-                                 compression_level, thresholder, ac_tester,
-                                 output_prefix + '_bic_reg')
-
-    print('Running compressed bi-clustering')
-    compression_level = 32
-    stats_comp = run_biclustering(model_class, data, pref_matrix,
-                                  compression_level, thresholder, ac_tester,
-                                  output_prefix + '_bic_comp')
-
-    return stats_reg, stats_comp
-
-
-def run(transformation, inliers_threshold):
-    logger = test_utils.Logger('test_{0}_{1:e}.txt'.format(transformation,
-                                                             inliers_threshold))
+    logger = test_utils.Logger(output_dir + 'test.txt')
     sys.stdout = logger
-
-    n_samples = 2000
-    epsilon = 0
 
     path = '../data/adelaidermf/{0}/'.format(transformation)
 
@@ -191,10 +158,13 @@ def run(transformation, inliers_threshold):
         break
 
     stats_list = []
-    for example in filenames:
-        # if example != 'biscuit.mat':
+    for i, example in enumerate(filenames):
+        print(example)
+        # if i != 6:
         #     continue
-        # if example != 'biscuitbookbox.mat':
+        # if example != 'barrsmith.mat':
+        #     continue
+        # if example != 'bonhall.mat':
         #     continue
         # if example != 'breadcartoychips.mat':
         #     continue
@@ -205,49 +175,49 @@ def run(transformation, inliers_threshold):
 
         if transformation == 'homography':
             model_class = homography.Homography
-            nfa_proba = np.pi / np.prod(data['img2'].shape[:2])
         else:
             model_class = fundamental.Fundamental
-            img_size = data['img2'].shape[:2]
-            nfa_proba = (2. * np.linalg.norm(img_size) / np.prod(img_size))
 
-        generator = multigs.ModelGenerator(model_class, data['data'], n_samples)
-        min_sample_size = model_class().min_sample_size
-        ac_tester = ac.ImageTransformNFA(epsilon, nfa_proba, min_sample_size)
-        thresholder = membership.GlobalThresholder(inliers_threshold)
+        if sampling_type == 'multigs':
+            generator = multigs.ModelGenerator(model_class, n_samples)
+        elif sampling_type == 'uniform':
+            sampler = sampling.UniformSampler(n_samples)
+            generator = sampling.ModelGenerator(model_class, sampler)
+        else:
+            raise RuntimeError('Unknown sampling method')
 
         seed = 0
         # seed = np.random.randint(0, np.iinfo(np.uint32).max)
         print('seed:', seed)
         np.random.seed(seed)
 
-        prefix = example[:-4]
-        dir_name = '{0}_{1:e}'.format(transformation, inliers_threshold)
-
-        res = test(model_class, data, prefix, generator, thresholder, ac_tester,
-                   dir_name)
+        output_prefix = output_dir + example[:-4]
+        res = test(generator, data, sigma, name=output_prefix)
         stats_list.append(res)
 
         print('-'*40)
         plt.close('all')
+        # break
 
-    reg_list, comp_list = zip(*stats_list)
-
-    print('Statistics of regular bi-clustering')
-    test_utils.compute_stats(reg_list)
-    print('Statistics of compressed bi-clustering')
-    test_utils.compute_stats(comp_list)
-    print('-'*40)
+    # reg_list, comp_list = zip(*stats_list)
+    #
+    # print('Statistics of regular bi-clustering')
+    # test_utils.compute_stats(reg_list)
+    # print('Statistics of compressed bi-clustering')
+    # test_utils.compute_stats(comp_list)
+    # print('-'*40)
 
     sys.stdout = logger.stdout
     logger.close()
 
 
 def run_all():
-    for thresh in np.power(np.arange(.5, 4, .5), 2):
-        run('homography', thresh)
-    for thresh in np.arange(2.5e-3, 2.51e-2, 2.5e-3):
-        run('fundamental', thresh)
+    # run('fundamental', 5)
+    run('homography', 5)
+    # for thresh in np.power(np.arange(.5, 4, .5), 2):
+    #     run('homography', thresh)
+    # for thresh in np.arange(.5, 10.5, .5):
+    #     run('fundamental', thresh)
 
 if __name__ == '__main__':
     run_all()

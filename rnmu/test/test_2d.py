@@ -38,16 +38,16 @@ def plot_models(x, models, palette):
         mod.plot(color=color, linewidth=5, alpha=0.5)
 
 
-def plot_original_models(x, original_models, bic_list, palette):
+def plot_original_models(x, original_models, bics, palette):
     base_plot(x)
-    for i, (_, rf) in enumerate(bic_list):
+    for i, (_, rf) in enumerate(bics):
         for j in np.nonzero(rf)[1]:
             original_models[j].plot(color=palette[i], alpha=0.5 * rf[:, j])
 
 
-def plot_final_biclusters(x, bic_list, palette):
+def plot_final_biclusters(x, bics, palette):
     base_plot(x)
-    for (lf, rf), color in zip(bic_list, palette):
+    for (lf, rf), color in zip(bics, palette):
         sel = np.squeeze(lf > 0)
         color = np.array(sel.sum() * [color])
         color = np.append(color, lf[sel], axis=1)
@@ -103,10 +103,9 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def run(types):
+def run(types, sigma=0.05, sampling_type='uniform'):
     # Sampling ratio with respect to the number of elements
     sampling_factor = 50
-    sigma = 0.05
 
     config = {'Star': line.Line,
               'Stairs': line.Line,
@@ -139,10 +138,14 @@ def run(types):
         data = mat[example].T
 
         n_samples = data.shape[0] * sampling_factor
-        # generator = multigs.ModelGenerator(model_class, n_samples, batch=10,
-        #                                    h_ratio=.1)
-        sampler = sampling.UniformSampler(n_samples)
-        generator = sampling.ModelGenerator(model_class, sampler)
+        if sampling_type == 'multigs':
+            generator = multigs.ModelGenerator(model_class, n_samples, batch=10,
+                                               h_ratio=.1)
+        elif sampling_type == 'uniform':
+            sampler = sampling.UniformSampler(n_samples)
+            generator = sampling.ModelGenerator(model_class, sampler)
+        else:
+            raise RuntimeError('Unknown sampling method')
 
         match = re.match(ex_type + '[0-9]*_', example)
         try:
@@ -163,16 +166,15 @@ def run(types):
         stats_list.append(res)
 
         print('-'*40)
-        # break
         plt.close('all')
 
-    # reg_list, comp_list = zip(*stats_list)
-    #
-    # print('Statistics of regular bi-clustering')
-    # test_utils.compute_stats(reg_list)
-    # print('Statistics of compressed bi-clustering')
-    # test_utils.compute_stats(comp_list)
-    # print('-'*40)
+    reg_list, comp_list = zip(*stats_list)
+
+    print('Statistics of regular bi-clustering')
+    test_utils.compute_stats(reg_list)
+    print('Statistics of compressed bi-clustering')
+    test_utils.compute_stats(comp_list)
+    print('-'*40)
 
     sys.stdout = logger.stdout
     logger.close()

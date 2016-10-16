@@ -1,18 +1,22 @@
 from __future__ import absolute_import
 import numpy as np
 import itertools
-from . import sampling
+from .sampling import UniformSampler, SampleSet
 
 
 class ModelGenerator(object):
-    def __init__(self, model_class, n_samples, batch=10, h_ratio=.1):
+    def __init__(self, model_class, n_samples, batch=10, h_ratio=.1, seed=None):
         self.model_class = model_class
         self.elements = None
-        self.n_samples = n_samples
-        self.batch = batch
-        self.h_ratio = h_ratio
-        self.bias = None
-        self.sample_set = sampling.SampleSet()
+        self._n_samples = n_samples
+        self._batch = batch
+        self._h_ratio = h_ratio
+        self._bias = None
+        self._sample_set = SampleSet()
+        self._uni_sampler = UniformSampler(n_samples=min(batch, n_samples),
+                                           seed=seed)
+        if seed is not None:
+            np.random.seed(seed)
 
     def __iter__(self):
         def generate(s):
@@ -22,9 +26,7 @@ class ModelGenerator(object):
         n_elements = self.elements.shape[0]
         min_sample_size = self.model_class().min_sample_size
 
-        sampler = sampling.UniformSampler(n_samples=min(self.batch,
-                                                        self.n_samples))
-        mss_samples = sampler.generate(self.elements, min_sample_size)
+        mss_samples = self._uni_sampler.generate(self.elements, min_sample_size)
 
         residuals = None
         for m in itertools.imap(generate, mss_samples):
@@ -32,11 +34,11 @@ class ModelGenerator(object):
             residuals = self._add_model(residuals, m)
 
         all_elems = np.arange(n_elements)
-        for i in range(self.n_samples - self.batch):
-            if i % self.batch == 0:
+        for i in range(self._n_samples - self._batch):
+            if i % self._batch == 0:
                 ranking = self._rank(residuals)
 
-            probas = self.bias
+            probas = self._bias
             sample = []
             for j in range(min_sample_size):
                 k = np.random.choice(all_elems, p=probas)
@@ -48,8 +50,8 @@ class ModelGenerator(object):
                     probas *= pk
                 probas /= probas.sum()
 
-            if sample not in self.sample_set:
-                self.sample_set.add(sample)
+            if sample not in self._sample_set:
+                self._sample_set.add(sample)
                 m = generate(sample)
                 yield m
                 residuals = self._add_model(residuals, m)
@@ -62,7 +64,7 @@ class ModelGenerator(object):
             return np.append(residuals, dist, axis=1)
 
     def _rank(self, residuals):
-        h = int(np.ceil(residuals.shape[1] * self.h_ratio))
+        h = int(np.ceil(residuals.shape[1] * self._h_ratio))
         ranking = np.argpartition(residuals, h, axis=1)
         return ranking[:, :h]
 

@@ -9,21 +9,21 @@ from rnmu.pme.clique import max_independent_set
 from rnmu.pme.stats import meaningful
 
 
-def run(ransac_gen, data, sigma, cutoff=3, downdate='hard-col', overlaps=True):
+def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
     t = timeit.default_timer()
     pref_matrix, orig_models = _build_preference_matrix(ransac_gen, data, sigma,
                                                         cutoff)
     t1 = timeit.default_timer() - t
     print('Preference matrix size:', pref_matrix.shape)
-    print('Preference matrix computation time:', t1)
+    print('Preference matrix computation time: {:.2f}'.format(t1))
 
     if pref_matrix.size == 0:
         return pref_matrix, orig_models, [], []
 
     t = timeit.default_timer()
-    bics = approximation.recursive_nmu(pref_matrix, downdate=downdate)
+    bics = approximation.recursive_nmu(pref_matrix, downdate='hard-col')
     t1 = timeit.default_timer() - t
-    print('NMU time:', t1)
+    print('NMU time: {:.2f}'.format(t1))
 
     print('Biclusters:', len(bics))
 
@@ -41,7 +41,7 @@ def _build_preference_matrix(ransac_gen, elements, sigma, cutoff):
     original_models = []
     for i, model in enumerate(ransac_gen):
         mem = _membership(model, elements, sigma, cutoff)
-        if meaningful(mem, model.min_sample_size, trim=False):
+        if meaningful(mem, model.min_sample_size, trim=True):
             pref_matrix.append(mem)
             original_models.append(model)
 

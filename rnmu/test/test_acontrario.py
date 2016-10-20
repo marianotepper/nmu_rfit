@@ -34,7 +34,7 @@ def plot_orthogonal_projection(data, mss, sigma, cutoff, axes=None):
     idx = membership > np.exp(-(cutoff ** 2))
     membership = membership[idx]
 
-    nfa = stats.concentration_nfa(membership, len(mss))
+    pfa = stats.concentration_pfa(membership, len(mss))
 
     if axes is not None:
         x_lim = (data[:, 0].min() - 0.1, data[:, 0].max() + 0.1)
@@ -110,7 +110,7 @@ def plot_orthogonal_projection(data, mss, sigma, cutoff, axes=None):
 
         ax.set_aspect('equal', adjustable='box')
 
-        ax.set_title('NFA: {:.3f}'.format(nfa))
+        ax.set_title('p-value: {:.3f}'.format(pfa), fontdict={'fontsize': 20})
 
 
 def main(sigma=0.02, cutoff=3, transversal=True):
@@ -152,7 +152,7 @@ def paper_figure(sigma=0.02, cutoff=3, transversal=True):
     plot_orthogonal_projection(data, [4, 180], sigma, cutoff, axes[:, 2])
     plot_orthogonal_projection(data, [250, 260], sigma, cutoff, axes[:, 3])
 
-    fig.tight_layout(pad=0, h_pad=-3, w_pad=-1)
+    fig.tight_layout(pad=0, h_pad=-4, w_pad=-3)
 
 
 def half_layout(sigma=0.02, cutoff=3, add_line=False, transversal=True):
@@ -174,10 +174,6 @@ def half_layout(sigma=0.02, cutoff=3, add_line=False, transversal=True):
         data = np.append(data, line, axis=0)
     else:
         data = np.append(data, np.array([[.5, 0], [.5, 1]]), axis=0)
-
-
-    n = len(data)
-    print(n)
 
     fig, axes = plt.subplots(nrows=1, ncols=2)
 

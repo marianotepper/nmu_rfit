@@ -1,18 +1,18 @@
 from __future__ import absolute_import, print_function
-import matplotlib.cm as cm
 import matplotlib.colors as mpl_colors
 import matplotlib.pyplot as plt
 import numpy as np
 import timeit
 import seaborn.apionly as sns
 import rnmu.pme.approximation as approximation
+from rnmu.pme.clique import max_independent_set
 from rnmu.pme.stats import meaningful
 
 
 def run(ransac_gen, data, sigma, cutoff=3, downdate='hard-col', overlaps=True):
     t = timeit.default_timer()
-    pref_matrix, orig_models = build_preference_matrix(ransac_gen, data, sigma,
-                                                       cutoff)
+    pref_matrix, orig_models = _build_preference_matrix(ransac_gen, data, sigma,
+                                                        cutoff)
     t1 = timeit.default_timer() - t
     print('Preference matrix size:', pref_matrix.shape)
     print('Preference matrix computation time:', t1)
@@ -27,21 +27,21 @@ def run(ransac_gen, data, sigma, cutoff=3, downdate='hard-col', overlaps=True):
 
     print('Biclusters:', len(bics))
 
-    models, bics = clean(ransac_gen.model_class, data, sigma, cutoff, overlaps,
-                         bics)
+    models, bics = _clean(ransac_gen.model_class, data, sigma, cutoff, overlaps,
+                          bics)
 
     print('Refined biclusters:', len(models))
 
     return pref_matrix, orig_models, models, bics
 
 
-def build_preference_matrix(ransac_gen, elements, sigma, cutoff):
+def _build_preference_matrix(ransac_gen, elements, sigma, cutoff):
     ransac_gen.elements = elements
     pref_matrix = []
     original_models = []
-    for model in ransac_gen:
-        mem = membership(model, elements, sigma, cutoff)
-        if meaningful(mem, model.min_sample_size):
+    for i, model in enumerate(ransac_gen):
+        mem = _membership(model, elements, sigma, cutoff)
+        if meaningful(mem, model.min_sample_size, trim=False):
             pref_matrix.append(mem)
             original_models.append(model)
 
@@ -49,24 +49,23 @@ def build_preference_matrix(ransac_gen, elements, sigma, cutoff):
     return pref_matrix, original_models
 
 
-def membership(model, data, sigma, cutoff):
+def _membership(model, data, sigma, cutoff):
     dists = model.distances(data) / sigma
     sim = np.exp(-(dists ** 2))
     sim[dists > cutoff] = 0
     return sim
 
 
-def clean(model_class, data, sigma, cutoff, overlaps, bics):
-    min_sample_size = model_class().min_sample_size
-
+def _clean(model_class, data, sigma, cutoff, overlaps, bics):
+    ms_size = model_class().min_sample_size
     bics_final = []
     models = []
     for lf, rf in bics:
-        if np.count_nonzero(rf) <= 1 or np.count_nonzero(lf) < min_sample_size:
+        if np.count_nonzero(rf) <= 1 or np.count_nonzero(lf) < ms_size:
             continue
         inliers = np.squeeze(lf)
         mod = model_class(data, weights=inliers)
-        mem = membership(mod, data, sigma, cutoff)
+        mem = _membership(mod, data, sigma, cutoff)
         if meaningful(mem, mod.min_sample_size):
             models.append(mod)
             bics_final.append((mem[:, np.newaxis], rf))
@@ -74,48 +73,54 @@ def clean(model_class, data, sigma, cutoff, overlaps, bics):
     if not bics_final:
         return [], []
 
-    models, bics_final = _eliminate_redundancy(bics_final, models)
+    idx_keep = _eliminate_redundancy(bics_final)
+    models = _select(models, idx_keep)
+    bics_final = _select(bics_final, idx_keep)
 
     if not bics_final:
         return [], []
 
     if not overlaps:
-        _solve_intersections(data, bics_final, models)
+        _solve_intersections(bics_final)
 
     return models, bics_final
 
 
-def _eliminate_redundancy(bics, models):
+def _eliminate_redundancy(bics):
     left_factors = np.concatenate(zip(*bics)[0], axis=1)
     r = left_factors.T.dot(left_factors)
-    idx = np.unique(np.argmax(r, axis=0))
-    models = [models[i] for i in idx]
-    bics_final = [bics[i] for i in idx]
-    return models, bics_final
+    norm_bics = np.linalg.norm(left_factors, axis=0)
+    r /= np.outer(norm_bics, norm_bics)
+    iset = max_independent_set(r > 0.9)
+    return iset
 
 
-def _solve_intersections(data, bics, models):
+def _select(values, idx):
+    return [values[i] for i in idx]
+
+
+def _solve_intersections(bics):
     left_factors = np.concatenate(zip(*bics)[0], axis=1)
-    intersection = np.sum(left_factors > 0, axis=1) > 1
-    dists = [mod.distances(data[intersection, :]) for mod in models]
-    idx = np.argmin(np.vstack(dists), axis=0)
+    idx = np.argmax(left_factors, axis=1)
     for i, bics in enumerate(bics):
-        bics[0][intersection] = idx[:, np.newaxis] == i
+        bics[0][idx != i] = 0
 
 
 def plot(array_or_bic_list, palette='Set1'):
-    plt.hold(True)
+    def get_cmap(base_color, n_colors=256):
+        colors = [np.array([1., 1., 1., 0])] + \
+                 sns.light_palette(base_color, n_colors=n_colors - 1)
+        return mpl_colors.ListedColormap(colors)
+
     try:
-        plt.imshow(array_or_bic_list, interpolation='none', cmap=cm.gray_r)
+        plt.imshow(array_or_bic_list, interpolation='none', cmap=get_cmap('k'))
     except TypeError:
         palette = sns.color_palette(palette, len(array_or_bic_list))
-
+        plt.hold(True)
         for (u, v), c in zip(array_or_bic_list, palette):
-            colors = [np.array([1., 1., 1., 0])] +\
-                     sns.light_palette(c, n_colors=63)
-            cmap = mpl_colors.ListedColormap(colors)
-            plt.imshow(u.dot(v), interpolation='none', cmap=cmap)
-        plt.tick_params(which='both',  # both major and minor ticks are affected
-                        bottom='off', top='off', left='off', right='off',
-                        labelbottom='off', labelleft='off')
-        plt.axis('image')
+            plt.imshow(u.dot(v), interpolation='none', cmap=get_cmap(c))
+
+    plt.tick_params(which='both',  # both major and minor ticks are affected
+                    bottom='off', top='off', left='off', right='off',
+                    labelbottom='off', labelleft='off')
+    plt.axis('image')

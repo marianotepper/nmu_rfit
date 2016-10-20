@@ -42,7 +42,7 @@ def plot_original_models(x, original_models, bics, palette):
     base_plot(x)
     for i, (_, rf) in enumerate(bics):
         for j in np.nonzero(rf)[1]:
-            original_models[j].plot(color=palette[i], alpha=0.5 * rf[:, j])
+            original_models[j].plot(color=palette[i], alpha=0.5 * rf[0, j])
 
 
 def plot_final_biclusters(x, bics, palette):
@@ -73,29 +73,37 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
 
     base_plot(x)
     if name is not None:
-        plt.savefig(name + '_data.pdf', dpi=600)
+        plt.savefig(name + '_data.pdf', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     plt.figure()
     detection.plot(pref_mat)
     if name is not None:
-        plt.savefig(name + '_pref_mat.pdf', dpi=600)
+        plt.savefig(name + '_pref_mat.png', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     palette = sns.color_palette(palette, len(bics))
 
     plt.figure()
     detection.plot(bics, palette=palette)
     if name is not None:
-        plt.savefig(name + '_pref_mat_bic.pdf', dpi=600)
+        plt.savefig(name + '_pref_mat_bic.png', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     plot_models(x, models, palette=palette)
     if name is not None:
-        plt.savefig(name + '_final_models.pdf', dpi=600)
+        plt.savefig(name + '_final_models.pdf', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     plot_final_biclusters(x, bics, palette=palette)
+    if name is not None:
+        plt.savefig(name + '_final_bics.pdf', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     plot_original_models(x, orig_models, bics, palette)
-    # if name is not None:
-    #     plt.savefig(name + '_bundles.pdf', dpi=600)
+    if name is not None:
+        plt.savefig(name + '_original_models.pdf', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     bc_groups = [bic[0] for bic in bics]
     gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
@@ -103,10 +111,7 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def run(types, sigma=0.05, sampling_type='uniform'):
-    # Sampling ratio with respect to the number of elements
-    sampling_factor = 50
-
+def run(types, sigma=0.05, sampling_factor=5, sampling_type='multigs'):
     config = {'Star': line.Line,
               'Stairs': line.Line,
               'Circles': circle.Circle,
@@ -134,15 +139,26 @@ def run(types, sigma=0.05, sampling_type='uniform'):
         else:
             continue
 
-        model_class = config[ex_type]
+        print(example)
+
+        seed = 0
+        # seed = np.random.randint(0, np.iinfo(np.uint32).max)
+        print('seed:', seed)
+
+        for k in config.keys():
+            if example.find(k) == 0:
+                model_class = config[k]
+                break
+        else:
+            continue
         data = mat[example].T
 
         n_samples = data.shape[0] * sampling_factor
         if sampling_type == 'multigs':
-            generator = multigs.ModelGenerator(model_class, n_samples, batch=10,
-                                               h_ratio=.1)
+            generator = multigs.ModelGenerator(model_class, n_samples,
+                                               seed=seed)
         elif sampling_type == 'uniform':
-            sampler = sampling.UniformSampler(n_samples)
+            sampler = sampling.UniformSampler(n_samples, seed=seed)
             generator = sampling.ModelGenerator(model_class, sampler)
         else:
             raise RuntimeError('Unknown sampling method')
@@ -155,9 +171,6 @@ def run(types, sigma=0.05, sampling_type='uniform'):
             n_groups = 4
         gt_groups = ground_truth(data, n_groups)
 
-        seed = 0
-        # seed = np.random.randint(0, np.iinfo(np.uint32).max)
-        print('seed:', seed)
         np.random.seed(seed)
 
         output_prefix = output_dir + example
@@ -168,12 +181,8 @@ def run(types, sigma=0.05, sampling_type='uniform'):
         print('-'*40)
         plt.close('all')
 
-    reg_list, comp_list = zip(*stats_list)
-
-    print('Statistics of regular bi-clustering')
-    test_utils.compute_stats(reg_list)
-    print('Statistics of compressed bi-clustering')
-    test_utils.compute_stats(comp_list)
+    print('Statistics')
+    test_utils.compute_stats(stats_list)
     print('-'*40)
 
     sys.stdout = logger.stdout
@@ -181,9 +190,9 @@ def run(types, sigma=0.05, sampling_type='uniform'):
 
 
 def run_all():
-    run(['Star', 'Circles', 'Stairs'])
-    # run(['Stairs'])
-    # run(['Circles'])
+    run(['Star', 'Stairs4'], sigma=0.03, sampling_factor=5)
+    run(['Stairs_'], sigma=0.035, sampling_factor=5)
+    run(['Circles'], sigma=0.07, sampling_factor=10)
 
 
 if __name__ == '__main__':

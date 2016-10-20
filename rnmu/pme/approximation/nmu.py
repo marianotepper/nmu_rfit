@@ -9,6 +9,8 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus'):
     factors = []
     for k in range(r):
         u, v = nmu_admm(array, max_iter, tol)
+        if np.count_nonzero(u) == 0 or np.count_nonzero(v) == 0:
+            break
         factors.append((u, v))
         if k == r - 1:
             continue
@@ -44,14 +46,13 @@ def nmu(array, max_iter, tol):
             u = u_old
             v = v_old
 
-        for _ in range(2):
-            u_old = u.copy()
-            v_old = v.copy()
-            # updating u, v:
-            aux = array - mu
-            u = np.maximum(0, aux.dot(v.T))
-            u /= np.max(u) + 1e-16
-            v = np.maximum(0, np.dot(u.T, aux) / np.dot(u.T, u))
+        u_old = u.copy()
+        v_old = v.copy()
+        # updating u, v:
+        aux = array - mu
+        u = np.maximum(0, aux.dot(v.T))
+        u /= np.max(u) + 1e-16
+        v = np.maximum(0, np.dot(u.T, aux) / np.dot(u.T, u))
 
         error_u.append(np.linalg.norm(u - u_old) / np.linalg.norm(u_old))
         error_v.append(np.linalg.norm(v - v_old) / np.linalg.norm(v_old))
@@ -72,7 +73,7 @@ def nmu_admm(array, max_iter, tol):
     # Alternating optimization
     error_u = []
     error_v = []
-    for k in range(int(max_iter)):
+    for _ in range(int(max_iter)):
         u_old = u.copy()
         v_old = v.copy()
         # updating u, v:
@@ -80,7 +81,11 @@ def nmu_admm(array, max_iter, tol):
 
         u = (aux + gamma_r).dot(v.T)
         u = np.maximum(0, u)
-        u /= np.max(u) + 1e-16
+        umax = u.max()
+        if umax == 0:
+            v[:] = 0
+            break
+        u /= umax
 
         v = np.dot(u.T, aux + gamma_r) / np.dot(u.T, u)
         v = np.maximum(0, v)

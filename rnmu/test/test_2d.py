@@ -69,7 +69,7 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
     t = timeit.default_timer()
     pref_mat, orig_models, models, bics = detection.run(ransac_gen, x, sigma)
     t1 = timeit.default_timer() - t
-    print('Total time:', t1)
+    print('Total time: {:.2f}'.format(t1))
 
     base_plot(x)
     if name is not None:
@@ -111,7 +111,7 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def run(types, sigma=0.05, sampling_factor=5, sampling_type='multigs'):
+def run(types, sigma=0.05, sampling_factor=50, sampling_type='uniform'):
     config = {'Star': line.Line,
               'Stairs': line.Line,
               'Circles': circle.Circle,
@@ -190,9 +190,9 @@ def run(types, sigma=0.05, sampling_factor=5, sampling_type='multigs'):
 
 
 def run_all():
-    run(['Star', 'Stairs4'], sigma=0.03, sampling_factor=5)
-    run(['Stairs_'], sigma=0.035, sampling_factor=5)
-    run(['Circles'], sigma=0.07, sampling_factor=10)
+    run(['Star', 'Stairs4'], sigma=0.05)
+    run(['Stairs_'], sigma=0.055)
+    run(['Circles'], sigma=0.06)
 
 
 if __name__ == '__main__':

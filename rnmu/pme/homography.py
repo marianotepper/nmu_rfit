@@ -50,6 +50,9 @@ class Homography(object):
         except np.linalg.LinAlgError:
             self.H = None
 
+        if np.linalg.cond(self.H) > 1e12:
+            self.H = None
+
     def distances(self, data):
         if self.H is None:
             return np.ones((len(data),)) * np.inf

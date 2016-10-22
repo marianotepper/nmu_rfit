@@ -44,11 +44,13 @@ class Homography(object):
             mat += np.outer(r2, r2)
         try:
             _, v = np.linalg.eigh(mat)
-            self.H = v[:, 0].reshape((3, 3))
-            self.H = trans1.dot(self.H.T).dot(trans2_inv)
-            self.H /= self.H[2, 2]
         except np.linalg.LinAlgError:
             self.H = None
+            return
+
+        self.H = v[:, 0].reshape((3, 3))
+        self.H = trans1.dot(self.H.T).dot(trans2_inv)
+        self.H /= self.H[2, 2]
 
         if np.linalg.cond(self.H) > 1e12:
             self.H = None

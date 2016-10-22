@@ -1,7 +1,6 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import sys
 import numpy as np
-import itertools as itt
 import rnmu.test.measures as mes
 
 
@@ -10,7 +9,7 @@ def compute_measures(gt_groups, left_factors, verbose=True):
     prec, rec = mes.mean_precision_recall(gt_groups, left_factors)
     measures_str = 'GNMI: {0:1.4f}; Precision: {1:1.4f}; Recall: {2:1.4f}'
     if verbose:
-        print measures_str.format(gnmi, prec, rec)
+        print(measures_str.format(gnmi, prec, rec))
     return gnmi, prec, rec
 
 
@@ -19,9 +18,9 @@ def compute_stats(stats, verbose=True):
         try:
             vals = [s[attr.lower()] for s in stats]
             val_str = attr.capitalize() + ' -> '
-            val_str += 'mean: {mean:1.3f}, '
-            val_str += 'std: {std:1.3f}, '
-            val_str += 'median: {median:1.3f}'
+            val_str += 'mean: {mean:1.4f}, '
+            val_str += 'std: {std:1.4f}, '
+            val_str += 'median: {median:1.4f}'
             summary = {'mean': np.mean(vals), 'std': np.std(vals),
                        'median': np.median(vals)}
             if verbose:

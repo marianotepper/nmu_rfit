@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import timeit
 import seaborn.apionly as sns
-import rnmu.pme.approximation as approximation
+import rnmu.nmu as nmu
 from rnmu.pme.clique import max_independent_set
 from rnmu.pme.stats import meaningful
 # import pickle
@@ -30,7 +30,7 @@ def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
         return pref_matrix, orig_models, [], []
 
     t = timeit.default_timer()
-    bics = approximation.recursive_nmu(pref_matrix, downdate='hard-col')
+    bics = nmu.recursive_nmu(pref_matrix, downdate='hard-col')
     t1 = timeit.default_timer() - t
     print('NMU time: {:.2f}'.format(t1))
 

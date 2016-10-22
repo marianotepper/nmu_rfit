@@ -1,11 +1,10 @@
 from __future__ import absolute_import, print_function
-import os
-import sys
-import pickle
 import matplotlib.pyplot as plt
 import seaborn.apionly as sns
 import numpy as np
+import os
 import scipy.io
+import sys
 import re
 import timeit
 import rnmu.test.utils as test_utils

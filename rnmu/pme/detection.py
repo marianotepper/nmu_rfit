@@ -7,6 +7,7 @@ import seaborn.apionly as sns
 import rnmu.pme.approximation as approximation
 from rnmu.pme.clique import max_independent_set
 from rnmu.pme.stats import meaningful
+# import pickle
 
 
 def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
@@ -16,6 +17,14 @@ def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
     t1 = timeit.default_timer() - t
     print('Preference matrix size:', pref_matrix.shape)
     print('Preference matrix computation time: {:.2f}'.format(t1))
+
+    # with open('test.pickle', 'wb') as handle:
+    #     pickle.dump(pref_matrix, handle)
+    #     pickle.dump(orig_models, handle)
+    # with open('test.pickle', 'rb') as handle:
+    #     pref_matrix = pickle.load(handle)
+    #     orig_models = pickle.load(handle)
+    #     print('Preference matrix size:', pref_matrix.shape)
 
     if pref_matrix.size == 0:
         return pref_matrix, orig_models, [], []
@@ -66,7 +75,7 @@ def _clean(model_class, data, sigma, cutoff, overlaps, bics):
         inliers = np.squeeze(lf)
         mod = model_class(data, weights=inliers)
         mem = _membership(mod, data, sigma, cutoff)
-        if meaningful(mem, mod.min_sample_size):
+        if meaningful(mem, ms_size):
             models.append(mod)
             bics_final.append((mem[:, np.newaxis], rf))
 
@@ -91,7 +100,7 @@ def _eliminate_redundancy(bics):
     r = left_factors.T.dot(left_factors)
     norm_bics = np.linalg.norm(left_factors, axis=0)
     r /= np.outer(norm_bics, norm_bics)
-    iset = max_independent_set(r > 0.9)
+    iset = max_independent_set(r > 0.8)
     return iset
 
 

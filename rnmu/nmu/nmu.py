@@ -11,6 +11,7 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
     factors = []
     for k in range(r):
         u, v = nmu_admm(array, max_iter, tol, init=init)
+        # u, v = nmu(array, max_iter, tol, init=init)
         if np.count_nonzero(u) == 0 or np.count_nonzero(v) == 0:
             break
         factors.append((u, v))
@@ -32,7 +33,6 @@ def nmu(array, max_iter, tol, init='svd'):
     u, v = _nmu_initialize(array, init=init)
     u_old = u.copy()
     v_old = v.copy()
-    # Initialization of Lagrangian variable lambda
     mu = 0
 
     # Alternating optimization
@@ -41,7 +41,7 @@ def nmu(array, max_iter, tol, init='svd'):
     for k in range(int(max_iter)):
         # updating mu:
         if np.any(u > 0) and np.any(v > 0):
-            remainder = array - np.dot(u, v)
+            remainder = array - u.dot(v)
             mu = np.maximum(0, mu - remainder / (k + 1))
         else:
             mu /= 2
@@ -53,8 +53,14 @@ def nmu(array, max_iter, tol, init='svd'):
         # updating u, v:
         aux = array - mu
         u = np.maximum(0, aux.dot(v.T))
-        u /= np.max(u) + 1e-16
-        v = np.maximum(0, np.dot(u.T, aux) / np.dot(u.T, u))
+        u = np.maximum(0, u)
+        umax = u.max()
+        if umax == 0:
+            v[:] = 0
+        else:
+            u /= umax
+            v = u.T.dot(aux) / u.T.dot(u)
+            v = np.maximum(0, v)
 
         error_u.append(np.linalg.norm(u - u_old) / np.linalg.norm(u_old))
         error_v.append(np.linalg.norm(v - v_old) / np.linalg.norm(v_old))
@@ -68,9 +74,8 @@ def nmu(array, max_iter, tol, init='svd'):
 def nmu_admm(array, max_iter, tol, init='svd'):
     u, v = _nmu_initialize(array, init=init)
 
-    # Initialization of Lagrangian variables lambda_r, gamma_r
     gamma_r = np.zeros(array.shape)
-    remainder = np.maximum(0, array - np.dot(u, v))
+    remainder = np.maximum(0, array - u.dot(v))
 
     # Alternating optimization
     error_u = []
@@ -79,9 +84,9 @@ def nmu_admm(array, max_iter, tol, init='svd'):
         u_old = u.copy()
         v_old = v.copy()
         # updating u, v:
-        aux = array - remainder
+        aux = array - remainder + gamma_r
 
-        u = (aux + gamma_r).dot(v.T)
+        u = aux.dot(v.T)
         u = np.maximum(0, u)
         umax = u.max()
         if umax == 0:
@@ -89,10 +94,10 @@ def nmu_admm(array, max_iter, tol, init='svd'):
             break
         u /= umax
 
-        v = np.dot(u.T, aux + gamma_r) / np.dot(u.T, u)
+        v = u.T.dot(aux) / u.T.dot(u)
         v = np.maximum(0, v)
 
-        temp = array - np.dot(u, v)
+        temp = array - u.dot(v)
         remainder = (temp + gamma_r)
         remainder = np.maximum(0, remainder)
         gamma_r += (temp - remainder)

@@ -5,23 +5,23 @@ import numpy as np
 import timeit
 import seaborn.apionly as sns
 import rnmu.nmu as nmu
-from rnmu.pme.clique import max_independent_set
+from rnmu.pme.clique import maximal_independent_sets
 from rnmu.pme.stats import meaningful
 # import pickle
 
 
-def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
+def run(ransac_gen, data, sigma, cutoff=3, pre_eps=0, overlaps=True):
     t = timeit.default_timer()
     pref_matrix, orig_models = _build_preference_matrix(ransac_gen, data, sigma,
-                                                        cutoff)
+                                                        cutoff, log_eps=pre_eps)
     t1 = timeit.default_timer() - t
     print('Preference matrix size:', pref_matrix.shape)
     print('Preference matrix computation time: {:.2f}'.format(t1))
 
-    # with open('test.pickle', 'wb') as handle:
+    # with open('neem.pickle', 'wb') as handle:
     #     pickle.dump(pref_matrix, handle)
     #     pickle.dump(orig_models, handle)
-    # with open('test.pickle', 'rb') as handle:
+    # with open('neem.pickle', 'rb') as handle:
     #     pref_matrix = pickle.load(handle)
     #     orig_models = pickle.load(handle)
     #     print('Preference matrix size:', pref_matrix.shape)
@@ -30,7 +30,7 @@ def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
         return pref_matrix, orig_models, [], []
 
     t = timeit.default_timer()
-    bics = nmu.recursive_nmu(pref_matrix, downdate='hard-col')
+    bics = nmu.recursive_nmu(pref_matrix, downdate='hard-col', init='max')
     t1 = timeit.default_timer() - t
     print('NMU time: {:.2f}'.format(t1))
 
@@ -44,13 +44,15 @@ def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
     return pref_matrix, orig_models, models, bics
 
 
-def _build_preference_matrix(ransac_gen, elements, sigma, cutoff):
+def _build_preference_matrix(ransac_gen, elements, sigma, cutoff,
+                             log_eps=0):
     ransac_gen.elements = elements
     pref_matrix = []
     original_models = []
     for i, model in enumerate(ransac_gen):
         mem = _membership(model, elements, sigma, cutoff)
-        if meaningful(mem, model.min_sample_size, trim=True):
+        if meaningful(mem, model.min_sample_size, log_epsilon=log_eps,
+                      trim=True):
             pref_matrix.append(mem)
             original_models.append(model)
 
@@ -95,13 +97,15 @@ def _clean(model_class, data, sigma, cutoff, overlaps, bics):
     return models, bics_final
 
 
-def _eliminate_redundancy(bics):
+def _eliminate_redundancy(bics, overlap=0.75):
     left_factors = np.concatenate(zip(*bics)[0], axis=1)
     r = left_factors.T.dot(left_factors)
     norm_bics = np.linalg.norm(left_factors, axis=0)
     r /= np.outer(norm_bics, norm_bics)
-    iset = max_independent_set(r > 0.8)
-    return iset
+    isets = maximal_independent_sets(r > overlap)
+    imax = np.argmax([sum([bics[i][0].dot(bics[i][1]).sum() for i in s])
+                      for s in isets])
+    return isets[imax]
 
 
 def _select(values, idx):

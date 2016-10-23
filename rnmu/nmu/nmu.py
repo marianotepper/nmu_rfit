@@ -1,14 +1,16 @@
 import numpy as np
+import scipy.sparse.linalg as sp_linalg
 
 
-def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus'):
+def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
+                  init='svd'):
     if r is None:
         r = min(array.shape)
 
     array = array.copy()
     factors = []
     for k in range(r):
-        u, v = nmu_admm(array, max_iter, tol)
+        u, v = nmu_admm(array, max_iter, tol, init=init)
         if np.count_nonzero(u) == 0 or np.count_nonzero(v) == 0:
             break
         factors.append((u, v))
@@ -26,8 +28,8 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus'):
     return factors
 
 
-def nmu(array, max_iter, tol):
-    u, v = _nmu_initialize(array)
+def nmu(array, max_iter, tol, init='svd'):
+    u, v = _nmu_initialize(array, init=init)
     u_old = u.copy()
     v_old = v.copy()
     # Initialization of Lagrangian variable lambda
@@ -63,8 +65,8 @@ def nmu(array, max_iter, tol):
     return u, v
 
 
-def nmu_admm(array, max_iter, tol):
-    u, v = _nmu_initialize(array)
+def nmu_admm(array, max_iter, tol, init='svd'):
+    u, v = _nmu_initialize(array, init=init)
 
     # Initialization of Lagrangian variables lambda_r, gamma_r
     gamma_r = np.zeros(array.shape)
@@ -104,10 +106,22 @@ def nmu_admm(array, max_iter, tol):
     return u, v
 
 
-def _nmu_initialize(array):
-    idx = np.argmax(np.sum(array, axis=0))
-    x = array[:, idx][:, np.newaxis]
-    m = np.max(x) + 1e-16
-    x /= m
-    y = m * x.T.dot(array) / np.dot(x.T, x)
+def _nmu_initialize(array, init='max'):
+    if init == 'max':
+        idx = np.argmax(np.sum(array, axis=0))
+        x = array[:, idx][:, np.newaxis]
+        m = np.max(x)
+        if m > 0:
+            x /= m
+        y = m * x.T.dot(array) / np.dot(x.T, x)
+    elif init == 'svd':
+        x, s, y = sp_linalg.svds(array, 1)
+        if np.all(x <= 0) and np.all(y <= 0):
+            x *= -1
+            y *= -1
+        m = np.max(x)
+        if m > 0:
+            x /= m
+        y *= m * s[0]
+
     return x, y

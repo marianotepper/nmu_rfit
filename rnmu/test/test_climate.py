@@ -57,7 +57,7 @@ def run(dir_name, filename, ncols=1):
         ax.set_global()
         ax.coastlines()
         plt.savefig(test_name + 'comp{}_left.png'.format(k+1),
-                    dpi=300, bbox_inches='tight', pad_inches=0)
+                    dpi=150, bbox_inches='tight', pad_inches=0)
 
         with sns.axes_style("darkgrid"):
             plt.figure()
@@ -68,7 +68,7 @@ def run(dir_name, filename, ncols=1):
                 plt.xticks(x_labels_pos, x_labels_names, rotation=45)
             # plt.title('Component {}'.format(k + 1))
             plt.savefig(test_name + 'comp{}_right.pdf'.format(k + 1),
-                        dpi=300, bbox_inches='tight', pad_inches=0)
+                        dpi=150, bbox_inches='tight', pad_inches=0)
 
         plt.close('all')
 
@@ -81,8 +81,8 @@ if __name__ == '__main__':
     logger = test_utils.Logger(dir_name + 'test.txt')
     sys.stdout = logger
 
-    run(dir_name, 'air_mon', ncols=10)
-    run(dir_name, 'air_day', ncols=10)
+    run(dir_name, 'air_mon', ncols=5)
+    run(dir_name, 'air_day', ncols=5)
 
     sys.stdout = logger.stdout
     logger.close()

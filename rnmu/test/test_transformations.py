@@ -1,13 +1,13 @@
 from __future__ import absolute_import, print_function
-import sys
-import os
-import PIL
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn.apionly as sns
 import scipy.spatial.distance as distance
 import numpy as np
+import os
+import PIL
 import scipy.io
+import sys
 import timeit
 import rnmu.pme.detection as detection
 import rnmu.pme.fundamental as fundamental
@@ -101,7 +101,7 @@ def ground_truth(labels):
 def test(ransac_gen, data, sigma, name=None, palette='Set1'):
     t = timeit.default_timer()
     pref_mat, _, _, bics = detection.run(ransac_gen, data['data'], sigma,
-                                         overlaps=False, downdate='hard-col')
+                                         overlaps=False, pre_eps=3)
     t1 = timeit.default_timer() - t
     print('Total time:', t1)
 
@@ -110,28 +110,35 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
     gt_colors.insert(0, [1., 1., 1.])
     plot_models(data, gt_groups, palette=gt_colors)
     if name is not None:
-        plt.savefig(name + '_gt10.pdf', dpi=600)
+        plt.savefig(name + '_gt10.pdf', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
     plot_models(data, gt_groups, palette=gt_colors, s=.1, marker='.')
     if name is not None:
-        plt.savefig(name + '_gt1.pdf', dpi=600)
+        plt.savefig(name + '_gt1.pdf', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     plt.figure()
     detection.plot(pref_mat)
     if name is not None:
-        plt.savefig(name + '_pref_mat.pdf', dpi=600)
+        plt.savefig(name + '_pref_mat.png', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     plt.figure()
     detection.plot(bics, palette=palette)
     if name is not None:
-        plt.savefig(name + '_pref_mat_bic.pdf', dpi=600)
+        plt.savefig(name + '_pref_mat_bic.png', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     bc_groups = [bic[0].flatten() for bic in bics]
 
     plot_models(data, bc_groups, palette=palette)
     if name is not None:
-        plt.savefig(name + '_final_models.pdf', dpi=600)
+        plt.savefig(name + '_final_models.pdf', dpi=600, bbox_inches='tight',
+                    pad_inches=0)
 
     if bc_groups:
+        thresh = 0.5
+        bc_groups = [(g >= thresh).astype(dtype=float) for g in bc_groups]
         outliers = np.sum(np.vstack(bc_groups), axis=0) == 0
     else:
         outliers = np.ones((len(data['data']),))
@@ -141,8 +148,8 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def run(transformation, sigma, sampling_type='multigs', n_samples=2000):
-    dir_name = '{0}_{1:e}'.format(transformation, sigma)
+def run(transformation, sigma, sampling_type='multigs', n_samples=5000):
+    dir_name = '{0}_{1}'.format(transformation, sigma)
     output_dir = '../results/{0}/'.format(dir_name)
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -160,16 +167,20 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=2000):
     stats_list = []
     for i, example in enumerate(filenames):
         print(example)
-        # if i != 6:
-        #     continue
-        # if example != 'barrsmith.mat':
+        # if example != 'johnsonb.mat':
         #     continue
         # if example != 'bonhall.mat':
         #     continue
         # if example != 'breadcartoychips.mat':
         #     continue
-        # if example != 'boardgame.mat':
+        # if example != 'breadtoy.mat':
         #     continue
+        # if example != 'neem.mat':
+        #     continue
+
+        seed = 0
+        # seed = np.random.randint(0, np.iinfo(np.uint32).max)
+        print('seed:', seed)
 
         data = load(path + example)
 
@@ -179,17 +190,13 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=2000):
             model_class = fundamental.Fundamental
 
         if sampling_type == 'multigs':
-            generator = multigs.ModelGenerator(model_class, n_samples)
+            generator = multigs.ModelGenerator(model_class, n_samples,
+                                               seed=seed)
         elif sampling_type == 'uniform':
-            sampler = sampling.UniformSampler(n_samples)
+            sampler = sampling.UniformSampler(n_samples, seed=seed)
             generator = sampling.ModelGenerator(model_class, sampler)
         else:
             raise RuntimeError('Unknown sampling method')
-
-        seed = 0
-        # seed = np.random.randint(0, np.iinfo(np.uint32).max)
-        print('seed:', seed)
-        np.random.seed(seed)
 
         output_prefix = output_dir + example[:-4]
         res = test(generator, data, sigma, name=output_prefix)
@@ -197,27 +204,23 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=2000):
 
         print('-'*40)
         plt.close('all')
-        # break
 
-    # reg_list, comp_list = zip(*stats_list)
-    #
-    # print('Statistics of regular bi-clustering')
-    # test_utils.compute_stats(reg_list)
-    # print('Statistics of compressed bi-clustering')
-    # test_utils.compute_stats(comp_list)
-    # print('-'*40)
+    print('Statistics')
+    test_utils.compute_stats(stats_list)
+    print('-'*40)
 
     sys.stdout = logger.stdout
     logger.close()
 
 
 def run_all():
-    # run('fundamental', 5)
-    run('homography', 5)
-    # for thresh in np.power(np.arange(.5, 4, .5), 2):
-    #     run('homography', thresh)
-    # for thresh in np.arange(.5, 10.5, .5):
-    #     run('fundamental', thresh)
+    # run('homography', 7.5)
+    # run('fundamental', 8.)
+    for thresh in np.arange(5, 10.5, .5):
+        run('homography', thresh)
+    for thresh in np.arange(5, 10.5, .5):
+        run('fundamental', thresh)
+
 
 if __name__ == '__main__':
     run_all()

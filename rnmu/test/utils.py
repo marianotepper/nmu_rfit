@@ -21,7 +21,7 @@ def compute_stats(stats, verbose=True):
             val_str += 'mean: {mean:1.4f}, '
             val_str += 'std: {std:1.4f}, '
             val_str += 'median: {median:1.4f}'
-            summary = {'mean': np.mean(vals), 'std': np.std(vals),
+            summary = {'mean': np.mean(vals), 'std': np.std(vals, ddof=1),
                        'median': np.median(vals)}
             if verbose:
                 print(val_str.format(**summary))

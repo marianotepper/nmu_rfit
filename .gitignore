@@ -1,7 +1,3 @@
 *.txt
 /rnmu/results/*
-/rnmu/pme/lsd/lsd
-/rnmu/pme/lsd/lsd_call_example
-/rnmu/pme/lsd/doc
 /rnmu/data/*
-!/rnmu/data/sources.txt

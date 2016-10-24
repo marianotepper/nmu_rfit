@@ -11,7 +11,6 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
     factors = []
     for k in range(r):
         u, v = nmu_admm(array, max_iter, tol, init=init)
-        # u, v = nmu(array, max_iter, tol, init=init)
         if np.count_nonzero(u) == 0 or np.count_nonzero(v) == 0:
             break
         factors.append((u, v))
@@ -29,7 +28,7 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
     return factors
 
 
-def nmu(array, max_iter, tol, init='svd'):
+def nmu(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
     u, v = _nmu_initialize(array, init=init)
     u_old = u.copy()
     v_old = v.copy()
@@ -68,10 +67,13 @@ def nmu(array, max_iter, tol, init='svd'):
         if error_u[-1] < tol and error_v[-1] < tol:
             break
 
-    return u, v
+    if ret_errors:
+        return u, v, error_u, error_v
+    else:
+        return u, v
 
 
-def nmu_admm(array, max_iter, tol, init='svd'):
+def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
     u, v = _nmu_initialize(array, init=init)
 
     gamma_r = np.zeros(array.shape)
@@ -108,7 +110,10 @@ def nmu_admm(array, max_iter, tol, init='svd'):
         if error_u[-1] < tol and error_v[-1] < tol:
             break
 
-    return u, v
+    if ret_errors:
+        return u, v, error_u, error_v
+    else:
+        return u, v
 
 
 def _nmu_initialize(array, init='max'):

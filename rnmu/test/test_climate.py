@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import scipy.io
+import scipy.sparse.linalg as sp_linalg
 import seaborn.apionly as sns
 import sys
 import timeit
@@ -11,7 +12,7 @@ import rnmu.nmu as nmu
 import rnmu.test.utils as test_utils
 
 
-def run(dir_name, filename, ncols=1):
+def plot_approximation(dir_name, filename, ncols=1):
     f = scipy.io.loadmat('../data/' + filename + '.mat')
     mat = f['A']
 
@@ -56,7 +57,7 @@ def run(dir_name, filename, ncols=1):
                   transform=ccrs.PlateCarree())
         ax.set_global()
         ax.coastlines()
-        plt.savefig(test_name + 'comp{}_left.png'.format(k+1),
+        plt.savefig(test_name + '_comp{}_left.png'.format(k+1),
                     dpi=150, bbox_inches='tight', pad_inches=0)
 
         with sns.axes_style("darkgrid"):
@@ -67,9 +68,52 @@ def run(dir_name, filename, ncols=1):
             if x_labels_pos is not None:
                 plt.xticks(x_labels_pos, x_labels_names, rotation=45)
             # plt.title('Component {}'.format(k + 1))
-            plt.savefig(test_name + 'comp{}_right.pdf'.format(k + 1),
+            plt.savefig(test_name + '_comp{}_right.pdf'.format(k + 1),
                         dpi=150, bbox_inches='tight', pad_inches=0)
 
+        plt.close('all')
+
+
+def plot_comparison(dir_name, filename):
+    f = scipy.io.loadmat('../data/' + filename + '.mat')
+    mat = f['A']
+
+    tol = 1e-3
+
+    u_svd, s, v_svd = sp_linalg.svds(mat, k=1)
+    u_lag, v_lag = nmu.nmu(mat, max_iter=5e2, tol=tol)
+    u_adm, v_adm = nmu.nmu_admm(mat, max_iter=5e2, tol=tol)
+
+    def plot_hist(diff, title):
+        plt.hist(diff.flatten(), bins=100, normed=True,
+                 histtype='stepfilled', color='#a6cee3', edgecolor='#1f78b4')
+        bbox = plt.ylim()
+        plt.plot([0, 0], [bbox[0], bbox[1]], color='#e41a1c', linewidth=2)
+        plt.ylim(bbox)
+        bbox = plt.xlim()
+        locs = np.round([0, bbox[0], bbox[-1]]).astype(np.int)
+        plt.xticks(locs, ['{}'.format(x) for x in locs])
+        plt.title(title)
+
+    diff_svd = mat - s[0] * u_svd.dot(v_svd)
+    diff_lag = mat - u_lag.dot(v_lag)
+    diff_adm = mat - u_adm.dot(v_adm)
+
+    with sns.axes_style("white"):
+        fig = plt.figure()
+
+        plt.subplot(131)
+        plot_hist(diff_svd, 'SVD/NMF')
+
+        plt.subplot(132)
+        plot_hist(diff_lag, 'NMU - LR')
+
+        plt.subplot(133)
+        plot_hist(diff_adm, 'NMU - ADMM')
+
+        fig.set_tight_layout(True)
+        fig.savefig(dir_name + filename + '_comp_hist.pdf',
+                    dpi=150, bbox_inches='tight', pad_inches=0)
         plt.close('all')
 
 
@@ -81,8 +125,10 @@ if __name__ == '__main__':
     logger = test_utils.Logger(dir_name + 'test.txt')
     sys.stdout = logger
 
-    run(dir_name, 'air_mon', ncols=5)
-    run(dir_name, 'air_day', ncols=5)
+    plot_approximation(dir_name, 'air_mon', ncols=5)
+    plot_approximation(dir_name, 'air_day', ncols=5)
+
+    plot_comparison(dir_name, 'air_mon')
 
     sys.stdout = logger.stdout
     logger.close()

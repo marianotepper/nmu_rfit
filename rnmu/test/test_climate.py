@@ -31,7 +31,7 @@ def plot_approximation(dir_name, filename, ncols=1):
         x_labels_pos = None
 
     t = timeit.default_timer()
-    factors = nmu.recursive_nmu(mat, r=ncols)
+    factors = nmu.recursive_nmu(mat, r=ncols, tol=1e-5)
     t = timeit.default_timer() - t
     print('time {:.2f}'.format(t))
 
@@ -43,11 +43,8 @@ def plot_approximation(dir_name, filename, ncols=1):
 
     test_name = dir_name + filename
 
-    shape = (73, 144)
-    lats = np.linspace(90, -90, shape[0])
-    lons = np.linspace(0, 360, shape[1])
-
     for k in range(0, ncols):
+        shape = (73, 144)
         img = np.squeeze(factors[k][0]).reshape(shape)
         img = np.roll(np.flipud(img), shape[1] / 2, axis=1)
 
@@ -57,42 +54,53 @@ def plot_approximation(dir_name, filename, ncols=1):
                   transform=ccrs.PlateCarree())
         ax.set_global()
         ax.coastlines()
-        plt.savefig(test_name + '_comp{}_left.png'.format(k+1),
-                    dpi=150, bbox_inches='tight', pad_inches=0)
 
-        with sns.axes_style("darkgrid"):
+        sm = plt.cm.ScalarMappable(cmap='RdYlBu_r')
+        sm._A = []
+        cb = plt.colorbar(sm, shrink=0.5)
+
+        cb.set_ticks([0, 1])
+
+        plt.savefig(test_name + '_comp{}_left.png'.format(k+1),
+                    dpi=150, bbox_inches='tight')
+        plt.close()
+
+        with sns.axes_style("whitegrid"):
             plt.figure()
             sns.regplot(np.arange(mat.shape[1]), np.squeeze(factors[k][1]),
-                        scatter_kws={'s': 10}, line_kws={'color':'r'},
+                        scatter_kws={'s': 10, 'facecolor': '#1f78b4'},
+                        line_kws={'color': '#e41a1c'},
                         order=1, ci=None, truncate=True)
             if x_labels_pos is not None:
-                plt.xticks(x_labels_pos, x_labels_names, rotation=45)
+                plt.xticks(x_labels_pos, x_labels_names, rotation=45,
+                           size='x-large')
+            for item in plt.yticks()[1]:
+                item.set_fontsize('x-large')
             # plt.title('Component {}'.format(k + 1))
             plt.savefig(test_name + '_comp{}_right.pdf'.format(k + 1),
-                        dpi=150, bbox_inches='tight', pad_inches=0)
-
-        plt.close('all')
+                        dpi=150, bbox_inches='tight')
+            plt.close()
 
 
 def plot_comparison(dir_name, filename):
     f = scipy.io.loadmat('../data/' + filename + '.mat')
     mat = f['A']
 
-    tol = 1e-3
-
     u_svd, s, v_svd = sp_linalg.svds(mat, k=1)
-    u_lag, v_lag = nmu.nmu(mat, max_iter=5e2, tol=tol)
-    u_adm, v_adm = nmu.nmu_admm(mat, max_iter=5e2, tol=tol)
+    u_lag, v_lag = nmu.nmu(mat, max_iter=5e2, tol=1e-5)
+    u_adm, v_adm = nmu.nmu_admm(mat, max_iter=5e2, tol=1e-5)
 
     def plot_hist(diff, title):
         plt.hist(diff.flatten(), bins=100, normed=True,
                  histtype='stepfilled', color='#a6cee3', edgecolor='#1f78b4')
         bbox = plt.ylim()
-        plt.plot([0, 0], [bbox[0], bbox[1]], color='#e41a1c', linewidth=2)
+        plt.plot([0, 0], [bbox[0], bbox[1]], color='#e41a1c', linewidth=2,
+                 linestyle='--')
         plt.ylim(bbox)
         bbox = plt.xlim()
         locs = np.round([0, bbox[0], bbox[-1]]).astype(np.int)
         plt.xticks(locs, ['{}'.format(x) for x in locs])
+        plt.yticks([])
         plt.title(title)
 
     diff_svd = mat - s[0] * u_svd.dot(v_svd)
@@ -100,7 +108,7 @@ def plot_comparison(dir_name, filename):
     diff_adm = mat - u_adm.dot(v_adm)
 
     with sns.axes_style("white"):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(7, 3))
 
         plt.subplot(131)
         plot_hist(diff_svd, 'SVD/NMF')
@@ -113,12 +121,12 @@ def plot_comparison(dir_name, filename):
 
         fig.set_tight_layout(True)
         fig.savefig(dir_name + filename + '_comp_hist.pdf',
-                    dpi=150, bbox_inches='tight', pad_inches=0)
-        plt.close('all')
+                    dpi=150, bbox_inches='tight')
+        plt.close()
 
 
 if __name__ == '__main__':
-    dir_name = '../results/climate/'
+    dir_name = '../results/climate2/'
     if not os.path.exists(dir_name):
         os.mkdir(dir_name)
 
@@ -126,7 +134,7 @@ if __name__ == '__main__':
     sys.stdout = logger
 
     plot_approximation(dir_name, 'air_mon', ncols=5)
-    plot_approximation(dir_name, 'air_day', ncols=5)
+    # plot_approximation(dir_name, 'air_day', ncols=5)
 
     plot_comparison(dir_name, 'air_mon')
 

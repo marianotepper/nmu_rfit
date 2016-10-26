@@ -9,5 +9,4 @@ def maximal_independent_sets(mat):
             g.remove_edge(u, u)
     cg = complement(g)
     isets = list(find_cliques(cg))
-    max_len = max([len(s) for s in isets])
-    return [s for s in isets if len(s) == max_len]
+    return isets

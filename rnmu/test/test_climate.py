@@ -125,8 +125,39 @@ def plot_comparison(dir_name, filename):
         plt.close()
 
 
+def plot_errors(dir_name, filename):
+    f = scipy.io.loadmat('../data/' + filename + '.mat')
+    mat = f['A']
+
+    u, v, err_u1, err_v1 = nmu.nmu_admm(mat, max_iter=5e2, tol=1e-8,
+                                        ret_errors=True)
+    mat -= u.dot(v)
+    print(mat.min(), mat.max())
+    mat = np.maximum(mat, 0)
+    _, _, err_u2, err_v2 = nmu.nmu_admm(mat, max_iter=5e2, tol=1e-8,
+                                        ret_errors=True)
+
+    with sns.axes_style("whitegrid"):
+        plt.figure()
+        plt.semilogy(err_u1, linewidth=2, color='#e41a1c')
+        plt.semilogy(err_v1, linewidth=2, color='#377eb8')
+        plt.semilogy(err_u2, linewidth=2, color='#e41a1c', linestyle='--')
+        plt.semilogy(err_v2, linewidth=2, color='#377eb8', linestyle='--')
+        for item in plt.xticks()[1]:
+            item.set_fontsize('x-large')
+        for item in plt.yticks()[1]:
+            item.set_fontsize('x-large')
+        plt.legend(['Left factor 1', 'Right factor 1',
+                    'Left factor 2', 'Right factor 2'],
+                   prop={'size': 'x-large'})
+        plt.tight_layout()
+        plt.savefig(dir_name + filename + '_convergence.pdf',
+                    dpi=150, bbox_inches='tight')
+        plt.close()
+
+
 if __name__ == '__main__':
-    dir_name = '../results/climate2/'
+    dir_name = '../results/climate/'
     if not os.path.exists(dir_name):
         os.mkdir(dir_name)
 
@@ -137,6 +168,7 @@ if __name__ == '__main__':
     # plot_approximation(dir_name, 'air_day', ncols=5)
 
     plot_comparison(dir_name, 'air_mon')
+    plot_errors(dir_name, 'air_mon')
 
     sys.stdout = logger.stdout
     logger.close()

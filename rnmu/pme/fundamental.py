@@ -58,4 +58,9 @@ class Fundamental(object):
 
         epi_lines1 = np.dot(pts1, self.F)
         epi_lines1 /= np.linalg.norm(epi_lines1[:, :2], axis=1)[:, np.newaxis]
-        return np.abs(np.sum(pts2 * epi_lines1, axis=1))
+        d1 = np.abs(np.sum(pts2 * epi_lines1, axis=1))
+
+        epi_lines2 = np.dot(pts2, self.F.T)
+        epi_lines2 /= np.linalg.norm(epi_lines2[:, :2], axis=1)[:, np.newaxis]
+        d2 = np.abs(np.sum(pts1 * epi_lines2, axis=1))
+        return np.maximum(d1, d2)

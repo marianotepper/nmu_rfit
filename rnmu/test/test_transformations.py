@@ -1,4 +1,5 @@
 from __future__ import absolute_import, print_function
+import collections
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn.apionly as sns
@@ -137,8 +138,7 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
                     pad_inches=0)
 
     if bc_groups:
-        thresh = 0.5
-        bc_groups = [(g >= thresh).astype(dtype=float) for g in bc_groups]
+        bc_groups = [(g > 0).astype(dtype=float) for g in bc_groups]
         outliers = np.sum(np.vstack(bc_groups), axis=0) == 0
     else:
         outliers = np.ones((len(data['data']),))
@@ -167,16 +167,6 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=5000):
     stats_list = []
     for i, example in enumerate(filenames):
         print(example)
-        # if example != 'johnsonb.mat':
-        #     continue
-        # if example != 'bonhall.mat':
-        #     continue
-        # if example != 'breadcartoychips.mat':
-        #     continue
-        # if example != 'breadtoy.mat':
-        #     continue
-        # if example != 'neem.mat':
-        #     continue
 
         seed = 0
         # seed = np.random.randint(0, np.iinfo(np.uint32).max)
@@ -213,15 +203,63 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=5000):
     logger.close()
 
 
-def run_all():
-    # run('homography', 7.5)
-    # run('fundamental', 8.)
-    for thresh in np.arange(5, 10.5, .5):
-        run('homography', thresh)
-    for thresh in np.arange(5, 10.5, .5):
-        run('fundamental', thresh)
+def plot_results(transformation):
+    res_dir = '../results'
+
+    _, dir_sigmas, _ = os.walk(res_dir).next()
+    dir_sigmas = [ds for ds in dir_sigmas if ds.find(transformation) != -1]
+    sigmas = [float(ds[len(transformation) + 1:]) for ds in dir_sigmas]
+    idx_sigmas = np.argsort(sigmas)
+    sigmas = [sigmas[i] for i in idx_sigmas]
+    dir_sigmas = [dir_sigmas[i] for i in idx_sigmas]
+
+    sigma_results = {}
+    example_results = {}
+    res_files = ['{}/{}/test.txt'.format(res_dir, ds) for ds in dir_sigmas]
+    for s, rf in zip(sigmas, res_files):
+        with open(rf, 'r') as file_contents:
+            sigma_results[s] = []
+            for i, line in enumerate(file_contents):
+                if line.find('Statistics') == 0:
+                    break
+                if i % 9 == 0:
+                    example = line[:-5]
+                if i % 9 == 7:
+                    pr = float(line.split()[3][:-1])
+                    if example not in example_results:
+                        example_results[example] = []
+                    example_results[example].append(pr)
+                    sigma_results[s].append(pr)
+
+    example_results = collections.OrderedDict(sorted(example_results.items()))
+    sigma_results = collections.OrderedDict(sorted(sigma_results.items()))
+
+    for key in sigma_results:
+        values = 1 - np.array(sigma_results[key])
+        print(key, np.mean(values), np.median(values), np.std(values, ddof=1))
+
+    with sns.axes_style("whitegrid"):
+        plt.figure()
+        sns.boxplot(data=sigma_results.values(), color='.95', whis=10)
+        sns.stripplot(data=sigma_results.values(), jitter=True)
+        plt.xticks(range(len(sigmas)), sigmas, size='x-large')
+        for item in plt.yticks()[1]:
+            item.set_fontsize('x-large')
+        plt.xlabel(r'$\sigma$', size='x-large')
+        plt.ylabel('Precision/recall', size='x-large')
+        plt.tight_layout()
+        plt.savefig('{}/{}_result.pdf'.format(res_dir, transformation),
+                    bbox_inches='tight')
 
 
 if __name__ == '__main__':
-    run_all()
+    run('homography', 7.5)
+    run('fundamental', 7.5)
+    for thresh in np.arange(4, 10.5, .5):
+        run('homography', thresh)
+    for thresh in np.arange(4, 10.5, .5):
+        run('fundamental', thresh)
+    plot_results('homography')
+    plot_results('fundamental')
+
     plt.show()

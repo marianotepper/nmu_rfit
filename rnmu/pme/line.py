@@ -35,7 +35,7 @@ class Line(object):
             data = np.hstack((data, np.ones((data.shape[0], 1))))
         return np.abs(np.dot(data, self.eq))
 
-    def plot(self, limits=None, **kwargs):
+    def plot(self, limits=None, cax=None, **kwargs):
         if limits is None:
             xlim = plt.xlim()
             ylim = plt.ylim()
@@ -54,7 +54,10 @@ class Line(object):
         p2 = np.cross(self.eq, p2)
         p1 /= p1[2]
         p2 /= p2[2]
-        plt.plot([p1[0], p2[0]], [p1[1], p2[1]], **kwargs)
+        if cax is not None:
+            cax.plot([p1[0], p2[0]], [p1[1], p2[1]], **kwargs)
+        else:
+            plt.plot([p1[0], p2[0]], [p1[1], p2[1]], **kwargs)
 
 
 def _test():

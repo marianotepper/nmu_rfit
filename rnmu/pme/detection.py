@@ -6,8 +6,7 @@ import timeit
 import seaborn.apionly as sns
 import rnmu.nmu as nmu
 from rnmu.pme.clique import maximal_independent_sets
-from rnmu.pme.stats import meaningful
-# import pickle
+from rnmu.pme.stats import meaningful, concentration_pfa
 
 
 def run(ransac_gen, data, sigma, cutoff=3, pre_eps=0, overlaps=True):
@@ -17,14 +16,6 @@ def run(ransac_gen, data, sigma, cutoff=3, pre_eps=0, overlaps=True):
     t1 = timeit.default_timer() - t
     print('Preference matrix size:', pref_matrix.shape)
     print('Preference matrix computation time: {:.2f}'.format(t1))
-
-    # with open('neem.pickle', 'wb') as handle:
-    #     pickle.dump(pref_matrix, handle)
-    #     pickle.dump(orig_models, handle)
-    # with open('neem.pickle', 'rb') as handle:
-    #     pref_matrix = pickle.load(handle)
-    #     orig_models = pickle.load(handle)
-    #     print('Preference matrix size:', pref_matrix.shape)
 
     if pref_matrix.size == 0:
         return pref_matrix, orig_models, [], []
@@ -84,7 +75,7 @@ def _clean(model_class, data, sigma, cutoff, overlaps, bics):
     if not bics_final:
         return [], []
 
-    idx_keep = _eliminate_redundancy(bics_final)
+    idx_keep = _eliminate_redundancy(bics_final, ms_size)
     models = _select(models, idx_keep)
     bics_final = _select(bics_final, idx_keep)
 
@@ -97,15 +88,15 @@ def _clean(model_class, data, sigma, cutoff, overlaps, bics):
     return models, bics_final
 
 
-def _eliminate_redundancy(bics, overlap=0.75):
+def _eliminate_redundancy(bics, ms_size, overlap=0.8):
     left_factors = np.concatenate(zip(*bics)[0], axis=1)
     r = left_factors.T.dot(left_factors)
-    norm_bics = np.linalg.norm(left_factors, axis=0)
-    r /= np.outer(norm_bics, norm_bics)
+    norms = np.linalg.norm(left_factors, axis=0)
+    r /= np.outer(norms, norms)
     isets = maximal_independent_sets(r > overlap)
-    imax = np.argmax([sum([bics[i][0].dot(bics[i][1]).sum() for i in s])
+    best = np.argmin([sum([concentration_pfa(bics[i][0], ms_size) for i in s])
                       for s in isets])
-    return isets[imax]
+    return isets[best]
 
 
 def _select(values, idx):

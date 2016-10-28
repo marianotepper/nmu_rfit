@@ -18,7 +18,7 @@ def concentration_pfa(membership, ms_size, trim=False):
     if trim:
         ones = np.where(membership == 1)[0]
         membership = np.delete(membership, ones[-min(len(ones), ms_size):])
-    if len(membership) > 0:
+    if len(membership) > 1:
         d_min, _ = kstest(membership, 'uniform', alternative='less')
         pvalue = smirnov(len(membership), d_min)
     else:

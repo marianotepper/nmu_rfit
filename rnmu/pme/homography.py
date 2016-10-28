@@ -1,5 +1,5 @@
 import numpy as np
-from rnmu.pme.proj_geom_utils import keep_finite, normalize_2d
+from rnmu.pme.proj_geom_utils import keep_finite, remove_repeated, normalize_2d
 
 
 class Homography(object):
@@ -13,18 +13,20 @@ class Homography(object):
         return 4
 
     def fit(self, data, weights=None):
-        mask = keep_finite(data)
+        mask1 = keep_finite(data)
+        mask2 = remove_repeated(data)
+        mask = np.logical_and(mask1, mask2)
         data = data[mask, :]
         if weights is not None:
             weights = weights[mask]
 
         if len(data) < self.min_sample_size:
-            raise ValueError('At least four points are needed to fit an '
-                             'homography')
+            self.H = None
+            return
         if (weights is not None and
-                    np.count_nonzero(weights) < self.min_sample_size):
-            raise ValueError('At least four points are needed to fit an '
-                             'homography')
+                np.count_nonzero(weights) < self.min_sample_size):
+            self.H = None
+            return
         if data.shape[1] != 6:
             raise ValueError('Points must be 6D (2 x 3D)')
 

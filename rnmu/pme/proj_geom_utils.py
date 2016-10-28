@@ -1,5 +1,7 @@
+import scipy.spatial.distance as distance
 import numpy as np
 import warnings
+
 
 def keep_finite(data):
     if data.shape[1] != 6:
@@ -13,6 +15,13 @@ def keep_finite(data):
         warnings.warn('Found points at infinity', RuntimeWarning)
 
     return finite_idx
+
+
+def remove_repeated(x, tol=1e-5):
+    m = x.shape[0]
+    dist = distance.squareform(distance.pdist(x)) + np.triu(np.ones((m, m)), 0)
+    mask = np.all(dist >= tol, axis=1)
+    return mask
 
 
 def normalize_2d(points, weights=None, ret_inv=False):

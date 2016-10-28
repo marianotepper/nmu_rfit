@@ -39,7 +39,8 @@ def plot_approximation(dir_name, filename, ncols=1):
     for i, (lf, rf) in enumerate(factors):
         approx += lf.dot(rf)
         err = np.linalg.norm(approx - mat) ** 2 / np.linalg.norm(mat) ** 2
-        print('ncols {}, error {:.4f}, energy {:.4f}'.format(i+1, err, 1 - err))
+        print('ncols {}, error {:.4f}, energy {:.4f}'.format(i + 1, err,
+                                                             1 - err))
 
     test_name = dir_name + filename
 

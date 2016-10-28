@@ -110,7 +110,7 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
     return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
 
 
-def run(types, sigma=0.05, sampling_factor=50, sampling_type='uniform'):
+def run(types, sigma=0.05, sampling_factor=20, sampling_type='uniform'):
     config = {'Star': line.Line,
               'Stairs': line.Line,
               'Circles': circle.Circle,
@@ -189,9 +189,9 @@ def run(types, sigma=0.05, sampling_factor=50, sampling_type='uniform'):
 
 
 def run_all():
-    run(['Star', 'Stairs4'], sigma=0.05)
-    run(['Stairs_'], sigma=0.055)
-    run(['Circles'], sigma=0.06)
+    run(['Star', 'Stairs4'], sigma=0.035)
+    run(['Stairs_'], sigma=0.037)
+    run(['Circles'], sigma=0.047)
 
 
 if __name__ == '__main__':

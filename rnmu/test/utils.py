@@ -17,12 +17,17 @@ def compute_stats(stats, verbose=True):
     def inner_print(attr):
         try:
             vals = [s[attr.lower()] for s in stats]
+
+            def fun_round(fun):
+                return np.round(fun(vals), decimals=4)
+
             val_str = attr.capitalize() + ' -> '
             val_str += 'mean: {mean:1.4f}, '
             val_str += 'std: {std:1.4f}, '
             val_str += 'median: {median:1.4f}'
-            summary = {'mean': np.mean(vals), 'std': np.std(vals, ddof=1),
-                       'median': np.median(vals)}
+            summary = {'mean': np.round(np.mean(vals), decimals=4),
+                       'std': np.round(np.std(vals, ddof=1), decimals=4),
+                       'median': np.round(np.median(vals), decimals=4)}
             if verbose:
                 print(val_str.format(**summary))
             return summary

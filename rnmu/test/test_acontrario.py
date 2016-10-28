@@ -24,6 +24,7 @@ def plot_soft_line(ax, line, sigma, box, n_levels=64, color='r', alpha=0.8):
     colors[:, 3] = levels
 
     ax.contourf(xi, yi, alphas, levels=levels, colors=colors, antialiased=True)
+    # line.plot(cax=ax, color='r', linewidth=2)
 
 
 def plot_orthogonal_projection(data, mss, sigma, cutoff, axes=None):
@@ -138,7 +139,7 @@ def main(sigma=0.02, cutoff=3, transversal=True):
     #     plot_orthogonal_projection(data, random_sample, sigma, [121, 122])
 
 
-def paper_figure(sigma=0.02, cutoff=3, transversal=True):
+def paper_figure(sigma=0.015, cutoff=3, transversal=True):
     mat = scipy.io.loadmat('../data/JLinkageExamples.mat')
 
     data = mat['Stairs4_S00075_O60'].T
@@ -190,8 +191,8 @@ def half_layout(sigma=0.02, cutoff=3, add_line=False, transversal=True):
 
 
 if __name__ == '__main__':
-    main()
-    half_layout()
-    half_layout(add_line=True)
+    # main()
+    # half_layout()
+    # half_layout(add_line=True)
     paper_figure()
     plt.show()

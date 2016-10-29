@@ -5,14 +5,14 @@ import rnmu.test.measures as mes
 
 
 def compute_measures(gt_groups, left_factors, verbose=True):
-    stats = {'GNMI': mes.gnmi(gt_groups, left_factors),
-             'ME': mes.misclassifitation_error(gt_groups, left_factors),
+    stats = {'gnmi': mes.gnmi(gt_groups, left_factors),
+             'me': mes.misclassifitation_error(gt_groups, left_factors),
              'precision': mes.mean_precision(gt_groups, left_factors),
              'recall': mes.mean_recall(gt_groups, left_factors)}
     for s in stats:
         stats[s] = np.round(stats[s], decimals=4)
 
-    measures_str = 'GNMI: {GNMI:1.4f}; ME: {ME:1.4f}; '
+    measures_str = 'GNMI: {gnmi:1.4f}; ME: {me:1.4f}; '
     measures_str += 'Precision: {precision:1.4f}; Recall: {recall:1.4f}'
     if verbose:
         print(measures_str.format(**stats))

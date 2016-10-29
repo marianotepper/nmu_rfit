@@ -104,10 +104,8 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
         plt.savefig(name + '_original_models.pdf', dpi=600, bbox_inches='tight',
                     pad_inches=0)
 
-    bc_groups = [bic[0] for bic in bics]
-    gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
-
-    return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
+    bc_groups = [(b[0] > 0).astype(dtype=float) for b in bics]
+    return test_utils.compute_measures(gt_groups, bc_groups)
 
 
 def run(types, sigma=0.05, sampling_factor=20, sampling_type='uniform'):

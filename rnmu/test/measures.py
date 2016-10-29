@@ -135,21 +135,60 @@ def size(c):
     return float(c.sum())
 
 
-def mean_precision_recall(gt_groups, groups):
+def mean_precision(gt_groups, groups):
     """
-    Compute the precision and recall.
+    Compute the mean precision.
 
     :param gt_groups: set of ground truth groups
     :param groups: set of tested groups
-    :return: precision and recall
+    :return: mean precision
+    """
+    if not groups:
+        return 0, 0
+    conf = confusion_matrix(gt_groups, groups)
+    idx = hungarian.linear_assignment(conf.max() - conf)
+
+    matches = np.array([conf[i[0], i[1]] for i in idx])
+    g_sizes = np.array([size(groups[i[1]]) for i in idx])
+
+    precision = matches / g_sizes
+    return np.sum(precision) / len(groups)
+
+
+def mean_recall(gt_groups, groups):
+    """
+    Compute the mean recall.
+
+    :param gt_groups: set of ground truth groups
+    :param groups: set of tested groups
+    :return: mean recall
+    """
+    if not groups:
+        return 0, 0
+    conf = confusion_matrix(gt_groups, groups)
+    idx = hungarian.linear_assignment(conf.max() - conf)
+
+    matches = np.array([conf[i[0], i[1]] for i in idx])
+    gt_sizes = np.array([size(gt_groups[i[0]]) for i in idx])
+
+    recall = matches / gt_sizes
+    return np.sum(recall) / len(gt_groups)
+
+
+def misclassifitation_error(gt_groups, groups):
+    """
+    Compute the misclassification error.
+
+    :param gt_groups: set of ground truth groups
+    :param groups: set of tested groups
+    :return: misclassification error
     """
     if not groups:
         return 0, 0
     conf = confusion_matrix(gt_groups, groups)
 
     idx = hungarian.linear_assignment(conf.max() - conf)
-    conf_sorted = conf.take(idx[:, 0], axis=0).take(idx[:, 1], axis=1)
+    matches = np.array([conf[i[0], i[1]] for i in idx])
 
-    precision = np.trace(conf_sorted) / sum([size(c) for c in groups])
-    recall = np.trace(conf_sorted) / sum([size(c) for c in gt_groups])
-    return precision, recall
+    me = 1 - np.sum(matches) / sum([size(c) for c in gt_groups])
+    return me

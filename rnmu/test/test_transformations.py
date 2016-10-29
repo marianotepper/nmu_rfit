@@ -3,7 +3,6 @@ import collections
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn.apionly as sns
-import scipy.spatial.distance as distance
 import numpy as np
 import os
 import PIL
@@ -18,26 +17,15 @@ import rnmu.pme.sampling as sampling
 import rnmu.test.utils as test_utils
 
 
-def load(path, tol=1e-5):
+def load(path):
     data = scipy.io.loadmat(path)
-
     x = data['data'].T
     gt = np.squeeze(data['label'])
-
-    # remove repeated points
-    m = x.shape[0]
-    dist = distance.squareform(distance.pdist(x)) + np.triu(np.ones((m, m)), 0)
-    mask = np.all(dist >= tol, axis=1)
-    gt = gt[mask]
-    x = x[mask, :]
 
     # sort in reverse order (inliers first, outliers last)
     inv_order = np.argsort(gt)[::-1]
     gt = gt[inv_order]
     x = x[inv_order, :]
-
-    x[:, 0:2] -= np.array(data['img1'].shape[:2], dtype=np.float) / 2
-    x[:, 3:5] -= np.array(data['img2'].shape[:2], dtype=np.float) / 2
 
     data['data'] = x
     data['label'] = gt
@@ -46,11 +34,10 @@ def load(path, tol=1e-5):
 
 def base_plot(data):
     def inner_plot_img(pos, img):
-        pos_rc = pos + np.array(img.shape[:2], dtype=np.float) / 2
         gray_image = PIL.Image.fromarray(img).convert('L')
         plt.hold(True)
         plt.imshow(gray_image, cmap='gray')
-        plt.scatter(pos_rc[:, 0], pos_rc[:, 1], c='w', marker='o', s=10)
+        plt.scatter(pos[:, 0], pos[:, 1], c='w', marker='o', s=10)
         plt.axis('off')
 
     x = data['data']
@@ -63,7 +50,6 @@ def base_plot(data):
 
 def plot_models(data, groups, palette, s=10, marker='o'):
     def inner_plot_img(pos, img):
-        pos_rc = pos + np.array(img.shape[:2], dtype=np.float) / 2
         plt.hold(True)
         gray_image = PIL.Image.fromarray(img).convert('L')
         plt.imshow(gray_image, cmap='gray', interpolation='none')
@@ -74,7 +60,7 @@ def plot_models(data, groups, palette, s=10, marker='o'):
                 colors = np.append(colors, g[:, np.newaxis], axis=1)
             if colors.shape[1] == 4:
                 colors[:, 3] = g
-            plt.scatter(pos_rc[:, 0], pos_rc[:, 1], c=colors,
+            plt.scatter(pos[:, 0], pos[:, 1], c=colors,
                         edgecolors='face', marker=marker, s=s)
 
         plt.axis('off')
@@ -102,9 +88,12 @@ def ground_truth(labels):
 def test(ransac_gen, data, sigma, name=None, palette='Set1'):
     t = timeit.default_timer()
     pref_mat, _, _, bics = detection.run(ransac_gen, data['data'], sigma,
-                                         overlaps=False, pre_eps=3)
+                                         overlaps=False)
     t1 = timeit.default_timer() - t
     print('Total time:', t1)
+
+    if name is not None:
+        scipy.io.savemat(name + '.mat', {'pref_mat': pref_mat})
 
     gt_groups = ground_truth(data['label'])
     gt_colors = sns.color_palette(palette, len(gt_groups) - 1)
@@ -113,24 +102,19 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
     if name is not None:
         plt.savefig(name + '_gt10.pdf', dpi=600, bbox_inches='tight',
                     pad_inches=0)
-    plot_models(data, gt_groups, palette=gt_colors, s=.1, marker='.')
-    if name is not None:
-        plt.savefig(name + '_gt1.pdf', dpi=600, bbox_inches='tight',
-                    pad_inches=0)
 
     plt.figure()
     detection.plot(pref_mat)
     if name is not None:
         plt.savefig(name + '_pref_mat.png', dpi=600, bbox_inches='tight',
                     pad_inches=0)
-
     plt.figure()
     detection.plot(bics, palette=palette)
     if name is not None:
         plt.savefig(name + '_pref_mat_bic.png', dpi=600, bbox_inches='tight',
                     pad_inches=0)
 
-    bc_groups = [bic[0].flatten() for bic in bics]
+    bc_groups = [b[0].flatten() for b in bics]
 
     plot_models(data, bc_groups, palette=palette)
     if name is not None:
@@ -144,12 +128,17 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
         outliers = np.ones((len(data['data']),))
     bc_groups.append(outliers.astype(dtype=float))
 
-    gnmi, prec, rec = test_utils.compute_measures(gt_groups, bc_groups)
-    return dict(time=t1, gnmi=gnmi, precision=prec, recall=rec)
+    stats = test_utils.compute_measures(gt_groups, bc_groups)
+    stats['time'] = t1
+    return stats
 
 
-def run(transformation, sigma, sampling_type='multigs', n_samples=5000):
-    dir_name = '{0}_{1}'.format(transformation, sigma)
+def run(transformation, sigma, sampling_type='multigs', n_samples=3000,
+        name_prefix=None):
+    if name_prefix is None:
+        dir_name = '{}_{}'.format(transformation, sigma)
+    else:
+        dir_name = '{}_{}_{}'.format(name_prefix, transformation, sigma)
     output_dir = '../results/{0}/'.format(dir_name)
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -167,6 +156,8 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=5000):
     stats_list = []
     for i, example in enumerate(filenames):
         print(example)
+        # if example != 'dinobooks.mat':
+        #     continue
 
         seed = 0
         # seed = np.random.randint(0, np.iinfo(np.uint32).max)
@@ -176,8 +167,10 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=5000):
 
         if transformation == 'homography':
             model_class = homography.Homography
-        else:
+        elif transformation == 'fundamental':
             model_class = fundamental.Fundamental
+        else:
+            raise RuntimeError('Unknown transformation')
 
         if sampling_type == 'multigs':
             generator = multigs.ModelGenerator(model_class, n_samples,
@@ -194,6 +187,7 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=5000):
 
         print('-'*40)
         plt.close('all')
+        # break
 
     print('Statistics')
     test_utils.compute_stats(stats_list)
@@ -213,36 +207,64 @@ def plot_results(transformation):
     sigmas = [sigmas[i] for i in idx_sigmas]
     dir_sigmas = [dir_sigmas[i] for i in idx_sigmas]
 
-    sigma_results = {}
-    example_results = {}
+    sigma_miss_err = {}
+    sigma_times = {'PM': {}, 'NMU': {}, 'TOTAL': {}}
+    example_miss_err = {}
     res_files = ['{}/{}/test.txt'.format(res_dir, ds) for ds in dir_sigmas]
+
+    # Very crude parser, do not change console printing output
+    # or this will break
     for s, rf in zip(sigmas, res_files):
         with open(rf, 'r') as file_contents:
-            sigma_results[s] = []
+            sigma_miss_err[s] = []
+            sigma_times['PM'][s] = []
+            sigma_times['NMU'][s] = []
+            sigma_times['TOTAL'][s] = []
             for i, line in enumerate(file_contents):
                 if line.find('Statistics') == 0:
                     break
-                if i % 9 == 0:
+                if i % 10 == 0:
                     example = line[:-5]
-                if i % 9 == 7:
+                if i % 10 == 3:
+                    t = float(line.split()[4])
+                    sigma_times['PM'][s].append(t)
+                if i % 10 == 4:
+                    t = float(line.split()[2])
+                    sigma_times['NMU'][s].append(t)
+                if i % 10 == 7:
+                    t = float(line.split()[2])
+                    sigma_times['TOTAL'][s].append(t)
+                if i % 10 == 8:
                     pr = float(line.split()[3][:-1])
-                    if example not in example_results:
-                        example_results[example] = []
-                    example_results[example].append(pr)
-                    sigma_results[s].append(pr)
+                    if example not in example_miss_err:
+                        example_miss_err[example] = []
+                    example_miss_err[example].append(pr)
+                    sigma_miss_err[s].append(pr)
 
-    example_results = collections.OrderedDict(sorted(example_results.items()))
-    sigma_results = collections.OrderedDict(sorted(sigma_results.items()))
+    def sort_dict(d):
+        return collections.OrderedDict(sorted(d.items()))
 
-    for key in sigma_results:
-        values = 1 - np.array(sigma_results[key])
-        print(key, np.mean(values), np.median(values), np.std(values, ddof=1))
+    example_miss_err = sort_dict(example_miss_err)
+    sigma_miss_err = sort_dict(sigma_miss_err)
+    sigma_times['PM'] = sort_dict(sigma_times['PM'])
+    sigma_times['NMU'] = sort_dict(sigma_times['NMU'])
+    sigma_times['TOTAL'] = sort_dict(sigma_times['TOTAL'])
+
+    print('Misclassification error')
+    for key in sigma_miss_err:
+        values = 100 * np.array(sigma_miss_err[key])
+        stats = (key, np.round(np.mean(values), decimals=2),
+                 np.round(np.median(values), decimals=2),
+                 np.round(np.std(values, ddof=1), decimals=2))
+        print('{:.2f}\t{:.2f}\t{:.2f}\t{:.2f}'.format(*stats))
+        print('\t', values)
 
     with sns.axes_style("whitegrid"):
         plt.figure()
-        sns.boxplot(data=sigma_results.values(), color='.95', whis=10)
-        sns.stripplot(data=sigma_results.values(), jitter=True)
-        plt.xticks(range(len(sigmas)), sigmas, size='x-large')
+        sns.boxplot(data=sigma_miss_err.values(), color='.95', whis=100)
+        sns.stripplot(data=sigma_miss_err.values(), jitter=True)
+        sigmas_text = ['{:.2f}'.format(s) for s in sigmas]
+        plt.xticks(range(len(sigmas)), sigmas_text, size='x-large')
         for item in plt.yticks()[1]:
             item.set_fontsize('x-large')
         plt.xlabel(r'$\sigma$', size='x-large')
@@ -253,12 +275,17 @@ def plot_results(transformation):
 
 
 if __name__ == '__main__':
-    run('homography', 7.5)
-    run('fundamental', 7.5)
-    for thresh in np.arange(4, 10.5, .5):
-        run('homography', thresh)
-    for thresh in np.arange(4, 10.5, .5):
-        run('fundamental', thresh)
+    # Parameters with ebst results
+    # run('homography', 4.33)
+    # run('fundamental', 4.67)
+
+    for sigma_unadjusted in np.arange(5, 10.5, .5):
+        sigma = np.round(sigma_unadjusted / 1.5, decimals=2)
+        run('homography', sigma)
+    for sigma_unadjusted in np.arange(5, 10.5, .5):
+        sigma = np.round(sigma_unadjusted / 1.5, decimals=2)
+        run('fundamental', sigma)
+
     plot_results('homography')
     plot_results('fundamental')
 

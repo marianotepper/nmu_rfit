@@ -5,12 +5,18 @@ import rnmu.test.measures as mes
 
 
 def compute_measures(gt_groups, left_factors, verbose=True):
-    gnmi = mes.gnmi(gt_groups, left_factors)
-    prec, rec = mes.mean_precision_recall(gt_groups, left_factors)
-    measures_str = 'GNMI: {0:1.4f}; Precision: {1:1.4f}; Recall: {2:1.4f}'
+    stats = {'GNMI': mes.gnmi(gt_groups, left_factors),
+             'ME': mes.misclassifitation_error(gt_groups, left_factors),
+             'precision': mes.mean_precision(gt_groups, left_factors),
+             'recall': mes.mean_recall(gt_groups, left_factors)}
+    for s in stats:
+        stats[s] = np.round(stats[s], decimals=4)
+
+    measures_str = 'GNMI: {GNMI:1.4f}; ME: {ME:1.4f}; '
+    measures_str += 'Precision: {precision:1.4f}; Recall: {recall:1.4f}'
     if verbose:
-        print(measures_str.format(gnmi, prec, rec))
-    return gnmi, prec, rec
+        print(measures_str.format(**stats))
+    return stats
 
 
 def compute_stats(stats, verbose=True):
@@ -25,16 +31,18 @@ def compute_stats(stats, verbose=True):
             val_str += 'mean: {mean:1.4f}, '
             val_str += 'std: {std:1.4f}, '
             val_str += 'median: {median:1.4f}'
-            summary = {'mean': np.round(np.mean(vals), decimals=4),
-                       'std': np.round(np.std(vals, ddof=1), decimals=4),
-                       'median': np.round(np.median(vals), decimals=4)}
+            summary = {'mean': np.mean(vals),
+                       'std': np.std(vals, ddof=1),
+                       'median': np.median(vals)}
+            for s in summary:
+                summary[s] = np.round(summary[s], decimals=4)
             if verbose:
                 print(val_str.format(**summary))
             return summary
         except KeyError:
             return {}
 
-    measures = ['Time', 'GNMI', 'Precision', 'Recall']
+    measures = ['Time', 'ME', 'GNMI', 'Precision', 'Recall']
     global_summary = {}
     for m in measures:
         global_summary[m] = inner_print(m)

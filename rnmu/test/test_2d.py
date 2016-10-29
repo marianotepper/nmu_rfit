@@ -105,7 +105,9 @@ def test(ransac_gen, x, sigma, name=None, gt_groups=None, palette='Set1'):
                     pad_inches=0)
 
     bc_groups = [(b[0] > 0).astype(dtype=float) for b in bics]
-    return test_utils.compute_measures(gt_groups, bc_groups)
+    stats = test_utils.compute_measures(gt_groups, bc_groups)
+    stats['time'] = t1
+    return stats
 
 
 def run(types, sigma=0.05, sampling_factor=20, sampling_type='uniform'):

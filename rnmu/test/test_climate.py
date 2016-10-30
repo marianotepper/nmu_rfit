@@ -148,6 +148,8 @@ def plot_errors(dir_name, filename):
             item.set_fontsize('x-large')
         for item in plt.yticks()[1]:
             item.set_fontsize('x-large')
+        plt.xlabel('Iterations', size='x-large')
+        plt.ylabel('Relative errror', size='x-large')
         plt.legend(['Left factor 1', 'Right factor 1',
                     'Left factor 2', 'Right factor 2'],
                    prop={'size': 'x-large'})

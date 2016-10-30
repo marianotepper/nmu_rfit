@@ -134,7 +134,7 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
 
 
 def run(transformation, sigma, sampling_type='multigs', n_samples=3000,
-        name_prefix=None):
+        name_prefix=None, test_examples=None):
     if name_prefix is None:
         dir_name = '{}_{}'.format(transformation, sigma)
     else:
@@ -156,6 +156,8 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=3000,
     stats_list = []
     for i, example in enumerate(filenames):
         print(example)
+        if test_examples is not None and example[:-4] not in test_examples:
+            continue
         # if example != 'dinobooks.mat':
         #     continue
 
@@ -201,7 +203,7 @@ def plot_results(transformation):
     res_dir = '../results'
 
     _, dir_sigmas, _ = os.walk(res_dir).next()
-    dir_sigmas = [ds for ds in dir_sigmas if ds.find(transformation) != -1]
+    dir_sigmas = [ds for ds in dir_sigmas if ds.find(transformation) == 0]
     sigmas = [float(ds[len(transformation) + 1:]) for ds in dir_sigmas]
     idx_sigmas = np.argsort(sigmas)
     sigmas = [sigmas[i] for i in idx_sigmas]
@@ -235,7 +237,7 @@ def plot_results(transformation):
                     t = float(line.split()[2])
                     sigma_times['TOTAL'][s].append(t)
                 if i % 10 == 8:
-                    pr = float(line.split()[3][:-1])
+                    pr = 100 * float(line.split()[3][:-1])
                     if example not in example_miss_err:
                         example_miss_err[example] = []
                     example_miss_err[example].append(pr)
@@ -252,41 +254,53 @@ def plot_results(transformation):
 
     print('Misclassification error')
     for key in sigma_miss_err:
-        values = 100 * np.array(sigma_miss_err[key])
+        values = np.array(sigma_miss_err[key])
         stats = (key, np.round(np.mean(values), decimals=2),
                  np.round(np.median(values), decimals=2),
                  np.round(np.std(values, ddof=1), decimals=2))
-        print('{:.2f}\t{:.2f}\t{:.2f}\t{:.2f}'.format(*stats))
-        print('\t', values)
+        fmt_str = 'sigma: {:.2f}\tmean: {:.2f}\tmedian: {:.2f}\tstd: {:.2f}'
+        print(fmt_str.format(*stats))
+        # print('\t', values)
 
     with sns.axes_style("whitegrid"):
+        values = sigma_miss_err.values()
+        max_val = max([max(sl) for sl in values])
+
         plt.figure()
-        sns.boxplot(data=sigma_miss_err.values(), color='.95', whis=100)
-        sns.stripplot(data=sigma_miss_err.values(), jitter=True)
+        sns.boxplot(data=values, color='.95', whis=100)
+        sns.stripplot(data=values, jitter=True)
         sigmas_text = ['{:.2f}'.format(s) for s in sigmas]
         plt.xticks(range(len(sigmas)), sigmas_text, size='x-large')
-        for item in plt.yticks()[1]:
-            item.set_fontsize('x-large')
+        yticks = [yt for yt in plt.yticks()[0] if yt >= 0]
+        plt.yticks(yticks, size='x-large')
         plt.xlabel(r'$\sigma$', size='x-large')
-        plt.ylabel('Precision/recall', size='x-large')
+        plt.ylabel('Misclassification error (%)', size='x-large')
+        ylim = plt.ylim()
+        print(ylim)
+        plt.ylim((-2, 10 * np.ceil(max_val / 10)))
         plt.tight_layout()
         plt.savefig('{}/{}_result.pdf'.format(res_dir, transformation),
                     bbox_inches='tight')
 
 
 if __name__ == '__main__':
-    # Parameters with ebst results
-    # run('homography', 4.33)
-    # run('fundamental', 4.67)
+    # Parameters with best results
+    run('homography', 4.33)
+    run('fundamental', 4.67)
 
-    for sigma_unadjusted in np.arange(5, 10.5, .5):
-        sigma = np.round(sigma_unadjusted / 1.5, decimals=2)
-        run('homography', sigma)
-    for sigma_unadjusted in np.arange(5, 10.5, .5):
-        sigma = np.round(sigma_unadjusted / 1.5, decimals=2)
-        run('fundamental', sigma)
+    # for sigma_unadjusted in np.arange(5, 10.5, .5):
+    #     sigma = np.round(sigma_unadjusted / 1.5, decimals=2)
+    #     run('homography', sigma)
+    # for sigma_unadjusted in np.arange(5, 10.5, .5):
+    #     sigma = np.round(sigma_unadjusted / 1.5, decimals=2)
+    #     run('fundamental', sigma)
 
-    plot_results('homography')
-    plot_results('fundamental')
+    # plot_results('homography')
+    # plot_results('fundamental')
+
+    # run('fundamental', 4.67, n_samples=500, name_prefix='notesting',
+    #     test_examples=['boardgame'])
+    # run('homography', 4.33, n_samples=500, name_prefix='notesting',
+    #     test_examples=['johnsonb'])
 
     plt.show()

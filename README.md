@@ -7,9 +7,11 @@ The arse project contains the code of the paper:
 If you use this software, please cite the paper.
 
 Dependencies:
-numpy
-scipy
-matplotlib
-networkx
+* numpy
+* scipy
+* matplotlib
+* seaborn
+* pillow
+* networkx
 
 Copyright (c) 2016 by Mariano Tepper, Duke University

@@ -252,13 +252,16 @@ def plot_results(transformation):
     sigma_times['NMU'] = sort_dict(sigma_times['NMU'])
     sigma_times['TOTAL'] = sort_dict(sigma_times['TOTAL'])
 
+    def round2(vals, decimals=2):
+        return np.round(vals, decimals=decimals)
+
     print('Misclassification error')
     for key in sigma_miss_err:
         values = np.array(sigma_miss_err[key])
-        stats = (key, np.round(np.mean(values), decimals=2),
-                 np.round(np.median(values), decimals=2),
-                 np.round(np.std(values, ddof=1), decimals=2))
-        fmt_str = 'sigma: {:.2f}\tmean: {:.2f}\tmedian: {:.2f}\tstd: {:.2f}'
+        stats = (key, round2(np.mean(values)),
+                 round2(np.median(values)),
+                 round2(np.std(values, ddof=1)))
+        fmt_str = 'sigma: {}\tmean: {}\tmedian: {}\tstd: {}'
         print(fmt_str.format(*stats))
         # print('\t', values)
 
@@ -276,11 +279,21 @@ def plot_results(transformation):
         plt.xlabel(r'$\sigma$', size='x-large')
         plt.ylabel('Misclassification error (%)', size='x-large')
         ylim = plt.ylim()
-        print(ylim)
         plt.ylim((-2, 10 * np.ceil(max_val / 10)))
         plt.tight_layout()
         plt.savefig('{}/{}_result.pdf'.format(res_dir, transformation),
                     bbox_inches='tight')
+
+    print('Time')
+    for key in sigma_miss_err:
+        mean_PM = round2(np.mean(np.array(sigma_times['PM'][key])))
+        mean_NMU = round2(np.mean((np.array(sigma_times['NMU'][key]))))
+        mean_total = round2(np.mean((np.array(sigma_times['TOTAL'][key]))))
+        stats = (key, mean_total,
+                 round2(mean_PM / mean_total),
+                 round2(mean_NMU / mean_total))
+        fmt_str = 'sigma: {}\tTOTAL: {}\tRATIO PM: {}\tRATIO PM: {}'
+        print(fmt_str.format(*stats))
 
 
 if __name__ == '__main__':
@@ -298,6 +311,7 @@ if __name__ == '__main__':
     # plot_results('homography')
     # plot_results('fundamental')
 
+    # These tests need code modification (comment testing) to run properly
     # run('fundamental', 4.67, n_samples=500, name_prefix='notesting',
     #     test_examples=['boardgame'])
     # run('homography', 4.33, n_samples=500, name_prefix='notesting',

@@ -1,4 +1,4 @@
-The arse project contains the code of the paper:
+This repository contains the code of the paper:
 
 > Mariano Tepper and Guillermo Sapiro,
 > Nonnegative Matrix Underapproximation for Robust Multiple Model Fitting, 2016.

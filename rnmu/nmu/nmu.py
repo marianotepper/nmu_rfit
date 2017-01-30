@@ -3,7 +3,7 @@ import scipy.sparse.linalg as sp_linalg
 
 
 def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
-                  init='svd'):
+                  init='svd', refine_v=False):
     if r is None:
         r = min(array.shape)
 
@@ -11,6 +11,8 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
     factors = []
     for k in range(r):
         u, v = nmu_admm(array, max_iter, tol, init=init)
+        if refine_v:
+            u, v = nmu_admm(array, max_iter, tol, init=u)
         if np.count_nonzero(u) == 0 or np.count_nonzero(v) == 0:
             break
         factors.append((u, v))
@@ -76,6 +78,7 @@ def nmu(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
 def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
     u, v = _nmu_initialize(array, init=init)
 
+    sigma = 1.
     gamma_r = np.zeros(array.shape)
     remainder = np.maximum(0, array - u.dot(v))
 
@@ -86,23 +89,25 @@ def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
         u_old = u.copy()
         v_old = v.copy()
         # updating u, v:
-        aux = array - remainder + gamma_r
+        aux = array - remainder + gamma_r / sigma
 
-        u = aux.dot(v.T)
-        u = np.maximum(0, u)
-        umax = u.max()
-        if umax == 0:
-            v[:] = 0
-            break
-        u /= umax
+        if isinstance(init, basestring):
+            u = aux.dot(v.T)
+            u = np.maximum(0, u)
+            umax = u.max()
+            if umax <= 1e-10:
+                u[:] = 0
+                v[:] = 0
+                break
+            u /= umax
 
         v = u.T.dot(aux) / u.T.dot(u)
         v = np.maximum(0, v)
 
         temp = array - u.dot(v)
-        remainder = (temp + gamma_r)
+        remainder = (temp + gamma_r / sigma)
         remainder = np.maximum(0, remainder)
-        gamma_r += (temp - remainder)
+        gamma_r += sigma * (temp - remainder)
 
         error_u.append(np.linalg.norm(u - u_old) / np.linalg.norm(u_old))
         error_v.append(np.linalg.norm(v - v_old) / np.linalg.norm(v_old))
@@ -116,22 +121,30 @@ def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
         return u, v
 
 
-def _nmu_initialize(array, init='max'):
-    if init == 'max':
+def _nmu_initialize(array, init):
+    if isinstance(init, np.ndarray):
+        x = init.copy()
+        y = x.T.dot(array) / np.dot(x.T, x)
+        m = np.max(x)
+        if m > 0:
+            x /= m
+        y *= m
+    elif init == 'max':
         idx = np.argmax(np.sum(array, axis=0))
         x = array[:, idx][:, np.newaxis]
-        m = np.max(x)
-        if m > 0:
-            x /= m
-        y = m * x.T.dot(array) / np.dot(x.T, x)
+        y = x.T.dot(array) / np.dot(x.T, x)
     elif init == 'svd':
         x, s, y = sp_linalg.svds(array, 1)
-        if np.all(x <= 0) and np.all(y <= 0):
+        y *= s[0]
+        if np.all(x <= 1e-10) and np.all(y <= 1e-10):
             x *= -1
             y *= -1
-        m = np.max(x)
-        if m > 0:
-            x /= m
-        y *= m * s[0]
+    else:
+        raise ValueError('Unknown initialization method')
+
+    m = np.max(x)
+    if m > 0:
+        x /= m
+    y *= m
 
     return x, y

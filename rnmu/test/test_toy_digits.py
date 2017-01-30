@@ -7,7 +7,10 @@ import seaborn.apionly as sns
 import timeit
 import rnmu.nmu as nmu
 
-dir_name = '../results/climate/'
+dir_name = '../results/'
+if not os.path.exists(dir_name):
+    os.mkdir(dir_name)
+dir_name += 'digits/'
 if not os.path.exists(dir_name):
     os.mkdir(dir_name)
 
@@ -68,9 +71,9 @@ with sns.axes_style("whitegrid"):
     plt.savefig(dir_name + 'digits_left_factors.pdf',
                 dpi=150, bbox_inches='tight')
 
-    plt.figure(figsize=(8, 5))
+    plt.figure()
     for i in range(len(imgs)):
-        plt.subplot2grid((2, len(imgs)), (1, i))
+        plt.subplot2grid((1, len(imgs)), (0, i))
         plt.imshow(1 - recs[:, i].reshape(img_size), vmin=0, vmax=1,
                    interpolation='nearest', cmap='gray')
         plt.tick_params(
@@ -84,17 +87,23 @@ with sns.axes_style("whitegrid"):
             labelleft='off')
         plt.grid(b=False)
 
-        plt.subplot2grid((2, len(imgs)), (0, i))
-        plt.barh(np.arange(1, len(factors) + 1) - 0.2,
-                 [v[0, i] for _, v in factors],
-                 height=0.4,
-                 color='g')
-        plt.grid(b=False)
+    plt.tight_layout()
+    plt.savefig(dir_name + 'digits_reconstruction.pdf',
+                dpi=300, bbox_inches='tight')
+
+    plt.figure(figsize=(8, 2.5))
+    for i in range(len(imgs)):
+        plt.subplot2grid((1, len(imgs)), (0, i))
+        x_vals = [v[0, i] for _, v in factors]
+        y_vals = np.arange(1, len(factors) + 1)
+        plt.hlines(y_vals, 0, x_vals, color='#e41a1c', linewidth=4)
+        plt.scatter(x_vals, y_vals, color='#e41a1c', marker='o', linewidth=4)
+        plt.xlim(-0.1, 1.1)
         plt.ylim(0.5, len(factors) + 0.5)
         plt.xticks([0, 0.5, 1])
 
     plt.tight_layout()
-    plt.savefig(dir_name + 'digits_reconstruction.pdf',
+    plt.savefig(dir_name + 'digits_right_factors.pdf',
                 dpi=300, bbox_inches='tight')
 
 

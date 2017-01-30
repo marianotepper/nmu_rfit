@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse.linalg as sp_linalg
+from six import string_types
 
 
 def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
@@ -91,7 +92,7 @@ def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
         # updating u, v:
         aux = array - remainder + gamma_r / sigma
 
-        if isinstance(init, basestring):
+        if isinstance(init, string_types):
             u = aux.dot(v.T)
             u = np.maximum(0, u)
             umax = u.max()

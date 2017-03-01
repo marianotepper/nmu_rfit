@@ -106,5 +106,4 @@ with sns.axes_style("whitegrid"):
     plt.savefig(dir_name + 'digits_right_factors.pdf',
                 dpi=300, bbox_inches='tight')
 
-
 plt.show()

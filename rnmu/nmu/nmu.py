@@ -106,7 +106,7 @@ def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
         v = np.maximum(0, v)
 
         temp = array - u.dot(v)
-        remainder = (temp + gamma_r / sigma)
+        remainder = (sigma * temp + gamma_r) / (1 + sigma)
         remainder = np.maximum(0, remainder)
         gamma_r += sigma * (temp - remainder)
 

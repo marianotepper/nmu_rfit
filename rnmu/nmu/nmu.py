@@ -4,7 +4,7 @@ from six import string_types
 
 
 def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
-                  init='svd', refine_v=False):
+                  init='svd'):
     if r is None:
         r = min(array.shape)
 
@@ -12,8 +12,6 @@ def recursive_nmu(array, r=None, max_iter=5e2, tol=1e-3, downdate='minus',
     factors = []
     for k in range(r):
         u, v = nmu_admm(array, max_iter, tol, init=init)
-        if refine_v:
-            u, v = nmu_admm(array, max_iter, tol, init=u)
         if np.count_nonzero(u) == 0 or np.count_nonzero(v) == 0:
             break
         factors.append((u, v))

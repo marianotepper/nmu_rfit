@@ -35,7 +35,10 @@ def normalize_2d(points, weights=None, ret_inv=False):
 
     centroid = np.average(points[:, :2], weights=weights, axis=0)
     dist = np.linalg.norm(points[:, :2] - centroid, ord=2, axis=1)
-    scale = np.sqrt(2) / np.average(dist, weights=weights)
+    scale = np.average(dist, weights=weights)
+    if scale == 0:
+        scale = 1
+    scale = np.sqrt(2) / scale
 
     trans = np.array([[scale, 0, 0],
                       [0, scale, 0],

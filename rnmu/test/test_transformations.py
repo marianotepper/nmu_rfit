@@ -50,7 +50,6 @@ def base_plot(data):
 
 def plot_models(data, groups, palette, s=10, marker='o'):
     def inner_plot_img(pos, img):
-        plt.hold(True)
         gray_image = PIL.Image.fromarray(img).convert('L')
         plt.imshow(gray_image, cmap='gray', interpolation='none')
 
@@ -133,7 +132,7 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
     return stats
 
 
-def run(transformation, sigma, sampling_type='multigs', n_samples=3000,
+def run(transformation, sigma, sampling_type='multigs', n_samples=5000,
         name_prefix=None, test_examples=None):
     if name_prefix is None:
         dir_name = '{}_{}'.format(transformation, sigma)

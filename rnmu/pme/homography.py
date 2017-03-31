@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function
 import numpy as np
 from rnmu.pme.proj_geom_utils import keep_finite, remove_repeated, normalize_2d
 
@@ -54,6 +55,7 @@ class Homography(object):
         self.H = trans1.dot(self.H.T).dot(trans2_inv)
         self.H /= self.H[2, 2]
 
+
         if np.linalg.cond(self.H) > 1e12:
             self.H = None
 
@@ -79,13 +81,13 @@ if __name__ == '__main__':
     # data2 = (data1 * [2, 1]).dot(rot) + 3
     data2 = data1.dot(rot) + 3
     data = np.hstack((data1, np.ones((4, 1)), data2, np.ones((4, 1))))
-    print data.shape
+    print(data.shape)
     mod = Homography(data=data)
-    print mod.H
+    print(mod.H)
     test1 = np.array([[2, 2]])
     test2 = test1.dot(rot) + 2
-    print test1.shape, test2.shape
+    print(test1.shape, test2.shape)
     test = np.hstack((test1, np.ones((1, 1)), test2, np.ones((1, 1))))
-    print test.shape
-    print mod.distances(test)
+    print(test.shape)
+    print(mod.distances(test))
 

@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -63,11 +64,11 @@ class Line(object):
 def _test():
     x = np.array([[1, 1], [1, 2], [1, 3]])
     l1 = Line(x)
-    print l1.distances(x)
-    print l1.distances(np.array([[0.5, 0], [0, 1], [0, 2]]))
+    print(l1.distances(x))
+    print(l1.distances(np.array([[0.5, 0], [0, 1], [0, 2]])))
     x = np.array([[0, 0], [2, 2]])
     l2 = Line(x)
-    print l2.distances(x)
+    print(l2.distances(x))
 
     plt.figure()
     plt.scatter(x[:, 0], x[:, 1])
@@ -88,13 +89,13 @@ def _test2():
 
     np.random.seed(0)
     samples = np.random.randint(data.shape[0], size=2)
-    print samples
+    print(samples)
     l1 = Line(data[samples, :])
 
     plt.figure()
     proj, s = l1.project(data)
-    print proj.shape
-    print np.min(s), np.max(s)
+    print(proj.shape)
+    print(np.min(s), np.max(s))
 
 
     plt.scatter(data[:, 0], data[:, 1], c='w')

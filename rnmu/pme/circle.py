@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -48,7 +48,7 @@ def _test():
                   [-0.21174648, 1.08196667]])
     # x = np.array([[1, 1], [1, 2], [0, 0]])
     c1 = Circle(x)
-    print c1.distances(x)
+    print(c1.distances(x))
     # print c1.distances(np.array([[0.5, 0], [0, 1], [0, 2]]))
     # x = np.array([[0, 0], [2, 2]])
     # l2 = Line(x)

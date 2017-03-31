@@ -1,7 +1,14 @@
 from __future__ import absolute_import
 import numpy as np
-import itertools
 import collections
+try:
+    from itertools import imap
+except ImportError:
+    imap = map
+try:
+    from functools import reduce
+except ImportError:
+    pass
 
 
 class SampleSet(collections.MutableSet):
@@ -70,4 +77,4 @@ class ModelGenerator(object):
             return self.model_class(ms_set)
         samples = self._sampler.generate(self.elements,
                                          self.model_class().min_sample_size)
-        return itertools.imap(generate, samples)
+        return imap(generate, samples)

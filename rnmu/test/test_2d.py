@@ -28,7 +28,7 @@ def base_plot(x):
     plt.figure(figsize=fig_size)
     plt.xlim(x_lim)
     plt.ylim(y_lim)
-    plt.scatter(x[:, 0], x[:, 1], c='w', marker='o', s=10)
+    plt.scatter(x[:, 0], x[:, 1], c='w', marker='o', s=10, edgecolors='k')
 
 
 def plot_models(x, models, palette):

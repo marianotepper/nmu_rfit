@@ -26,7 +26,7 @@ img_size = imgs[0].shape
 mat = 1 - np.stack([im.flatten() for im in imgs], axis=1)
 
 t = timeit.default_timer()
-factors = nmu.recursive_nmu(mat, r=10, init='svd', refine_v=True)
+factors = nmu.recursive_nmu(mat, r=10, init='svd')
 t = timeit.default_timer() - t
 print('time {:.2f}'.format(t))
 
@@ -101,6 +101,7 @@ with sns.axes_style("whitegrid"):
         plt.xlim(-0.1, 1.1)
         plt.ylim(0.5, len(factors) + 0.5)
         plt.xticks([0, 0.5, 1])
+        plt.yticks(np.arange(len(factors)) + 1)
 
     plt.tight_layout()
     plt.savefig(dir_name + 'digits_right_factors.pdf',

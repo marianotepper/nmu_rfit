@@ -55,9 +55,12 @@ class Homography(object):
         self.H = trans1.dot(self.H.T).dot(trans2_inv)
         self.H /= self.H[2, 2]
 
-
-        if np.linalg.cond(self.H) > 1e12:
-            self.H = None
+        with np.errstate(divide='raise'):
+            try:
+                if np.linalg.cond(self.H) > 1e12:
+                    self.H = None
+            except FloatingPointError:
+                self.H = None
 
     def distances(self, data):
         if self.H is None:

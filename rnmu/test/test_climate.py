@@ -12,9 +12,10 @@ import rnmu.nmu as nmu
 import rnmu.test.utils as test_utils
 
 
-def plot_approximation(dir_name, filename, ncols=1):
+def plot_approximation(dir_name, filename, n_factors=1):
     f = scipy.io.loadmat('../data/' + filename + '.mat')
     mat = f['A']
+    mat /= mat.max()
 
     if filename.find('mon') != -1:
         years_step = 10
@@ -31,7 +32,7 @@ def plot_approximation(dir_name, filename, ncols=1):
         x_labels_pos = None
 
     t = timeit.default_timer()
-    factors = nmu.recursive_nmu(mat, r=ncols, tol=1e-5)
+    factors = nmu.recursive_nmu(mat, r=n_factors, tol=1e-5)
     t = timeit.default_timer() - t
     print('time {:.2f}'.format(t))
 
@@ -44,10 +45,10 @@ def plot_approximation(dir_name, filename, ncols=1):
 
     test_name = dir_name + filename
 
-    for k in range(0, ncols):
+    for k in range(n_factors):
         shape = (73, 144)
         img = np.squeeze(factors[k][0]).reshape(shape)
-        img = np.roll(np.flipud(img), shape[1] / 2, axis=1)
+        img = np.roll(np.flipud(img), shape[1] // 2, axis=1)
 
         plt.figure()
         ax = plt.axes(projection=ccrs.Robinson())
@@ -86,12 +87,14 @@ def plot_approximation(dir_name, filename, ncols=1):
 def plot_comparison(dir_name, filename):
     f = scipy.io.loadmat('../data/' + filename + '.mat')
     mat = f['A']
+    mat /= mat.max()
 
     u_svd, s, v_svd = sp_linalg.svds(mat, k=1)
     u_lag, v_lag = nmu.nmu(mat, max_iter=5e2, tol=1e-5)
     u_adm, v_adm = nmu.nmu_admm(mat, max_iter=5e2, tol=1e-5)
 
     def plot_hist(diff, title):
+        print(diff.min(), diff.max())
         plt.hist(diff.flatten(), bins=100, normed=True,
                  histtype='stepfilled', color='#a6cee3', edgecolor='#1f78b4')
         bbox = plt.ylim()
@@ -126,37 +129,36 @@ def plot_comparison(dir_name, filename):
         plt.close()
 
 
-def plot_errors(dir_name, filename):
+def plot_errors(dir_name, filename, n_factors=4):
     f = scipy.io.loadmat('../data/' + filename + '.mat')
     mat = f['A']
+    mat /= mat.max()
 
-    u, v, err_u1, err_v1 = nmu.nmu_admm(mat, max_iter=5e2, tol=1e-8,
-                                        ret_errors=True)
-    mat -= u.dot(v)
-    print(mat.min(), mat.max())
-    mat = np.maximum(mat, 0)
-    _, _, err_u2, err_v2 = nmu.nmu_admm(mat, max_iter=5e2, tol=1e-8,
-                                        ret_errors=True)
+    err_R = {}
+    for i in range(n_factors):
+        out = nmu.nmu_admm(mat, max_iter=5e2, tol=1e-20, ret_errors=True)
+        u, v, _, _, err_R[i] = out
+        mat -= u.dot(v)
+        mat = np.maximum(mat, 0)
 
     with sns.axes_style("whitegrid"):
         plt.figure()
-        plt.semilogy(err_u1, linewidth=2, color='#e41a1c')
-        plt.semilogy(err_v1, linewidth=2, color='#377eb8')
-        plt.semilogy(err_u2, linewidth=2, color='#e41a1c', linestyle='--')
-        plt.semilogy(err_v2, linewidth=2, color='#377eb8', linestyle='--')
+        palette = sns.color_palette('Set1', n_colors=n_factors)
+        for i in range(n_factors):
+            plt.plot(err_R[i], linewidth=2, color=palette[i], linestyle='-',
+                         label='Remainder {}'.format(i + 1))
+
         for item in plt.xticks()[1]:
             item.set_fontsize('x-large')
         for item in plt.yticks()[1]:
             item.set_fontsize('x-large')
         plt.xlabel('Iterations', size='x-large')
         plt.ylabel('Relative errror', size='x-large')
-        plt.legend(['Left factor 1', 'Right factor 1',
-                    'Left factor 2', 'Right factor 2'],
-                   prop={'size': 'x-large'})
+        plt.legend(loc='lower center', ncol=2, prop={'size': 'x-large'})
+        plt.ylim([0, 1])
         plt.tight_layout()
         plt.savefig(dir_name + filename + '_convergence.pdf',
                     dpi=150, bbox_inches='tight')
-        plt.close()
 
 
 if __name__ == '__main__':
@@ -167,9 +169,7 @@ if __name__ == '__main__':
     logger = test_utils.Logger(dir_name + 'test.txt')
     sys.stdout = logger
 
-    plot_approximation(dir_name, 'air_mon', ncols=5)
-    # plot_approximation(dir_name, 'air_day', ncols=5)
-
+    plot_approximation(dir_name, 'air_mon', n_factors=4)
     plot_comparison(dir_name, 'air_mon')
     plot_errors(dir_name, 'air_mon')
 

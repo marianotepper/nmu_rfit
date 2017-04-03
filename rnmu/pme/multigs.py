@@ -1,6 +1,9 @@
 from __future__ import absolute_import
 import numpy as np
-import itertools
+try:
+    from itertools import imap
+except ImportError:
+    imap = map
 from .sampling import UniformSampler, SampleSet
 
 
@@ -29,7 +32,7 @@ class ModelGenerator(object):
         mss_samples = self._uni_sampler.generate(self.elements, min_sample_size)
 
         residuals = None
-        for m in itertools.imap(generate, mss_samples):
+        for m in imap(generate, mss_samples):
             yield m
             residuals = self._add_model(residuals, m)
 
@@ -48,8 +51,14 @@ class ModelGenerator(object):
                     probas = pk
                 else:
                     probas *= pk
-                probas /= probas.sum()
+                if np.any(probas > 0):
+                    probas /= probas.sum()
+                else:
+                    sample = []
+                    break
 
+            if not sample:
+                continue
             if sample not in self._sample_set:
                 self._sample_set.add(sample)
                 m = generate(sample)
@@ -74,16 +83,17 @@ class ModelGenerator(object):
             return float(np.intersect1d(a, b, assume_unique=True).size) / a.size
         p = np.apply_along_axis(intersect_ratio, 1, ranking, ranking[k, :])
         p[k] = 0
+        p /= p.max()
         return p
 
     def apply_distribution(self, distribution):
         try:
             dist_max = distribution.max()
             if dist_max > 0:
-                self.bias = dist_max - distribution
-                self.bias /= self.bias.sum()
+                self._bias = dist_max - distribution
+                self._bias /= self._bias.sum()
             else:
-                self.bias = None
+                self._bias = None
 
         except AttributeError:
             pass

@@ -14,11 +14,12 @@ dir_name += 'digits/'
 if not os.path.exists(dir_name):
     os.mkdir(dir_name)
 
-imgs = [Image.open('./digits/digit2.png'),
-        Image.open('./digits/digit3.png'),
-        Image.open('./digits/digit5.png'),
-        Image.open('./digits/digit6.png'),
-        Image.open('./digits/digit8.png')
+imgs = [Image.open('../data/digits/digit2.png'),
+        Image.open('../data/digits/digit3.png'),
+        Image.open('../data/digits/digit5.png'),
+        Image.open('../data/digits/digit6.png'),
+        Image.open('../data/digits/digit8.png'),
+        Image.open('../data/digits/digit9.png')
         ]
 imgs = [np.array(im.convert('L'), dtype=np.float) / 255. for im in imgs]
 img_size = imgs[0].shape
@@ -66,7 +67,7 @@ with sns.axes_style("whitegrid"):
             right='off',
             labelleft='off')
         plt.grid(b=False)
-        plt.title('{}'.format(i + 1))
+        plt.title('F{}'.format(i + 1))
     plt.tight_layout()
     plt.savefig(dir_name + 'digits_left_factors.pdf',
                 dpi=150, bbox_inches='tight')
@@ -91,6 +92,24 @@ with sns.axes_style("whitegrid"):
     plt.savefig(dir_name + 'digits_reconstruction.pdf',
                 dpi=300, bbox_inches='tight')
 
+    for i in range(len(imgs)):
+        plt.figure()
+        plt.imshow(1 - recs[:, i].reshape(img_size), vmin=0, vmax=1,
+                   interpolation='nearest', cmap='gray')
+        plt.tick_params(
+            axis='both',
+            which='both',
+            bottom='off',
+            top='off',
+            labelbottom='off',
+            left='off',
+            right='off',
+            labelleft='off')
+        plt.grid(b=False)
+        plt.tight_layout()
+        plt.savefig(dir_name + 'digits_reconstruction{}.pdf'.format(i),
+                    dpi=300, bbox_inches='tight')
+
     plt.figure(figsize=(8, 2.5))
     for i in range(len(imgs)):
         plt.subplot2grid((1, len(imgs)), (0, i))
@@ -101,7 +120,8 @@ with sns.axes_style("whitegrid"):
         plt.xlim(-0.1, 1.1)
         plt.ylim(0.5, len(factors) + 0.5)
         plt.xticks([0, 0.5, 1])
-        plt.yticks(np.arange(len(factors)) + 1)
+        plt.yticks(np.arange(len(factors)) + 1,
+                   ['F{}'.format(k + 1) for k in range(len(factors))])
 
     plt.tight_layout()
     plt.savefig(dir_name + 'digits_right_factors.pdf',

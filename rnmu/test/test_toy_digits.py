@@ -14,12 +14,12 @@ dir_name += 'digits/'
 if not os.path.exists(dir_name):
     os.mkdir(dir_name)
 
-imgs = [Image.open('../data/digits/digit2.png'),
-        Image.open('../data/digits/digit3.png'),
-        Image.open('../data/digits/digit5.png'),
-        Image.open('../data/digits/digit6.png'),
-        Image.open('../data/digits/digit8.png'),
-        Image.open('../data/digits/digit9.png')
+imgs = [Image.open('../digits/digit2.png'),
+        Image.open('../digits/digit3.png'),
+        Image.open('../digits/digit5.png'),
+        Image.open('../digits/digit6.png'),
+        Image.open('../digits/digit8.png'),
+        Image.open('../digits/digit9.png')
         ]
 imgs = [np.array(im.convert('L'), dtype=np.float) / 255. for im in imgs]
 img_size = imgs[0].shape

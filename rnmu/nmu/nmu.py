@@ -84,6 +84,7 @@ def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
     # Alternating optimization
     error_u = []
     error_v = []
+    error_rem = []
     for _ in range(int(max_iter)):
         u_old = u.copy()
         v_old = v.copy()
@@ -110,12 +111,15 @@ def nmu_admm(array, max_iter=5e2, tol=1e-3, init='svd', ret_errors=False):
 
         error_u.append(np.linalg.norm(u - u_old) / np.linalg.norm(u_old))
         error_v.append(np.linalg.norm(v - v_old) / np.linalg.norm(v_old))
+        if ret_errors:
+            error_rem.append(np.linalg.norm(array - remainder)
+                             / np.linalg.norm(array))
 
         if error_u[-1] < tol and error_v[-1] < tol:
             break
 
     if ret_errors:
-        return u, v, error_u, error_v
+        return u, v, error_u, error_v, error_rem
     else:
         return u, v
 

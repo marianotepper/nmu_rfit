@@ -60,7 +60,7 @@ def plot_models(data, groups, palette, s=10, marker='o'):
             if colors.shape[1] == 4:
                 colors[:, 3] = g
             plt.scatter(pos[:, 0], pos[:, 1], c=colors,
-                        edgecolors='face', marker=marker, s=s)
+                        edgecolors='none', marker=marker, s=s)
 
         plt.xlim(0, img.shape[1])
         plt.ylim(img.shape[0], 0)

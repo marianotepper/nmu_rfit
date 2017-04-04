@@ -62,6 +62,8 @@ def plot_models(data, groups, palette, s=10, marker='o'):
             plt.scatter(pos[:, 0], pos[:, 1], c=colors,
                         edgecolors='face', marker=marker, s=s)
 
+        plt.xlim(0, img.shape[1])
+        plt.ylim(img.shape[0], 0)
         plt.axis('off')
 
     palette = sns.color_palette(palette, len(groups))
@@ -69,7 +71,7 @@ def plot_models(data, groups, palette, s=10, marker='o'):
     x = data['data']
     plt.figure()
     gs = gridspec.GridSpec(1, 2)
-    gs.update(wspace=0)
+    gs.update(wspace=0.05)
 
     plt.subplot(gs[0])
     inner_plot_img(x[:, 0:2], data['img1'])
@@ -121,7 +123,7 @@ def test(ransac_gen, data, sigma, name=None, palette='Set1'):
                     pad_inches=0)
 
     if bc_groups:
-        bc_groups = [(g > 0).astype(dtype=float) for g in bc_groups]
+        bc_groups = [(g > 0.5).astype(dtype=float) for g in bc_groups]
         outliers = np.sum(np.vstack(bc_groups), axis=0) == 0
     else:
         outliers = np.ones((len(data['data']),))
@@ -201,7 +203,7 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=5000,
 def plot_results(transformation):
     res_dir = '../results'
 
-    _, dir_sigmas, _ = os.walk(res_dir).next()
+    _, dir_sigmas, _ = next(os.walk(res_dir))
     dir_sigmas = [ds for ds in dir_sigmas if ds.find(transformation) == 0]
     sigmas = [float(ds[len(transformation) + 1:]) for ds in dir_sigmas]
     idx_sigmas = np.argsort(sigmas)
@@ -265,8 +267,8 @@ def plot_results(transformation):
         # print('\t', values)
 
     with sns.axes_style("whitegrid"):
-        values = sigma_miss_err.values()
-        max_val = max([max(sl) for sl in values])
+        values = np.array(list(sigma_miss_err.values())).T
+        max_val = values.max()
 
         plt.figure()
         sns.boxplot(data=values, color='.95', whis=100)
@@ -277,8 +279,11 @@ def plot_results(transformation):
         plt.yticks(yticks, size='x-large')
         plt.xlabel(r'$\sigma$', size='x-large')
         plt.ylabel('Misclassification error (%)', size='x-large')
-        ylim = plt.ylim()
         plt.ylim((-2, 10 * np.ceil(max_val / 10)))
+        if transformation == 'homography':
+            plt.title('Homographies', size='x-large')
+        if transformation == 'fundamental':
+            plt.title('Fundamental matrices', size='x-large')
         plt.tight_layout()
         plt.savefig('{}/{}_result.pdf'.format(res_dir, transformation),
                     bbox_inches='tight')
@@ -291,7 +296,7 @@ def plot_results(transformation):
         stats = (key, mean_total,
                  round2(mean_PM / mean_total),
                  round2(mean_NMU / mean_total))
-        fmt_str = 'sigma: {}\tTOTAL: {}\tRATIO PM: {}\tRATIO PM: {}'
+        fmt_str = 'sigma: {}\tTOTAL: {}\tRATIO PM: {}\tRATIO NMU: {}'
         print(fmt_str.format(*stats))
 
 

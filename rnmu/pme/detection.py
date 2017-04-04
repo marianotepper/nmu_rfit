@@ -17,7 +17,7 @@ def run(ransac_gen, data, sigma, cutoff=3, overlaps=True):
     print('Preference matrix size:', pref_matrix.shape)
     print('Preference matrix computation time: {:.2f}'.format(t1))
     # import scipy.io
-    # obj = scipy.io.loadmat('../results/fundamental_7.5/biscuit.mat')
+    # obj = scipy.io.loadmat('../results/fundamental_4.67/cubebreadtoychips.mat')
     # pref_matrix = obj['pref_mat']
     # orig_models = []
     # print('Preference matrix size:', pref_matrix.shape)
@@ -71,7 +71,7 @@ def _clean(model_class, data, sigma, cutoff, overlaps, bics):
     for lf, rf in bics:
         lf[lf < 1e-6] = 0
         rf[rf < 1e-6] = 0
-        if np.count_nonzero(rf) <= 1 or np.count_nonzero(lf) < ms_size:
+        if np.count_nonzero(rf) <= 1 or np.count_nonzero(lf) < 2 * ms_size:
             continue
         inliers = np.squeeze(lf)
         mod = model_class(data, weights=inliers)
@@ -97,7 +97,7 @@ def _clean(model_class, data, sigma, cutoff, overlaps, bics):
 
 
 def _eliminate_redundancy(bics, ms_size, overlap=0.6):
-    left_factors = np.concatenate(zip(*bics)[0], axis=1)
+    left_factors = np.concatenate(list(zip(*bics))[0], axis=1)
     r = left_factors.T.dot(left_factors)
     norms = np.linalg.norm(left_factors, axis=0)
     r /= np.outer(norms, norms)
@@ -117,7 +117,7 @@ def _select(values, idx):
 
 
 def _solve_intersections(bics):
-    left_factors = np.concatenate(zip(*bics)[0], axis=1)
+    left_factors = np.concatenate(list(zip(*bics))[0], axis=1)
     idx = np.argmax(left_factors, axis=1)
     for i, bics in enumerate(bics):
         bics[0][idx != i] = 0
@@ -133,7 +133,6 @@ def plot(array_or_bic_list, palette='Set1'):
         plt.imshow(array_or_bic_list, interpolation='none', cmap=get_cmap('k'))
     except TypeError:
         palette = sns.color_palette(palette, len(array_or_bic_list))
-        plt.hold(True)
         for (u, v), c in zip(array_or_bic_list, palette):
             plt.imshow(u.dot(v), interpolation='none', cmap=get_cmap(c))
 

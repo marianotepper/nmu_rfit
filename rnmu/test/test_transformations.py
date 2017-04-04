@@ -153,6 +153,7 @@ def run(transformation, sigma, sampling_type='multigs', n_samples=5000,
     for (_, _, fn) in os.walk(path):
         filenames.extend(fn)
         break
+    filenames = sorted(filenames)
 
     stats_list = []
     for i, example in enumerate(filenames):

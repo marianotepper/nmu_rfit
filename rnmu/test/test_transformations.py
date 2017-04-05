@@ -304,7 +304,7 @@ def plot_results(transformation):
 if __name__ == '__main__':
     # Parameters with best results
     run('homography', 4.33)
-    run('fundamental', 4.67)
+    run('fundamental', 5.0)
 
     # for sigma_unadjusted in np.arange(5, 10.5, .5):
     #     sigma = np.round(sigma_unadjusted / 1.5, decimals=2)
@@ -316,10 +316,10 @@ if __name__ == '__main__':
     # plot_results('homography')
     # plot_results('fundamental')
 
-    # These tests need code modification (comment testing) to run properly
-    # run('fundamental', 4.67, n_samples=500, name_prefix='notesting',
+    #These tests need code modification (comment testing) to run properly
+    # run('fundamental', 5.0, n_samples=1000, name_prefix='notesting',
     #     test_examples=['boardgame'])
-    # run('homography', 4.33, n_samples=500, name_prefix='notesting',
+    # run('homography', 4.33, n_samples=1000, name_prefix='notesting',
     #     test_examples=['johnsonb'])
 
     plt.show()
